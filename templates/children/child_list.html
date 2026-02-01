@@ -36,6 +36,16 @@
                     </span>
                   {% endif %}
                 </p>
+                <p class="text-body-secondary small mb-0">
+                  <i class="fa-solid fa-poo me-1"></i>
+                  {% if child.last_diaper_change %}
+                    <time datetime="{{ child.last_diaper_change|date:'c' }}" class="relative-time">
+                      {{ child.last_diaper_change|date:"M j, Y g:i A" }}
+                    </time>
+                  {% else %}
+                    No diaper changes yet
+                  {% endif %}
+                </p>
               </div>
               <div class="card-footer bg-transparent border-top-0">
                 <a href="{% url 'children:child_edit' child.pk %}" class="btn btn-outline-secondary btn-sm">
@@ -70,3 +80,12 @@
   </div>
 </div>
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.relative-time').forEach(function(el) {
+    const date = dayjs(el.getAttribute('datetime'));
+    el.textContent = date.fromNow();
+  });
+</script>
+{% endblock extra_js %}

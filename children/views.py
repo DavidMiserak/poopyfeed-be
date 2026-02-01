@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -13,7 +14,9 @@ class ChildListView(LoginRequiredMixin, ListView):
     context_object_name = "children"
 
     def get_queryset(self):
-        return Child.objects.filter(parent=self.request.user)
+        return Child.objects.filter(parent=self.request.user).annotate(
+            last_diaper_change=Max("diaper_changes__changed_at")
+        )
 
 
 class ChildCreateView(LoginRequiredMixin, CreateView):
