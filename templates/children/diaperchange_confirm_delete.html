@@ -14,7 +14,7 @@
       <div class="card-body">
         <p>Are you sure you want to delete this diaper change for <strong>{{ object.child.name }}</strong>?</p>
         <p class="text-body-secondary">
-          {{ object.get_change_type_display }} at {{ object.changed_at|date:"M j, Y g:i A" }}
+          {{ object.get_change_type_display }} at {{ object.changed_at|date:"M j, Y g:i A T" }}
         </p>
         <form method="post">
           {% csrf_token %}
