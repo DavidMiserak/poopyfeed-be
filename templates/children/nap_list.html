@@ -1,0 +1,74 @@
+{% extends "_base.html" %}
+
+{% block title %}Naps | {{ child.name }}{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h3 mb-1">
+          <i class="fa-solid fa-moon me-2 text-primary"></i>Naps
+        </h1>
+        <p class="text-body-secondary mb-0">{{ child.name }}</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'children:nap_add' child.pk %}" class="btn btn-primary">
+          <i class="fa-solid fa-plus me-1"></i>Log Nap
+        </a>
+        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">
+          <i class="fa-solid fa-children me-1"></i>Back to Children
+        </a>
+      </div>
+    </div>
+
+    {% if naps %}
+      <div class="list-group">
+        {% for nap in naps %}
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">
+                <i class="fa-solid fa-moon text-primary me-1"></i>Nap
+              </div>
+              <div class="text-body-secondary small">
+                <i class="fa-solid fa-clock me-1"></i>
+                <time datetime="{{ nap.napped_at|date:'c' }}" class="local-time">
+                  {{ nap.napped_at|date:"M j, Y g:i A T" }}
+                </time>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{% url 'children:nap_edit' nap.pk %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-pen me-1"></i>Edit
+              </a>
+              <a href="{% url 'children:nap_delete' nap.pk %}" class="btn btn-outline-danger btn-sm">
+                <i class="fa-solid fa-trash me-1"></i>Delete
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="fa-solid fa-moon fa-3x text-body-secondary mb-3"></i>
+          <h5 class="text-body-secondary">No naps yet</h5>
+          <p class="text-body-secondary mb-3">Log your first nap.</p>
+          <a href="{% url 'children:nap_add' child.pk %}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-1"></i>Log Nap
+          </a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.local-time').forEach(function(el) {
+    const date = dayjs(el.getAttribute('datetime'));
+    el.textContent = date.format('MMM D, YYYY h:mm A') + ' (' + date.fromNow() + ')';
+  });
+</script>
+{% endblock extra_js %}

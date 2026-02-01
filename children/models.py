@@ -52,3 +52,20 @@ class DiaperChange(models.Model):
 
     def __str__(self):
         return f"{self.child.name} - {self.get_change_type_display()}"
+
+
+class Nap(models.Model):
+    child = models.ForeignKey(
+        Child,
+        on_delete=models.CASCADE,
+        related_name="naps",
+    )
+    napped_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-napped_at"]
+
+    def __str__(self):
+        return f"{self.child.name} - Nap"

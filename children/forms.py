@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Child, DiaperChange
+from .models import Child, DiaperChange, Nap
 
 
 class ChildForm(forms.ModelForm):
@@ -34,3 +34,16 @@ class DiaperChangeForm(forms.ModelForm):
         widgets = {
             "change_type": forms.Select(attrs={"class": "form-select"}),
         }
+
+
+class NapForm(forms.ModelForm):
+    napped_at = forms.DateTimeField(
+        initial=timezone.now,
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": "form-control"},
+        ),
+    )
+
+    class Meta:
+        model = Nap
+        fields = ["napped_at"]

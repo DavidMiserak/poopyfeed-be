@@ -9,6 +9,10 @@ from .views import (
     DiaperChangeDeleteView,
     DiaperChangeListView,
     DiaperChangeUpdateView,
+    NapCreateView,
+    NapDeleteView,
+    NapListView,
+    NapUpdateView,
 )
 
 app_name = "children"
@@ -37,5 +41,25 @@ urlpatterns = [
         "diapers/<int:pk>/delete/",
         DiaperChangeDeleteView.as_view(),
         name="diaper_delete",
+    ),
+    path(
+        "<int:child_pk>/naps/",
+        NapListView.as_view(),
+        name="nap_list",
+    ),
+    path(
+        "<int:child_pk>/naps/add/",
+        NapCreateView.as_view(),
+        name="nap_add",
+    ),
+    path(
+        "naps/<int:pk>/edit/",
+        NapUpdateView.as_view(),
+        name="nap_edit",
+    ),
+    path(
+        "naps/<int:pk>/delete/",
+        NapDeleteView.as_view(),
+        name="nap_delete",
     ),
 ]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Child, DiaperChange
+from .models import Child, DiaperChange, Nap
 
 
 @admin.register(Child)
@@ -17,3 +17,11 @@ class DiaperChangeAdmin(admin.ModelAdmin):
     list_filter = ["change_type", "changed_at", "created_at"]
     search_fields = ["child__name", "child__parent__email"]
     date_hierarchy = "changed_at"
+
+
+@admin.register(Nap)
+class NapAdmin(admin.ModelAdmin):
+    list_display = ["child", "napped_at", "created_at"]
+    list_filter = ["napped_at", "created_at"]
+    search_fields = ["child__name", "child__parent__email"]
+    date_hierarchy = "napped_at"
