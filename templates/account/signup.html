@@ -1,0 +1,39 @@
+{% extends "_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Sign Up - PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-md-5">
+        <div class="text-center mb-4">
+          <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="fa-solid fa-user-plus fa-2x text-success"></i>
+          </div>
+          <h2 class="fw-bold">Create Account</h2>
+          <p class="text-body-secondary">Start tracking your baby's care</p>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-grid mt-4">
+            <button class="btn btn-success btn-lg" type="submit">
+              <i class="fa-solid fa-user-plus me-2"></i>Sign Up
+            </button>
+          </div>
+        </form>
+
+        <hr class="my-4">
+
+        <p class="text-center text-body-secondary mb-0">
+          Already have an account?
+          <a href="{% url 'account_login' %}" class="text-decoration-none">Log in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
