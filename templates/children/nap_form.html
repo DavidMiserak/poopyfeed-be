@@ -19,6 +19,7 @@
       <div class="card-body">
         <form method="post">
           {% csrf_token %}
+          {{ form.tz_offset }}
           <div class="mb-3">
             <label for="id_napped_at" class="form-label">Time of Nap</label>
             {{ form.napped_at }}
@@ -38,3 +39,17 @@
   </div>
 </div>
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const tzOffset = new Date().getTimezoneOffset();
+    document.querySelector('.tz-offset').value = tzOffset;
+
+    const dtInput = document.querySelector('.local-datetime');
+    if (dtInput && !dtInput.value) {
+      dtInput.value = dayjs().format('YYYY-MM-DDTHH:mm');
+    }
+  })();
+</script>
+{% endblock extra_js %}
