@@ -28,14 +28,18 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", get_random_secret_key())
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS",
-        "localhost,127.0.0.1",
-    ).split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = (
+    ["*"]
+    if DEBUG
+    else [
+        host.strip()
+        for host in os.environ.get(
+            "DJANGO_ALLOWED_HOSTS",
+            "localhost,127.0.0.1",
+        ).split(",")
+        if host.strip()
+    ]
+)
 
 
 # Application definition
