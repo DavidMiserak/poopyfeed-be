@@ -10,12 +10,16 @@ pre-commit-setup:
 	pre-commit install --install-hooks
 	pre-commit run --all-files
 
+.PHONY: image-build
+image-build:
+	$(RUNTIME) build -t poopyfeed .
+
 .PHONY: stop
 stop:
 	$(RUNTIME) compose down
 
 .PHONY: run
-run:
+run: image-build
 	$(RUNTIME) compose down || true
 	$(RUNTIME) compose up --build -d
 
