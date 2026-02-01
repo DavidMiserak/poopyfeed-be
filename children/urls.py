@@ -5,18 +5,6 @@ from .views import (
     ChildDeleteView,
     ChildListView,
     ChildUpdateView,
-    DiaperChangeCreateView,
-    DiaperChangeDeleteView,
-    DiaperChangeListView,
-    DiaperChangeUpdateView,
-    FeedingCreateView,
-    FeedingDeleteView,
-    FeedingListView,
-    FeedingUpdateView,
-    NapCreateView,
-    NapDeleteView,
-    NapListView,
-    NapUpdateView,
 )
 
 app_name = "children"
@@ -26,64 +14,4 @@ urlpatterns = [
     path("add/", ChildCreateView.as_view(), name="child_add"),
     path("<int:pk>/edit/", ChildUpdateView.as_view(), name="child_edit"),
     path("<int:pk>/delete/", ChildDeleteView.as_view(), name="child_delete"),
-    path(
-        "<int:child_pk>/diapers/",
-        DiaperChangeListView.as_view(),
-        name="diaper_list",
-    ),
-    path(
-        "<int:child_pk>/diapers/add/",
-        DiaperChangeCreateView.as_view(),
-        name="diaper_add",
-    ),
-    path(
-        "diapers/<int:pk>/edit/",
-        DiaperChangeUpdateView.as_view(),
-        name="diaper_edit",
-    ),
-    path(
-        "diapers/<int:pk>/delete/",
-        DiaperChangeDeleteView.as_view(),
-        name="diaper_delete",
-    ),
-    path(
-        "<int:child_pk>/naps/",
-        NapListView.as_view(),
-        name="nap_list",
-    ),
-    path(
-        "<int:child_pk>/naps/add/",
-        NapCreateView.as_view(),
-        name="nap_add",
-    ),
-    path(
-        "naps/<int:pk>/edit/",
-        NapUpdateView.as_view(),
-        name="nap_edit",
-    ),
-    path(
-        "naps/<int:pk>/delete/",
-        NapDeleteView.as_view(),
-        name="nap_delete",
-    ),
-    path(
-        "<int:child_pk>/feedings/",
-        FeedingListView.as_view(),
-        name="feeding_list",
-    ),
-    path(
-        "<int:child_pk>/feedings/add/",
-        FeedingCreateView.as_view(),
-        name="feeding_add",
-    ),
-    path(
-        "feedings/<int:pk>/edit/",
-        FeedingUpdateView.as_view(),
-        name="feeding_edit",
-    ),
-    path(
-        "feedings/<int:pk>/delete/",
-        FeedingDeleteView.as_view(),
-        name="feeding_delete",
-    ),
 ]

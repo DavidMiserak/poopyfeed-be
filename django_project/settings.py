@@ -56,6 +56,9 @@ INSTALLED_APPS = [
     # Local
     "accounts",
     "children",
+    "diapers",
+    "feedings",
+    "naps",
     "pages",
 ]
 

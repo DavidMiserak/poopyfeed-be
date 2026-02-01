@@ -1,6 +1,6 @@
 {% extends "_base.html" %}
 
-{% block title %}{% if object %}Edit{% else %}Log{% endif %} Nap | {{ child.name }}{% endblock title %}
+{% block title %}{% if object %}Edit{% else %}Log{% endif %} Diaper | {{ child.name }}{% endblock title %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -9,9 +9,9 @@
       <div class="card-header">
         <h1 class="h5 mb-0">
           {% if object %}
-            <i class="fa-solid fa-pen me-2"></i>Edit Nap
+            <i class="fa-solid fa-pen me-2"></i>Edit Diaper Change
           {% else %}
-            <i class="fa-solid fa-plus me-2"></i>Log Nap
+            <i class="fa-solid fa-plus me-2"></i>Log Diaper Change
           {% endif %}
         </h1>
         <p class="text-body-secondary mb-0">{{ child.name }}</p>
@@ -21,17 +21,24 @@
           {% csrf_token %}
           {{ form.tz_offset }}
           <div class="mb-3">
-            <label for="id_napped_at" class="form-label">Time of Nap</label>
-            {{ form.napped_at }}
-            {% if form.napped_at.errors %}
-              <div class="invalid-feedback d-block">{{ form.napped_at.errors.0 }}</div>
+            <label for="id_change_type" class="form-label">Change Type</label>
+            {{ form.change_type }}
+            {% if form.change_type.errors %}
+              <div class="invalid-feedback d-block">{{ form.change_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="id_changed_at" class="form-label">Time of Change</label>
+            {{ form.changed_at }}
+            {% if form.changed_at.errors %}
+              <div class="invalid-feedback d-block">{{ form.changed_at.errors.0 }}</div>
             {% endif %}
           </div>
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-success">
               <i class="fa-solid fa-check me-1"></i>Save
             </button>
-            <a href="{% url 'children:nap_list' child.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            <a href="{% url 'diapers:diaper_list' child.pk %}" class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>
       </div>

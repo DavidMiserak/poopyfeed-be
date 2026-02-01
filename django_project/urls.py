@@ -22,5 +22,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("children/", include("children.urls")),
+    path("children/<int:child_pk>/diapers/", include("diapers.urls")),
+    path("children/<int:child_pk>/feedings/", include("feedings.urls")),
+    path("children/<int:child_pk>/naps/", include("naps.urls")),
     path("", include("pages.urls")),
 ]

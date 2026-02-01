@@ -70,13 +70,13 @@
               </div>
               <div class="card-footer bg-transparent border-top-0 pt-0">
                 <div class="d-flex flex-wrap gap-2 mb-2">
-                  <a href="{% url 'children:diaper_list' child.pk %}" class="btn btn-success btn-sm flex-fill">
+                  <a href="{% url 'diapers:diaper_list' child.pk %}" class="btn btn-success btn-sm flex-fill">
                     <i class="fa-solid fa-poo me-1"></i>Diapers
                   </a>
-                  <a href="{% url 'children:nap_list' child.pk %}" class="btn btn-primary btn-sm flex-fill">
+                  <a href="{% url 'naps:nap_list' child.pk %}" class="btn btn-primary btn-sm flex-fill">
                     <i class="fa-solid fa-moon me-1"></i>Naps
                   </a>
-                  <a href="{% url 'children:feeding_list' child.pk %}" class="btn btn-info btn-sm flex-fill">
+                  <a href="{% url 'feedings:feeding_list' child.pk %}" class="btn btn-info btn-sm flex-fill">
                     <i class="fa-solid fa-bottle-water me-1"></i>Feedings
                   </a>
                 </div>
