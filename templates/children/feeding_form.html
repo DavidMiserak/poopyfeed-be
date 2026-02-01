@@ -1,0 +1,106 @@
+{% extends "_base.html" %}
+
+{% block title %}{% if object %}Edit{% else %}Log{% endif %} Feeding | {{ child.name }}{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h1 class="h5 mb-0">
+          {% if object %}
+            <i class="fa-solid fa-pen me-2"></i>Edit Feeding
+          {% else %}
+            <i class="fa-solid fa-plus me-2"></i>Log Feeding
+          {% endif %}
+        </h1>
+        <p class="text-body-secondary mb-0">{{ child.name }}</p>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.tz_offset }}
+          <div class="mb-3">
+            <label for="id_feeding_type" class="form-label">Feeding Type</label>
+            {{ form.feeding_type }}
+            {% if form.feeding_type.errors %}
+              <div class="invalid-feedback d-block">{{ form.feeding_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="id_fed_at" class="form-label">Time of Feeding</label>
+            {{ form.fed_at }}
+            {% if form.fed_at.errors %}
+              <div class="invalid-feedback d-block">{{ form.fed_at.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3" id="bottle-fields">
+            <label for="id_amount_oz" class="form-label">Amount (oz)</label>
+            {{ form.amount_oz }}
+            {% if form.amount_oz.errors %}
+              <div class="invalid-feedback d-block">{{ form.amount_oz.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div id="breast-fields">
+            <div class="mb-3">
+              <label for="id_duration_minutes" class="form-label">Duration (minutes)</label>
+              {{ form.duration_minutes }}
+              {% if form.duration_minutes.errors %}
+                <div class="invalid-feedback d-block">{{ form.duration_minutes.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="id_side" class="form-label">Side</label>
+              {{ form.side }}
+              {% if form.side.errors %}
+                <div class="invalid-feedback d-block">{{ form.side.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-info">
+              <i class="fa-solid fa-check me-1"></i>Save
+            </button>
+            <a href="{% url 'children:feeding_list' child.pk %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const tzOffset = new Date().getTimezoneOffset();
+    document.querySelector('.tz-offset').value = tzOffset;
+
+    const dtInput = document.querySelector('.local-datetime');
+    if (dtInput && !dtInput.value) {
+      dtInput.value = dayjs().format('YYYY-MM-DDTHH:mm');
+    }
+
+    const feedingTypeSelect = document.getElementById('id_feeding_type');
+    const bottleFields = document.getElementById('bottle-fields');
+    const breastFields = document.getElementById('breast-fields');
+
+    function toggleFields() {
+      const feedingType = feedingTypeSelect.value;
+      if (feedingType === 'bottle') {
+        bottleFields.style.display = 'block';
+        breastFields.style.display = 'none';
+      } else if (feedingType === 'breast') {
+        bottleFields.style.display = 'none';
+        breastFields.style.display = 'block';
+      } else {
+        bottleFields.style.display = 'none';
+        breastFields.style.display = 'none';
+      }
+    }
+
+    feedingTypeSelect.addEventListener('change', toggleFields);
+    toggleFields();
+  })();
+</script>
+{% endblock extra_js %}

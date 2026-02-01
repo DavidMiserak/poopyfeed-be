@@ -46,7 +46,7 @@
                     No diaper changes yet
                   {% endif %}
                 </p>
-                <p class="text-body-secondary small mb-0">
+                <p class="text-body-secondary small mb-1">
                   <i class="fa-solid fa-moon me-1"></i>
                   {% if child.last_nap %}
                     <time datetime="{{ child.last_nap|date:'c' }}" class="relative-time">
@@ -54,6 +54,16 @@
                     </time>
                   {% else %}
                     No naps yet
+                  {% endif %}
+                </p>
+                <p class="text-body-secondary small mb-0">
+                  <i class="fa-solid fa-bottle-water me-1"></i>
+                  {% if child.last_feeding %}
+                    <time datetime="{{ child.last_feeding|date:'c' }}" class="relative-time">
+                      {{ child.last_feeding|date:"M j, Y g:i A" }}
+                    </time>
+                  {% else %}
+                    No feedings yet
                   {% endif %}
                 </p>
               </div>
@@ -66,6 +76,9 @@
                 </a>
                 <a href="{% url 'children:nap_list' child.pk %}" class="btn btn-outline-primary btn-sm">
                   <i class="fa-solid fa-moon me-1"></i>Naps
+                </a>
+                <a href="{% url 'children:feeding_list' child.pk %}" class="btn btn-outline-info btn-sm">
+                  <i class="fa-solid fa-bottle-water me-1"></i>Feedings
                 </a>
                 <a href="{% url 'children:child_delete' child.pk %}" class="btn btn-outline-danger btn-sm">
                   <i class="fa-solid fa-trash me-1"></i>Delete

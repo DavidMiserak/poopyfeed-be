@@ -9,6 +9,10 @@ from .views import (
     DiaperChangeDeleteView,
     DiaperChangeListView,
     DiaperChangeUpdateView,
+    FeedingCreateView,
+    FeedingDeleteView,
+    FeedingListView,
+    FeedingUpdateView,
     NapCreateView,
     NapDeleteView,
     NapListView,
@@ -61,5 +65,25 @@ urlpatterns = [
         "naps/<int:pk>/delete/",
         NapDeleteView.as_view(),
         name="nap_delete",
+    ),
+    path(
+        "<int:child_pk>/feedings/",
+        FeedingListView.as_view(),
+        name="feeding_list",
+    ),
+    path(
+        "<int:child_pk>/feedings/add/",
+        FeedingCreateView.as_view(),
+        name="feeding_add",
+    ),
+    path(
+        "feedings/<int:pk>/edit/",
+        FeedingUpdateView.as_view(),
+        name="feeding_edit",
+    ),
+    path(
+        "feedings/<int:pk>/delete/",
+        FeedingDeleteView.as_view(),
+        name="feeding_delete",
     ),
 ]

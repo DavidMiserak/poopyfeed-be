@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django import forms
 
-from .models import Child, DiaperChange, Nap
+from .models import Child, DiaperChange, Feeding, Nap
 
 
 class ChildForm(forms.ModelForm):
@@ -84,3 +84,66 @@ class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
     class Meta:
         model = Nap
         fields = ["napped_at", "tz_offset"]
+
+
+class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
+    datetime_field_name = "fed_at"
+
+    tz_offset = forms.IntegerField(
+        widget=forms.HiddenInput(attrs={"class": "tz-offset"}),
+        required=False,
+    )
+    fed_at = forms.DateTimeField(
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local", "class": "form-control local-datetime"},
+        ),
+    )
+    amount_oz = forms.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        required=False,
+        widget=forms.NumberInput(
+            attrs={"class": "form-control", "step": "0.5", "min": "0"}
+        ),
+    )
+    duration_minutes = forms.IntegerField(
+        required=False,
+        widget=forms.NumberInput(attrs={"class": "form-control", "min": "1"}),
+    )
+
+    class Meta:
+        model = Feeding
+        fields = [
+            "feeding_type",
+            "fed_at",
+            "amount_oz",
+            "duration_minutes",
+            "side",
+            "tz_offset",
+        ]
+        widgets = {
+            "feeding_type": forms.Select(attrs={"class": "form-select"}),
+            "side": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        feeding_type = cleaned_data.get("feeding_type")
+
+        if feeding_type == Feeding.FeedingType.BOTTLE:
+            if not cleaned_data.get("amount_oz"):
+                self.add_error("amount_oz", "Amount is required for bottle feeding.")
+            # Clear breast fields
+            cleaned_data["duration_minutes"] = None
+            cleaned_data["side"] = ""
+        elif feeding_type == Feeding.FeedingType.BREAST:
+            if not cleaned_data.get("duration_minutes"):
+                self.add_error(
+                    "duration_minutes", "Duration is required for breastfeeding."
+                )
+            if not cleaned_data.get("side"):
+                self.add_error("side", "Side is required for breastfeeding.")
+            # Clear bottle fields
+            cleaned_data["amount_oz"] = None
+
+        return cleaned_data

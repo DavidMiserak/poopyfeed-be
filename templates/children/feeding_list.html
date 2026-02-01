@@ -1,0 +1,83 @@
+{% extends "_base.html" %}
+
+{% block title %}Feedings | {{ child.name }}{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h3 mb-1">
+          <i class="fa-solid fa-bottle-water me-2 text-info"></i>Feedings
+        </h1>
+        <p class="text-body-secondary mb-0">{{ child.name }}</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'children:feeding_add' child.pk %}" class="btn btn-info">
+          <i class="fa-solid fa-plus me-1"></i>Log Feeding
+        </a>
+        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">
+          <i class="fa-solid fa-children me-1"></i>Back to Children
+        </a>
+      </div>
+    </div>
+
+    {% if feedings %}
+      <div class="list-group">
+        {% for feeding in feedings %}
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">
+                {% if feeding.feeding_type == "bottle" %}
+                  <i class="fa-solid fa-bottle-water text-info me-1"></i>Bottle
+                  <span class="text-body-secondary ms-2">{{ feeding.amount_oz }} oz</span>
+                {% else %}
+                  <i class="fa-solid fa-person-breastfeeding text-danger me-1"></i>Breast
+                  <span class="text-body-secondary ms-2">
+                    {{ feeding.duration_minutes }} min
+                    {% if feeding.side %}({{ feeding.get_side_display }}){% endif %}
+                  </span>
+                {% endif %}
+              </div>
+              <div class="text-body-secondary small">
+                <i class="fa-solid fa-clock me-1"></i>
+                <time datetime="{{ feeding.fed_at|date:'c' }}" class="local-time">
+                  {{ feeding.fed_at|date:"M j, Y g:i A T" }}
+                </time>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{% url 'children:feeding_edit' feeding.pk %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-pen me-1"></i>Edit
+              </a>
+              <a href="{% url 'children:feeding_delete' feeding.pk %}" class="btn btn-outline-danger btn-sm">
+                <i class="fa-solid fa-trash me-1"></i>Delete
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="fa-solid fa-bottle-water fa-3x text-body-secondary mb-3"></i>
+          <h5 class="text-body-secondary">No feedings yet</h5>
+          <p class="text-body-secondary mb-3">Log your first feeding.</p>
+          <a href="{% url 'children:feeding_add' child.pk %}" class="btn btn-info">
+            <i class="fa-solid fa-plus me-1"></i>Log Feeding
+          </a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.local-time').forEach(function(el) {
+    const date = dayjs(el.getAttribute('datetime'));
+    el.textContent = date.format('MMM D, YYYY h:mm A') + ' (' + date.fromNow() + ')';
+  });
+</script>
+{% endblock extra_js %}
