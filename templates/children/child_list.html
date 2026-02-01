@@ -23,7 +23,8 @@
                 <h5 class="card-title mb-1">{{ child.name }}</h5>
                 <p class="text-body-secondary mb-2">
                   <i class="fa-solid fa-cake-candles me-1"></i>
-                  {{ child.date_of_birth }}
+                  {{ child.date_of_birth|date:"Y-m-d" }}
+                  <span class="child-age" data-dob="{{ child.date_of_birth|date:'c' }}"></span>
                   {% if child.gender %}
                     <span class="ms-2">
                       {% if child.gender == "M" %}
@@ -109,6 +110,11 @@
   document.querySelectorAll('.relative-time').forEach(function(el) {
     const date = dayjs(el.getAttribute('datetime'));
     el.textContent = date.fromNow();
+  });
+  document.querySelectorAll('.child-age').forEach(function(el) {
+    const dob = dayjs(el.getAttribute('data-dob'));
+    const age = dayjs().to(dob, true);
+    el.textContent = '(' + age + ' old)';
   });
 </script>
 {% endblock extra_js %}
