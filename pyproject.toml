@@ -1,0 +1,5 @@
+[tool.bandit]
+exclude_dirs = ["tests", "*/tests", "*/migrations"]
+skips = ["B101"]
+severity = "medium"
+confidence = "medium"
