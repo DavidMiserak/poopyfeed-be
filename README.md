@@ -1,27 +1,27 @@
 # PoopyFeed
 
-A comprehensive baby care tracking web application built with
-Django. PoopyFeed helps parents and caregivers monitor feeding, diaper
-changes, sleep patterns, and health metrics for infants.
+A baby care tracking web application built with Django. PoopyFeed helps
+parents and caregivers monitor feeding, diaper changes, and sleep patterns
+for infants.
 
 ## Features
 
-### Core Tracking
+### Implemented
 
-- **Bottle Feeding**: Track breast milk and formula consumption with timestamps and amounts
-- **Breastfeeding**: Monitor left/right breast sessions with duration tracking
+- **Feedings**: Track bottle (amount in oz) and breast (duration, side) feedings
+- **Diapers**: Log wet, dirty, or both diaper changes
+- **Naps**: Track sleep times
+- **Multi-Child Support**: Manage multiple children per account
+
+### Planned
+
 - **Pumping**: Record pumping sessions and milk output
-- **Diapers**: Log poop and pee occurrences with notes
-- **Naps**: Track sleep duration and patterns
-- **Temperature**: Record body temperature in Fahrenheit
-- **Weight**: Monitor growth with weight measurements
-- **Medication**: Log medication administration with dosages and times
-
-### Planned Features
-
+- **Temperature**: Record body temperature
+- **Weight**: Monitor growth measurements
+- **Medication**: Log medication administration
 - **Multi-Caregiver Access**: Shared access for parents, family members, and babysitters
-- **Push Notifications**: Automatic reminders for feeding, medication, and care activities
-- **PWA Support**: Install as a Progressive Web App for offline access
+- **REST API**: Django REST Framework + Djoser (dependencies installed, not yet configured)
+- **Payments**: Stripe integration (dependency installed, not yet configured)
 
 ## Technology Stack
 
@@ -29,8 +29,6 @@ changes, sleep patterns, and health metrics for infants.
 - **Database**: PostgreSQL (containers) or SQLite (local dev)
 - **Frontend**: Django Templates with Bootstrap 5 (via crispy-forms)
 - **Authentication**: django-allauth with email-based login
-- **API**: Django REST Framework + Djoser
-- **Payments**: Stripe
 - **Containers**: Podman (or Docker)
 
 ## Requirements
@@ -47,11 +45,10 @@ See `requirements.txt` for full list. Key packages:
 
 - Django 6.0
 - django-allauth (authentication)
-- djangorestframework + djoser (API)
 - django-crispy-forms + crispy-bootstrap5 (forms)
-- stripe (payments)
-- environs (environment configuration)
 - psycopg2-binary (PostgreSQL)
+- whitenoise (static files)
+- gunicorn (production server)
 
 ## Installation
 
@@ -90,7 +87,6 @@ Other useful commands:
 make test             # Run tests
 make logs             # View container logs
 make stop             # Stop containers
-make stripe-listen    # Forward Stripe webhooks locally
 ```
 
 ### Local Development (without containers)
