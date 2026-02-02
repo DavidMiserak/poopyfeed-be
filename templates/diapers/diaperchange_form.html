@@ -54,8 +54,16 @@
     document.querySelector('.tz-offset').value = tzOffset;
 
     const dtInput = document.querySelector('.local-datetime');
-    if (dtInput && !dtInput.value) {
-      dtInput.value = dayjs().format('YYYY-MM-DDTHH:mm');
+    if (dtInput) {
+      if (dtInput.value) {
+        // Editing: convert UTC value to local time for display
+        const utcDate = dayjs(dtInput.value);
+        const localDate = utcDate.subtract(tzOffset, 'minute');
+        dtInput.value = localDate.format('YYYY-MM-DDTHH:mm');
+      } else {
+        // Creating: default to current local time
+        dtInput.value = dayjs().format('YYYY-MM-DDTHH:mm');
+      }
     }
   })();
 </script>
