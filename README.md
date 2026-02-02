@@ -29,6 +29,7 @@ Share access to children with other accounts via invite links:
 
 <p align="center">
   <img src="docs/images/share-1.png" width="200" alt="Share management page" />
+  <img src="docs/images/share-2.png" width="200" alt="Share management page" />
 </p>
 
 <p align="center">

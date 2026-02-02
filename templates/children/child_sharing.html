@@ -4,172 +4,187 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <a href="{% url 'children:child_list' %}" class="text-decoration-none text-body-secondary">
-          <i class="fa-solid fa-arrow-left me-1"></i>Back to Children
-        </a>
-        <h1 class="h3 mb-0 mt-2">
-          <i class="fa-solid fa-share-nodes me-2 text-primary"></i>Share {{ child.name }}
-        </h1>
-      </div>
+  <div class="col-md-8 col-lg-6">
+
+    <!-- Header - Simplified -->
+    <div class="text-center mb-4">
+      <a href="{% url 'children:child_list' %}" class="btn btn-link text-secondary text-decoration-none mb-2">
+        <i class="fa-solid fa-arrow-left me-1"></i>Back
+      </a>
+      <h1 class="h2 fw-bold mb-1">
+        <i class="fa-solid fa-heart text-primary me-2"></i>Share {{ child.name }}
+      </h1>
+      <p class="text-body-secondary">Let others help track {{ child.name }}'s care</p>
     </div>
 
-    <!-- Current Shared Users -->
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h5 mb-0">
-          <i class="fa-solid fa-users me-2 text-secondary"></i>People with Access
-        </h2>
-      </div>
-      <div class="card-body px-4">
-        {% if shares %}
-          <div class="list-group list-group-flush">
-            {% for share in shares %}
-              <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                <div>
-                  <span class="fw-medium">{{ share.user.email }}</span>
-                  <span class="badge {% if share.role == 'CO' %}bg-primary{% else %}bg-secondary{% endif %} ms-2">
-                    {{ share.get_role_display }}
-                  </span>
-                  <div class="text-body-secondary small">
-                    Added {{ share.created_at|date:"M j, Y" }}
-                  </div>
-                </div>
-                <form method="post" action="{% url 'children:revoke_access' child.pk share.pk %}"
-                      onsubmit="return confirm('Remove access for {{ share.user.email }}?');">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-outline-danger btn-sm">
-                    <i class="fa-solid fa-user-minus me-1"></i>Remove
-                  </button>
-                </form>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="text-body-secondary mb-0">
-            <i class="fa-solid fa-info-circle me-1"></i>
-            No one else has access to {{ child.name }} yet. Create an invite link below.
-          </p>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Create Invite Link -->
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h5 mb-0">
-          <i class="fa-solid fa-link me-2 text-secondary"></i>Create Invite Link
-        </h2>
-      </div>
-      <div class="card-body px-4">
+    <!-- Primary Action: Create Invite Link -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-body p-4">
         <form method="post" action="{% url 'children:create_invite' child.pk %}">
           {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label fw-medium">Access Level</label>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="form-check card p-3 h-100">
-                  <input class="form-check-input" type="radio" name="role" id="role-coparent" value="CO">
-                  <label class="form-check-label" for="role-coparent">
-                    <span class="fw-semibold">Co-parent</span>
-                    <p class="text-body-secondary small mb-0 mt-1">
-                      Full access: can view, add, edit, and delete entries
-                    </p>
-                  </label>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-check card p-3 h-100">
-                  <input class="form-check-input" type="radio" name="role" id="role-caregiver" value="CG" checked>
-                  <label class="form-check-label" for="role-caregiver">
-                    <span class="fw-semibold">Caregiver</span>
-                    <p class="text-body-secondary small mb-0 mt-1">
-                      Limited access: can view and add entries, but cannot edit or delete
-                    </p>
-                  </label>
-                </div>
-              </div>
+
+          <!-- Role Selection - Big tappable cards -->
+          <div class="row g-3 mb-4">
+            <div class="col-6">
+              <input type="radio" class="btn-check" name="role" id="role-coparent" value="CO" autocomplete="off">
+              <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center py-4 rounded-4" for="role-coparent">
+                <i class="fa-solid fa-user-group fa-2x mb-2"></i>
+                <span class="fw-bold">Co-parent</span>
+                <small class="text-body-secondary mt-1">Full access</small>
+              </label>
+            </div>
+            <div class="col-6">
+              <input type="radio" class="btn-check" name="role" id="role-caregiver" value="CG" autocomplete="off" checked>
+              <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center py-4 rounded-4" for="role-caregiver">
+                <i class="fa-solid fa-hand-holding-heart fa-2x mb-2"></i>
+                <span class="fw-bold">Caregiver</span>
+                <small class="text-body-secondary mt-1">View & add only</small>
+              </label>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-plus me-1"></i>Create Invite Link
+
+          <!-- Big Create Button -->
+          <button type="submit" class="btn btn-primary btn-lg w-100 py-3 rounded-4 fw-bold">
+            <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Create Invite Link
           </button>
         </form>
       </div>
     </div>
 
-    <!-- Existing Invite Links -->
-    <div class="card shadow-sm border-0 rounded-4">
-      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h5 mb-0">
-          <i class="fa-solid fa-envelope-open-text me-2 text-secondary"></i>Active Invite Links
-        </h2>
+    {% if invites %}
+    <!-- Invite Links - Easy copy -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-2 px-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <h2 class="h5 mb-0 fw-bold">
+            <i class="fa-solid fa-link me-2 text-primary"></i>Invite Links
+          </h2>
+          <span class="badge bg-secondary rounded-pill">{{ invites|length }}</span>
+        </div>
       </div>
-      <div class="card-body px-4">
-        {% if invites %}
-          <div class="list-group list-group-flush">
-            {% for invite in invites %}
-              <div class="list-group-item px-0 py-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <span class="badge {% if invite.role == 'CO' %}bg-primary{% else %}bg-secondary{% endif %}">
-                      {{ invite.get_role_display }}
-                    </span>
-                    {% if not invite.is_active %}
-                      <span class="badge bg-warning text-dark ms-1">Inactive</span>
-                    {% endif %}
-                    <span class="text-body-secondary small ms-2">
-                      Created {{ invite.created_at|date:"M j, Y" }}
-                    </span>
-                  </div>
-                  <div class="btn-group btn-group-sm">
-                    <form method="post" action="{% url 'children:toggle_invite' child.pk invite.pk %}" class="d-inline">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-outline-secondary btn-sm">
-                        {% if invite.is_active %}
-                          <i class="fa-solid fa-pause me-1"></i>Deactivate
-                        {% else %}
-                          <i class="fa-solid fa-play me-1"></i>Activate
-                        {% endif %}
-                      </button>
-                    </form>
-                    <form method="post" action="{% url 'children:delete_invite' child.pk invite.pk %}"
-                          class="d-inline"
-                          onsubmit="return confirm('Delete this invite link?');">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="fa-solid fa-trash"></i>
-                      </button>
-                    </form>
-                  </div>
-                </div>
-                {% if invite.is_active %}
-                  <div class="input-group input-group-sm">
-                    <input type="text" class="form-control font-monospace bg-body-secondary"
-                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'children:accept_invite' invite.token %}"
-                           readonly id="invite-{{ invite.pk }}">
-                    <button class="btn btn-outline-primary" type="button"
-                            onclick="copyInviteLink('invite-{{ invite.pk }}')">
-                      <i class="fa-solid fa-copy"></i>
-                    </button>
-                  </div>
-                {% else %}
-                  <p class="text-body-secondary small mb-0">
-                    <i class="fa-solid fa-circle-info me-1"></i>
-                    This link is deactivated. Activate it to share.
-                  </p>
-                {% endif %}
-              </div>
-            {% endfor %}
+      <div class="card-body px-4 pb-4">
+        {% for invite in invites %}
+        <div class="{% if not invite.is_active %}opacity-50{% endif %} {% if not forloop.last %}mb-4 pb-4 border-bottom{% endif %}">
+
+          <!-- Link Meta -->
+          <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <span class="badge {% if invite.role == 'CO' %}bg-primary{% else %}bg-success{% endif %} rounded-pill px-3 py-2">
+              <i class="fa-solid {% if invite.role == 'CO' %}fa-user-group{% else %}fa-hand-holding-heart{% endif %} me-1"></i>
+              {{ invite.get_role_display }}
+            </span>
+            {% if not invite.is_active %}
+            <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+              <i class="fa-solid fa-pause me-1"></i>Paused
+            </span>
+            {% endif %}
+            <span class="text-body-secondary small ms-auto">{{ invite.created_at|date:"M j" }}</span>
           </div>
-        {% else %}
-          <p class="text-body-secondary mb-0">
-            <i class="fa-solid fa-info-circle me-1"></i>
-            No invite links created yet. Create one above to share access.
-          </p>
-        {% endif %}
+
+          {% if invite.is_active %}
+          <!-- BIG COPY BUTTON - The main event for tired parents -->
+          <button type="button"
+                  class="btn btn-outline-primary btn-lg w-100 py-3 rounded-4 fw-bold copy-btn mb-3"
+                  data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'children:accept_invite' invite.token %}"
+                  onclick="copyLink(this)">
+            <i class="fa-solid fa-copy me-2 copy-icon"></i>
+            <i class="fa-solid fa-check me-2 check-icon d-none"></i>
+            <span class="btn-text">Tap to Copy Link</span>
+          </button>
+          {% endif %}
+
+          <!-- Secondary Actions -->
+          <div class="d-flex gap-2">
+            <form method="post" action="{% url 'children:toggle_invite' child.pk invite.pk %}" class="flex-fill">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-secondary w-100 py-2">
+                {% if invite.is_active %}
+                <i class="fa-solid fa-pause me-1"></i>Pause
+                {% else %}
+                <i class="fa-solid fa-play me-1"></i>Resume
+                {% endif %}
+              </button>
+            </form>
+            <form method="post" action="{% url 'children:delete_invite' child.pk invite.pk %}" class="flex-fill"
+                  onsubmit="return confirm('Delete this invite link?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger w-100 py-2">
+                <i class="fa-solid fa-trash me-1"></i>Delete
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if shares %}
+    <!-- People with Access -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-2 px-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <h2 class="h5 mb-0 fw-bold">
+            <i class="fa-solid fa-users me-2 text-primary"></i>People with Access
+          </h2>
+          <span class="badge bg-secondary rounded-pill">{{ shares|length }}</span>
+        </div>
+      </div>
+      <div class="card-body px-4 pb-4">
+        {% for share in shares %}
+        <div class="d-flex align-items-center gap-3 {% if not forloop.last %}mb-3 pb-3 border-bottom{% endif %}">
+
+          <!-- Avatar -->
+          <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 p-3">
+            <i class="fa-solid fa-user fa-lg"></i>
+          </div>
+
+          <!-- Info -->
+          <div class="flex-grow-1 min-width-0">
+            <div class="fw-semibold text-truncate">{{ share.user.email }}</div>
+            <div class="d-flex align-items-center gap-2 mt-1">
+              <span class="badge {% if share.role == 'CO' %}bg-primary{% else %}bg-success{% endif %} rounded-pill">
+                {{ share.get_role_display }}
+              </span>
+              <span class="text-body-secondary small">{{ share.created_at|date:"M j" }}</span>
+            </div>
+          </div>
+
+          <!-- Remove Button - Good size for tapping -->
+          <form method="post" action="{% url 'children:revoke_access' child.pk share.pk %}"
+                onsubmit="return confirm('Remove access for {{ share.user.email }}?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger rounded-3 p-2 px-3" title="Remove access">
+              <i class="fa-solid fa-user-minus"></i>
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not invites and not shares %}
+    <!-- Empty State -->
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body text-center py-5">
+        <i class="fa-solid fa-paper-plane fa-3x text-body-tertiary mb-3"></i>
+        <p class="text-body-secondary mb-0">
+          Create an invite link above and share it with<br>
+          your co-parent, nanny, or family member
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Toast for copy feedback -->
+<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3">
+  <div id="copyToast" class="toast align-items-center text-bg-success border-0 rounded-pill" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold">
+        <i class="fa-solid fa-check-circle me-2"></i>Link copied!
       </div>
     </div>
   </div>
@@ -178,23 +193,45 @@
 
 {% block extra_js %}
 <script>
-function copyInviteLink(inputId) {
-  const input = document.getElementById(inputId);
-  input.select();
-  input.setSelectionRange(0, 99999);
-  navigator.clipboard.writeText(input.value).then(function() {
-    // Show feedback
-    const btn = input.nextElementSibling;
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-    btn.classList.remove('btn-outline-primary');
-    btn.classList.add('btn-success');
-    setTimeout(function() {
-      btn.innerHTML = originalHtml;
-      btn.classList.remove('btn-success');
-      btn.classList.add('btn-outline-primary');
-    }, 2000);
+function copyLink(btn) {
+  const url = btn.dataset.url;
+
+  navigator.clipboard.writeText(url).then(function() {
+    showCopySuccess(btn);
+  }).catch(function() {
+    // Fallback for older browsers
+    const input = document.createElement('input');
+    input.value = url;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    showCopySuccess(btn);
   });
+}
+
+function showCopySuccess(btn) {
+  // Update button
+  btn.classList.remove('btn-outline-primary');
+  btn.classList.add('btn-success');
+  btn.querySelector('.copy-icon').classList.add('d-none');
+  btn.querySelector('.check-icon').classList.remove('d-none');
+  btn.querySelector('.btn-text').textContent = 'Copied!';
+
+  // Show toast
+  const toast = new bootstrap.Toast(document.getElementById('copyToast'), {
+    delay: 2000
+  });
+  toast.show();
+
+  // Reset button after delay
+  setTimeout(function() {
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-outline-primary');
+    btn.querySelector('.copy-icon').classList.remove('d-none');
+    btn.querySelector('.check-icon').classList.add('d-none');
+    btn.querySelector('.btn-text').textContent = 'Tap to Copy Link';
+  }, 2500);
 }
 </script>
 {% endblock extra_js %}
