@@ -73,28 +73,14 @@
 {% block extra_js %}
 <script>
   (function() {
-    const tzOffset = new Date().getTimezoneOffset();
-    document.querySelector('.tz-offset').value = tzOffset;
+    DateTimeUtils.initFormDatetime();
 
-    const dtInput = document.querySelector('.local-datetime');
-    if (dtInput) {
-      if (dtInput.value) {
-        // Editing: convert UTC value to local time for display
-        const utcDate = dayjs(dtInput.value);
-        const localDate = utcDate.subtract(tzOffset, 'minute');
-        dtInput.value = localDate.format('YYYY-MM-DDTHH:mm');
-      } else {
-        // Creating: default to current local time
-        dtInput.value = dayjs().format('YYYY-MM-DDTHH:mm');
-      }
-    }
-
-    const feedingTypeSelect = document.getElementById('id_feeding_type');
-    const bottleFields = document.getElementById('bottle-fields');
-    const breastFields = document.getElementById('breast-fields');
+    var feedingTypeSelect = document.getElementById('id_feeding_type');
+    var bottleFields = document.getElementById('bottle-fields');
+    var breastFields = document.getElementById('breast-fields');
 
     function toggleFields() {
-      const feedingType = feedingTypeSelect.value;
+      var feedingType = feedingTypeSelect.value;
       if (feedingType === 'bottle') {
         bottleFields.style.display = 'block';
         breastFields.style.display = 'none';

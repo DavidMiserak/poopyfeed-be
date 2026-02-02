@@ -128,14 +128,7 @@
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.relative-time').forEach(function(el) {
-    const date = dayjs(el.getAttribute('datetime'));
-    el.textContent = date.fromNow();
-  });
-  document.querySelectorAll('.child-age').forEach(function(el) {
-    const dob = dayjs(el.getAttribute('data-dob'));
-    const age = dayjs().to(dob, true);
-    el.textContent = '(' + age + ' old)';
-  });
+  DateTimeUtils.formatRelativeTimeElements();
+  DateTimeUtils.formatChildAges();
 </script>
 {% endblock extra_js %}

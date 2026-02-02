@@ -21,8 +21,9 @@ class LocalDateTimeFormMixin:
         dt_value = cleaned_data.get(self.datetime_field_name)
 
         if tz_offset is not None and dt_value is not None:
-            # tz_offset is in minutes, negative means behind UTC
-            # e.g., EST is -300 (5 hours behind)
+            # tz_offset is JavaScript's getTimezoneOffset() in minutes
+            # Positive means behind UTC (e.g., EST UTC-5 = +300)
+            # Negative means ahead of UTC (e.g., IST UTC+5:30 = -330)
             # To convert local time to UTC, add the offset
             cleaned_data[self.datetime_field_name] = dt_value + timedelta(
                 minutes=tz_offset

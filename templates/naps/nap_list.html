@@ -72,13 +72,7 @@
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.local-time-relative').forEach(function(el) {
-    const date = dayjs(el.getAttribute('data-datetime'));
-    el.textContent = date.fromNow();
-  });
-  document.querySelectorAll('.local-time-exact').forEach(function(el) {
-    const date = dayjs(el.getAttribute('data-datetime'));
-    el.textContent = date.format('MMM D, h:mm A');
-  });
+  DateTimeUtils.formatRelativeTimes();
+  DateTimeUtils.formatExactTimes();
 </script>
 {% endblock extra_js %}
