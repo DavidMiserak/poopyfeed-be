@@ -40,7 +40,10 @@ class DiaperChangeForm(LocalDateTimeFormMixin, forms.ModelForm):
     )
     changed_at = forms.DateTimeField(
         widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": "form-control local-datetime"},
+            attrs={
+                "type": "datetime-local",
+                "class": "form-control form-control-lg border-2 local-datetime",
+            },
         ),
     )
 
@@ -48,5 +51,7 @@ class DiaperChangeForm(LocalDateTimeFormMixin, forms.ModelForm):
         model = DiaperChange
         fields = ["change_type", "changed_at", "tz_offset"]
         widgets = {
-            "change_type": forms.Select(attrs={"class": "form-select"}),
+            "change_type": forms.Select(
+                attrs={"class": "form-select form-select-lg border-2"}
+            ),
         }

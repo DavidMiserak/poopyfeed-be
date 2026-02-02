@@ -5,64 +5,70 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-8">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
       <div>
         <h1 class="h3 mb-1">
           <i class="fa-solid fa-poo me-2 text-success"></i>Diaper Changes
         </h1>
         <p class="text-body-secondary mb-0">{{ child.name }}</p>
       </div>
-      <div class="d-flex gap-2">
-        <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success">
-          <i class="fa-solid fa-plus me-1"></i>Log Diaper
+      <div class="d-flex gap-2 w-100 w-sm-auto">
+        <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success btn-lg flex-grow-1 flex-sm-grow-0 py-3 px-4 fs-5 fw-semibold">
+          <i class="fa-solid fa-plus me-2"></i>Log Diaper
         </a>
-        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">
-          <i class="fa-solid fa-children me-1"></i>Back to Children
+        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary btn-lg py-3 px-3">
+          <i class="fa-solid fa-children"></i>
         </a>
       </div>
     </div>
 
     {% if diaper_changes %}
-      <div class="list-group">
+      <div class="d-flex flex-column gap-3">
         {% for change in diaper_changes %}
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-semibold">
-                {% if change.change_type == "wet" %}
-                  <i class="fa-solid fa-droplet text-info me-1"></i>Wet
-                {% elif change.change_type == "dirty" %}
-                  <i class="fa-solid fa-poo text-success me-1"></i>Dirty
-                {% else %}
-                  <i class="fa-solid fa-droplet text-info me-1"></i>
-                  <i class="fa-solid fa-poo text-success me-1"></i>Wet + Dirty
-                {% endif %}
+          <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body py-3">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <div class="fw-semibold fs-5">
+                    {% if change.change_type == "wet" %}
+                      <i class="fa-solid fa-droplet text-info me-1"></i>Wet
+                    {% elif change.change_type == "dirty" %}
+                      <i class="fa-solid fa-poo text-success me-1"></i>Dirty
+                    {% else %}
+                      <i class="fa-solid fa-droplet text-info me-1"></i>
+                      <i class="fa-solid fa-poo text-success me-1"></i>Wet + Dirty
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-semibold local-time-relative" data-datetime="{{ change.changed_at|date:'c' }}">
+                    {{ change.changed_at|timesince }} ago
+                  </div>
+                  <div class="text-body-secondary small local-time-exact" data-datetime="{{ change.changed_at|date:'c' }}">
+                    {{ change.changed_at|date:"M j, g:i A" }}
+                  </div>
+                </div>
               </div>
-              <div class="text-body-secondary small">
-                <i class="fa-solid fa-clock me-1"></i>
-                <time datetime="{{ change.changed_at|date:'c' }}" class="local-time">
-                  {{ change.changed_at|date:"M j, Y g:i A T" }}
-                </time>
+              <div class="d-flex gap-2">
+                <a href="{% url 'diapers:diaper_edit' child.pk change.pk %}" class="btn btn-outline-secondary py-2 px-3 flex-grow-1">
+                  <i class="fa-solid fa-pen me-1"></i>Edit
+                </a>
+                <a href="{% url 'diapers:diaper_delete' child.pk change.pk %}" class="btn btn-outline-danger py-2 px-3 flex-grow-1">
+                  <i class="fa-solid fa-trash me-1"></i>Delete
+                </a>
               </div>
-            </div>
-            <div class="d-flex gap-2">
-              <a href="{% url 'diapers:diaper_edit' child.pk change.pk %}" class="btn btn-outline-secondary btn-sm">
-                <i class="fa-solid fa-pen me-1"></i>Edit
-              </a>
-              <a href="{% url 'diapers:diaper_delete' child.pk change.pk %}" class="btn btn-outline-danger btn-sm">
-                <i class="fa-solid fa-trash me-1"></i>Delete
-              </a>
             </div>
           </div>
         {% endfor %}
       </div>
     {% else %}
-      <div class="card">
+      <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body text-center py-5">
-          <i class="fa-solid fa-poo fa-3x text-body-secondary mb-3"></i>
-          <h5 class="text-body-secondary">No diaper changes yet</h5>
-          <p class="text-body-secondary mb-3">Log your first diaper change.</p>
-          <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success">
-            <i class="fa-solid fa-plus me-1"></i>Log Diaper
+          <i class="fa-solid fa-poo fa-4x text-body-secondary mb-4 opacity-50"></i>
+          <h5 class="text-body-secondary mb-2">No diaper changes yet</h5>
+          <p class="text-body-secondary mb-4">Log your first diaper change.</p>
+          <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success btn-lg py-3 px-5 fs-5">
+            <i class="fa-solid fa-plus me-2"></i>Log Diaper
           </a>
         </div>
       </div>
@@ -73,9 +79,13 @@
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.local-time').forEach(function(el) {
-    const date = dayjs(el.getAttribute('datetime'));
-    el.textContent = date.format('MMM D, YYYY h:mm A') + ' (' + date.fromNow() + ')';
+  document.querySelectorAll('.local-time-relative').forEach(function(el) {
+    const date = dayjs(el.getAttribute('data-datetime'));
+    el.textContent = date.fromNow();
+  });
+  document.querySelectorAll('.local-time-exact').forEach(function(el) {
+    const date = dayjs(el.getAttribute('data-datetime'));
+    el.textContent = date.format('MMM D, h:mm A');
   });
 </script>
 {% endblock extra_js %}

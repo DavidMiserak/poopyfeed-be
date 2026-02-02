@@ -5,57 +5,63 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-8">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
       <div>
         <h1 class="h3 mb-1">
           <i class="fa-solid fa-moon me-2 text-primary"></i>Naps
         </h1>
         <p class="text-body-secondary mb-0">{{ child.name }}</p>
       </div>
-      <div class="d-flex gap-2">
-        <a href="{% url 'naps:nap_add' child.pk %}" class="btn btn-primary">
-          <i class="fa-solid fa-plus me-1"></i>Log Nap
+      <div class="d-flex gap-2 w-100 w-sm-auto">
+        <a href="{% url 'naps:nap_add' child.pk %}" class="btn btn-primary btn-lg flex-grow-1 flex-sm-grow-0 py-3 px-4 fs-5 fw-semibold">
+          <i class="fa-solid fa-plus me-2"></i>Log Nap
         </a>
-        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">
-          <i class="fa-solid fa-children me-1"></i>Back to Children
+        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary btn-lg py-3 px-3">
+          <i class="fa-solid fa-children"></i>
         </a>
       </div>
     </div>
 
     {% if naps %}
-      <div class="list-group">
+      <div class="d-flex flex-column gap-3">
         {% for nap in naps %}
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-semibold">
-                <i class="fa-solid fa-moon text-primary me-1"></i>Nap
+          <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body py-3">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <div class="fw-semibold fs-5">
+                    <i class="fa-solid fa-moon text-primary me-1"></i>Nap
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-semibold local-time-relative" data-datetime="{{ nap.napped_at|date:'c' }}">
+                    {{ nap.napped_at|timesince }} ago
+                  </div>
+                  <div class="text-body-secondary small local-time-exact" data-datetime="{{ nap.napped_at|date:'c' }}">
+                    {{ nap.napped_at|date:"M j, g:i A" }}
+                  </div>
+                </div>
               </div>
-              <div class="text-body-secondary small">
-                <i class="fa-solid fa-clock me-1"></i>
-                <time datetime="{{ nap.napped_at|date:'c' }}" class="local-time">
-                  {{ nap.napped_at|date:"M j, Y g:i A T" }}
-                </time>
+              <div class="d-flex gap-2">
+                <a href="{% url 'naps:nap_edit' child.pk nap.pk %}" class="btn btn-outline-secondary py-2 px-3 flex-grow-1">
+                  <i class="fa-solid fa-pen me-1"></i>Edit
+                </a>
+                <a href="{% url 'naps:nap_delete' child.pk nap.pk %}" class="btn btn-outline-danger py-2 px-3 flex-grow-1">
+                  <i class="fa-solid fa-trash me-1"></i>Delete
+                </a>
               </div>
-            </div>
-            <div class="d-flex gap-2">
-              <a href="{% url 'naps:nap_edit' child.pk nap.pk %}" class="btn btn-outline-secondary btn-sm">
-                <i class="fa-solid fa-pen me-1"></i>Edit
-              </a>
-              <a href="{% url 'naps:nap_delete' child.pk nap.pk %}" class="btn btn-outline-danger btn-sm">
-                <i class="fa-solid fa-trash me-1"></i>Delete
-              </a>
             </div>
           </div>
         {% endfor %}
       </div>
     {% else %}
-      <div class="card">
+      <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body text-center py-5">
-          <i class="fa-solid fa-moon fa-3x text-body-secondary mb-3"></i>
-          <h5 class="text-body-secondary">No naps yet</h5>
-          <p class="text-body-secondary mb-3">Log your first nap.</p>
-          <a href="{% url 'naps:nap_add' child.pk %}" class="btn btn-primary">
-            <i class="fa-solid fa-plus me-1"></i>Log Nap
+          <i class="fa-solid fa-moon fa-4x text-body-secondary mb-4 opacity-50"></i>
+          <h5 class="text-body-secondary mb-2">No naps yet</h5>
+          <p class="text-body-secondary mb-4">Log your first nap.</p>
+          <a href="{% url 'naps:nap_add' child.pk %}" class="btn btn-primary btn-lg py-3 px-5 fs-5">
+            <i class="fa-solid fa-plus me-2"></i>Log Nap
           </a>
         </div>
       </div>
@@ -66,9 +72,13 @@
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.local-time').forEach(function(el) {
-    const date = dayjs(el.getAttribute('datetime'));
-    el.textContent = date.format('MMM D, YYYY h:mm A') + ' (' + date.fromNow() + ')';
+  document.querySelectorAll('.local-time-relative').forEach(function(el) {
+    const date = dayjs(el.getAttribute('data-datetime'));
+    el.textContent = date.fromNow();
+  });
+  document.querySelectorAll('.local-time-exact').forEach(function(el) {
+    const date = dayjs(el.getAttribute('data-datetime'));
+    el.textContent = date.format('MMM D, h:mm A');
   });
 </script>
 {% endblock extra_js %}

@@ -6,7 +6,7 @@ from .models import Child
 class ChildForm(forms.ModelForm):
     date_of_birth = forms.DateField(
         widget=forms.DateInput(
-            attrs={"type": "date", "class": "form-control"},
+            attrs={"type": "date", "class": "form-control form-control-lg border-2"},
         ),
     )
 
@@ -14,6 +14,10 @@ class ChildForm(forms.ModelForm):
         model = Child
         fields = ["name", "date_of_birth", "gender"]
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control"}),
-            "gender": forms.Select(attrs={"class": "form-select"}),
+            "name": forms.TextInput(
+                attrs={"class": "form-control form-control-lg border-2"}
+            ),
+            "gender": forms.Select(
+                attrs={"class": "form-select form-select-lg border-2"}
+            ),
         }

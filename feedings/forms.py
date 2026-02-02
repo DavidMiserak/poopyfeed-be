@@ -40,7 +40,10 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
     )
     fed_at = forms.DateTimeField(
         widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": "form-control local-datetime"},
+            attrs={
+                "type": "datetime-local",
+                "class": "form-control form-control-lg border-2 local-datetime",
+            },
         ),
     )
     amount_oz = forms.DecimalField(
@@ -48,12 +51,18 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
         decimal_places=1,
         required=False,
         widget=forms.NumberInput(
-            attrs={"class": "form-control", "step": "0.5", "min": "0"}
+            attrs={
+                "class": "form-control form-control-lg border-2",
+                "step": "0.5",
+                "min": "0",
+            }
         ),
     )
     duration_minutes = forms.IntegerField(
         required=False,
-        widget=forms.NumberInput(attrs={"class": "form-control", "min": "1"}),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control form-control-lg border-2", "min": "1"}
+        ),
     )
 
     class Meta:
@@ -67,8 +76,12 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
             "tz_offset",
         ]
         widgets = {
-            "feeding_type": forms.Select(attrs={"class": "form-select"}),
-            "side": forms.Select(attrs={"class": "form-select"}),
+            "feeding_type": forms.Select(
+                attrs={"class": "form-select form-select-lg border-2"}
+            ),
+            "side": forms.Select(
+                attrs={"class": "form-select form-select-lg border-2"}
+            ),
         }
 
     def clean(self):

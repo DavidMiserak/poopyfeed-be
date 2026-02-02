@@ -57,11 +57,11 @@
               {% endif %}
             </div>
           </div>
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-info">
-              <i class="fa-solid fa-check me-1"></i>Save
+          <div class="d-grid gap-2 d-sm-flex">
+            <button type="submit" class="btn btn-warning btn-lg py-3 flex-sm-grow-1 fs-5 fw-semibold">
+              <i class="fa-solid fa-check me-2"></i>Save
             </button>
-            <a href="{% url 'feedings:feeding_list' child.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            <a href="{% url 'feedings:feeding_list' child.pk %}" class="btn btn-outline-secondary btn-lg py-3">Cancel</a>
           </div>
         </form>
       </div>

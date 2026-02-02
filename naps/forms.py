@@ -40,7 +40,10 @@ class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
     )
     napped_at = forms.DateTimeField(
         widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": "form-control local-datetime"},
+            attrs={
+                "type": "datetime-local",
+                "class": "form-control form-control-lg border-2 local-datetime",
+            },
         ),
     )
 

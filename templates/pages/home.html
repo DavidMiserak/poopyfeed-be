@@ -12,10 +12,9 @@
   </p>
 
   {% if user.is_authenticated %}
-    <div class="alert alert-success d-inline-flex align-items-center" role="alert">
-      <i class="fa-solid fa-circle-check me-2"></i>
-      Welcome back, {{ user.email }}!
-    </div>
+    <a href="{% url 'children:child_list' %}" class="btn btn-primary btn-lg py-4 px-5 fs-4 fw-semibold shadow">
+      <i class="fa-solid fa-children me-2"></i>Go to My Children
+    </a>
   {% else %}
     <div class="d-flex justify-content-center gap-3">
       <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg">
