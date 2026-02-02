@@ -28,15 +28,23 @@
                   <i class="fa-solid fa-children me-1"></i>Children
                 </a>
               </li>
-              <li class="nav-item">
-                <span class="nav-link text-body-secondary">
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   <i class="fa-solid fa-circle-user me-1"></i>{{ user.email }}
-                </span>
-              </li>
-              <li class="nav-item">
-                <a class="btn btn-outline-secondary btn-sm" href="{% url 'account_logout' %}">
-                  <i class="fa-solid fa-right-from-bracket me-1"></i>Log Out
                 </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'account_change_password' %}">
+                      <i class="fa-solid fa-key me-2"></i>Change Password
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'account_logout' %}">
+                      <i class="fa-solid fa-right-from-bracket me-2"></i>Log Out
+                    </a>
+                  </li>
+                </ul>
               </li>
             {% else %}
               <li class="nav-item">
