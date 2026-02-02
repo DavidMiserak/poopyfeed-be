@@ -14,13 +14,21 @@
       </a>
     </div>
 
-    {% if children %}
+    {% if children_with_roles %}
       <div class="row g-4">
-        {% for child in children %}
+        {% for item in children_with_roles %}
+          {% with child=item.child role=item.role can_edit=item.can_edit is_owner=item.is_owner %}
           <div class="col-12 col-md-6">
             <div class="card h-100 shadow-sm border-0 rounded-4">
               <div class="card-body pb-2">
-                <h2 class="h4 fw-bold mb-1">{{ child.name }}</h2>
+                <div class="d-flex justify-content-between align-items-start">
+                  <h2 class="h4 fw-bold mb-1">{{ child.name }}</h2>
+                  {% if role == "co" %}
+                    <span class="badge bg-primary">Co-parent</span>
+                  {% elif role == "cg" %}
+                    <span class="badge bg-secondary">Caregiver</span>
+                  {% endif %}
+                </div>
                 <p class="text-body-secondary mb-0">
                   <i class="fa-solid fa-cake-candles me-1"></i>
                   {{ child.date_of_birth|date:"M j, Y" }}
@@ -99,15 +107,25 @@
               </div>
 
               <div class="card-footer bg-transparent border-top d-flex justify-content-between py-3">
-                <a href="{% url 'children:child_edit' child.pk %}" class="btn btn-link text-secondary text-decoration-none">
-                  <i class="fa-solid fa-pen me-1"></i>Edit
-                </a>
-                <a href="{% url 'children:child_delete' child.pk %}" class="btn btn-link text-danger text-decoration-none">
-                  <i class="fa-solid fa-trash me-1"></i>Delete
-                </a>
+                {% if can_edit %}
+                  <a href="{% url 'children:child_edit' child.pk %}" class="btn btn-link text-secondary text-decoration-none">
+                    <i class="fa-solid fa-pen me-1"></i>Edit
+                  </a>
+                {% else %}
+                  <span></span>
+                {% endif %}
+                {% if is_owner %}
+                  <a href="{% url 'children:child_sharing' child.pk %}" class="btn btn-link text-primary text-decoration-none">
+                    <i class="fa-solid fa-share-nodes me-1"></i>Share
+                  </a>
+                  <a href="{% url 'children:child_delete' child.pk %}" class="btn btn-link text-danger text-decoration-none">
+                    <i class="fa-solid fa-trash me-1"></i>Delete
+                  </a>
+                {% endif %}
               </div>
             </div>
           </div>
+          {% endwith %}
         {% endfor %}
       </div>
     {% else %}

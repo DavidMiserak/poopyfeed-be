@@ -49,6 +49,7 @@
                   </div>
                 </div>
               </div>
+              {% if user_role != "cg" %}
               <div class="d-flex gap-2">
                 <a href="{% url 'diapers:diaper_edit' child.pk change.pk %}" class="btn btn-outline-secondary py-2 px-3 flex-grow-1">
                   <i class="fa-solid fa-pen me-1"></i>Edit
@@ -57,6 +58,7 @@
                   <i class="fa-solid fa-trash me-1"></i>Delete
                 </a>
               </div>
+              {% endif %}
             </div>
           </div>
         {% endfor %}

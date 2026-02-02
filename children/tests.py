@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .forms import ChildForm
-from .models import Child
+from .models import Child, ChildShare, ShareInvite
 
 
 class ChildModelTests(TestCase):
@@ -229,3 +229,652 @@ class ChildViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Child.objects.filter(pk=child_pk).exists())
+
+
+class ChildShareModelTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.shared_user = get_user_model().objects.create_user(
+            username="shared",
+            email="shared@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_childshare_creation(self):
+        share = ChildShare.objects.create(
+            child=self.child,
+            user=self.shared_user,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.owner,
+        )
+        self.assertEqual(share.child, self.child)
+        self.assertEqual(share.user, self.shared_user)
+        self.assertEqual(share.role, ChildShare.Role.CO_PARENT)
+
+    def test_childshare_str(self):
+        share = ChildShare.objects.create(
+            child=self.child,
+            user=self.shared_user,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        self.assertIn(self.shared_user.email, str(share))
+        self.assertIn(self.child.name, str(share))
+
+    def test_childshare_unique_together(self):
+        ChildShare.objects.create(
+            child=self.child,
+            user=self.shared_user,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        with self.assertRaises(Exception):
+            ChildShare.objects.create(
+                child=self.child,
+                user=self.shared_user,
+                role=ChildShare.Role.CAREGIVER,
+            )
+
+    def test_childshare_cascade_delete_child(self):
+        ChildShare.objects.create(
+            child=self.child,
+            user=self.shared_user,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        self.child.delete()
+        self.assertEqual(ChildShare.objects.count(), 0)
+
+    def test_childshare_cascade_delete_user(self):
+        share_user = get_user_model().objects.create_user(
+            username="temp",
+            email="temp@example.com",
+            password="testpass123",
+        )
+        share = ChildShare.objects.create(
+            child=self.child,
+            user=share_user,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        share_pk = share.pk
+        share_user.delete()
+        # Verify share was deleted via cascade
+        self.assertFalse(ChildShare.objects.filter(pk=share_pk).exists())
+
+
+class ShareInviteModelTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_shareinvite_creation(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.assertEqual(invite.child, self.child)
+        self.assertEqual(invite.role, ChildShare.Role.CAREGIVER)
+        self.assertTrue(invite.is_active)
+
+    def test_shareinvite_token_auto_generated(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.assertIsNotNone(invite.token)
+        self.assertGreater(len(invite.token), 20)
+
+    def test_shareinvite_token_unique(self):
+        invite1 = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        invite2 = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.owner,
+        )
+        self.assertNotEqual(invite1.token, invite2.token)
+
+    def test_shareinvite_str(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.assertIn(self.child.name, str(invite))
+
+
+class ChildSharingMethodTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.coparent = get_user_model().objects.create_user(
+            username="coparent",
+            email="coparent@example.com",
+            password="testpass123",
+        )
+        cls.caregiver = get_user_model().objects.create_user(
+            username="caregiver",
+            email="caregiver@example.com",
+            password="testpass123",
+        )
+        cls.stranger = get_user_model().objects.create_user(
+            username="stranger",
+            email="stranger@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.coparent,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.caregiver,
+            role=ChildShare.Role.CAREGIVER,
+        )
+
+    def test_has_access_owner(self):
+        self.assertTrue(self.child.has_access(self.owner))
+
+    def test_has_access_coparent(self):
+        self.assertTrue(self.child.has_access(self.coparent))
+
+    def test_has_access_caregiver(self):
+        self.assertTrue(self.child.has_access(self.caregiver))
+
+    def test_has_access_stranger(self):
+        self.assertFalse(self.child.has_access(self.stranger))
+
+    def test_get_user_role_owner(self):
+        self.assertEqual(self.child.get_user_role(self.owner), "owner")
+
+    def test_get_user_role_coparent(self):
+        self.assertEqual(self.child.get_user_role(self.coparent), "co")
+
+    def test_get_user_role_caregiver(self):
+        self.assertEqual(self.child.get_user_role(self.caregiver), "cg")
+
+    def test_get_user_role_stranger(self):
+        self.assertIsNone(self.child.get_user_role(self.stranger))
+
+    def test_can_edit_owner(self):
+        self.assertTrue(self.child.can_edit(self.owner))
+
+    def test_can_edit_coparent(self):
+        self.assertTrue(self.child.can_edit(self.coparent))
+
+    def test_can_edit_caregiver(self):
+        self.assertFalse(self.child.can_edit(self.caregiver))
+
+    def test_can_edit_stranger(self):
+        self.assertFalse(self.child.can_edit(self.stranger))
+
+    def test_can_manage_sharing_owner(self):
+        self.assertTrue(self.child.can_manage_sharing(self.owner))
+
+    def test_can_manage_sharing_coparent(self):
+        self.assertFalse(self.child.can_manage_sharing(self.coparent))
+
+    def test_can_manage_sharing_caregiver(self):
+        self.assertFalse(self.child.can_manage_sharing(self.caregiver))
+
+    def test_for_user_owner(self):
+        children = Child.for_user(self.owner)
+        self.assertIn(self.child, children)
+
+    def test_for_user_coparent(self):
+        children = Child.for_user(self.coparent)
+        self.assertIn(self.child, children)
+
+    def test_for_user_caregiver(self):
+        children = Child.for_user(self.caregiver)
+        self.assertIn(self.child, children)
+
+    def test_for_user_stranger(self):
+        children = Child.for_user(self.stranger)
+        self.assertNotIn(self.child, children)
+
+
+class ChildSharingViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.coparent = get_user_model().objects.create_user(
+            username="coparent",
+            email="coparent@example.com",
+            password="testpass123",
+        )
+        cls.other_user = get_user_model().objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_sharing_view_requires_login(self):
+        response = self.client.get(
+            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_sharing_view_owner_access(self):
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Share")
+        self.assertContains(response, self.child.name)
+
+    def test_sharing_view_non_owner_denied(self):
+        self.client.login(email="other@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_sharing_view_coparent_denied(self):
+        ChildShare.objects.create(
+            child=self.child,
+            user=self.coparent,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class CreateInviteViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.other_user = get_user_model().objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_create_invite_owner(self):
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.post(
+            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            {"role": ChildShare.Role.CAREGIVER},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(ShareInvite.objects.count(), 1)
+        invite = ShareInvite.objects.first()
+        self.assertEqual(invite.child, self.child)
+        self.assertEqual(invite.role, ChildShare.Role.CAREGIVER)
+
+    def test_create_invite_coparent_role(self):
+        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.post(
+            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            {"role": ChildShare.Role.CO_PARENT},
+        )
+        invite = ShareInvite.objects.first()
+        self.assertEqual(invite.role, ChildShare.Role.CO_PARENT)
+
+    def test_create_invite_non_owner_denied(self):
+        self.client.login(email="other@example.com", password="testpass123")
+        response = self.client.post(
+            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            {"role": ChildShare.Role.CAREGIVER},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(ShareInvite.objects.count(), 0)
+
+
+class AcceptInviteViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.new_user = get_user_model().objects.create_user(
+            username="newuser",
+            email="new@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_accept_invite_requires_login(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        response = self.client.get(
+            reverse("children:accept_invite", kwargs={"token": invite.token})
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("accounts/login", response.url)
+
+    def test_accept_invite_creates_share(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.client.login(email="new@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:accept_invite", kwargs={"token": invite.token})
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            ChildShare.objects.filter(child=self.child, user=self.new_user).exists()
+        )
+        share = ChildShare.objects.get(child=self.child, user=self.new_user)
+        self.assertEqual(share.role, ChildShare.Role.CAREGIVER)
+
+    def test_accept_invite_coparent_role(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.owner,
+        )
+        self.client.login(email="new@example.com", password="testpass123")
+        self.client.get(
+            reverse("children:accept_invite", kwargs={"token": invite.token})
+        )
+        share = ChildShare.objects.get(child=self.child, user=self.new_user)
+        self.assertEqual(share.role, ChildShare.Role.CO_PARENT)
+
+    def test_accept_invite_owner_rejected(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:accept_invite", kwargs={"token": invite.token})
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            ChildShare.objects.filter(child=self.child, user=self.owner).exists()
+        )
+
+    def test_accept_invite_already_shared(self):
+        ChildShare.objects.create(
+            child=self.child,
+            user=self.new_user,
+            role=ChildShare.Role.CAREGIVER,
+        )
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.owner,
+        )
+        self.client.login(email="new@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:accept_invite", kwargs={"token": invite.token})
+        )
+        self.assertEqual(response.status_code, 302)
+        # Should not change role since already shared
+        share = ChildShare.objects.get(child=self.child, user=self.new_user)
+        self.assertEqual(share.role, ChildShare.Role.CAREGIVER)
+
+    def test_accept_invite_inactive_denied(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+            is_active=False,
+        )
+        self.client.login(email="new@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:accept_invite", kwargs={"token": invite.token})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_accept_invite_invalid_token(self):
+        self.client.login(email="new@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:accept_invite", kwargs={"token": "invalid-token"})
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class RevokeAccessViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.shared_user = get_user_model().objects.create_user(
+            username="shared",
+            email="shared@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_revoke_access_owner(self):
+        share = ChildShare.objects.create(
+            child=self.child,
+            user=self.shared_user,
+            role=ChildShare.Role.CAREGIVER,
+        )
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "children:revoke_access",
+                kwargs={"pk": self.child.pk, "share_pk": share.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ChildShare.objects.filter(pk=share.pk).exists())
+
+    def test_revoke_access_non_owner_denied(self):
+        share = ChildShare.objects.create(
+            child=self.child,
+            user=self.shared_user,
+            role=ChildShare.Role.CAREGIVER,
+        )
+        self.client.login(email="shared@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "children:revoke_access",
+                kwargs={"pk": self.child.pk, "share_pk": share.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(ChildShare.objects.filter(pk=share.pk).exists())
+
+
+class ToggleInviteViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_toggle_invite_deactivate(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+            is_active=True,
+        )
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "children:toggle_invite",
+                kwargs={"pk": self.child.pk, "invite_pk": invite.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+        invite.refresh_from_db()
+        self.assertFalse(invite.is_active)
+
+    def test_toggle_invite_activate(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+            is_active=False,
+        )
+        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.post(
+            reverse(
+                "children:toggle_invite",
+                kwargs={"pk": self.child.pk, "invite_pk": invite.pk},
+            )
+        )
+        invite.refresh_from_db()
+        self.assertTrue(invite.is_active)
+
+
+class SharedChildListViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.coparent = get_user_model().objects.create_user(
+            username="coparent",
+            email="coparent@example.com",
+            password="testpass123",
+        )
+        cls.caregiver = get_user_model().objects.create_user(
+            username="caregiver",
+            email="caregiver@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.coparent,
+            role=ChildShare.Role.CO_PARENT,
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.caregiver,
+            role=ChildShare.Role.CAREGIVER,
+        )
+
+    def test_shared_child_appears_in_coparent_list(self):
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.get(reverse("children:child_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Baby Jane")
+        self.assertContains(response, "Co-parent")
+
+    def test_shared_child_appears_in_caregiver_list(self):
+        self.client.login(email="caregiver@example.com", password="testpass123")
+        response = self.client.get(reverse("children:child_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Baby Jane")
+        self.assertContains(response, "Caregiver")
+
+    def test_coparent_can_edit_child(self):
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:child_edit", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_caregiver_cannot_edit_child(self):
+        self.client.login(email="caregiver@example.com", password="testpass123")
+        response = self.client.get(
+            reverse("children:child_edit", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_coparent_cannot_delete_child(self):
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.post(
+            reverse("children:child_delete", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_caregiver_cannot_delete_child(self):
+        self.client.login(email="caregiver@example.com", password="testpass123")
+        response = self.client.post(
+            reverse("children:child_delete", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_share_button_visible_only_for_owner(self):
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.get(reverse("children:child_list"))
+        self.assertContains(response, "fa-share-nodes")
+
+    def test_share_button_hidden_for_coparent(self):
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.get(reverse("children:child_list"))
+        self.assertNotContains(response, "fa-share-nodes")

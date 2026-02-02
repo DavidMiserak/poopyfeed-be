@@ -6,11 +6,39 @@ for infants.
 
 ## Features
 
-### Implemented
+### Tracking
 
 - **Feedings**: Track bottle (amount in oz) and breast (duration, side) feedings
 - **Diapers**: Log wet, dirty, or both diaper changes
 - **Naps**: Track sleep times
+
+<p align="center">
+  <img src="docs/images/feeding-log.jpeg" width="200" alt="Feeding log showing breast and bottle feedings" />
+  <img src="docs/images/diaper-log.jpeg" width="200" alt="Diaper change log" />
+  <img src="docs/images/nap-log.jpeg" width="200" alt="Nap log" />
+</p>
+
+### Child Sharing
+
+Share access to children with other accounts via invite links:
+
+- **Co-parent role**: Full access to view, add, edit, and delete entries
+- **Caregiver role**: Limited access to view and add entries only
+- Invite links are reusable and can be deactivated/reactivated
+- Only the child's owner can manage sharing settings
+
+<p align="center">
+  <img src="docs/images/share-1.png" width="200" alt="Share management page" />
+</p>
+
+<p align="center">
+  <img src="docs/images/parent.png" width="200" alt="Child card - owner view" />
+  <img src="docs/images/coparent.png" width="200" alt="Child card - co-parent view" />
+  <img src="docs/images/caregiver.png" width="200" alt="Child card - caregiver view" />
+</p>
+
+### Other Features
+
 - **Multi-Child Support**: Manage multiple children per account
 - **Email Authentication**: Secure email-based login via django-allauth
 
@@ -21,16 +49,6 @@ for infants.
 - **Temperature**: Record body temperature
 - **Weight**: Monitor growth measurements
 - **Medication**: Log medication administration
-- **Multi-Caregiver Access**: Shared access for parents, family members, and babysitters
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/images/child-card.jpeg" width="200" alt="Child profile card with activity summary">
-  <img src="docs/images/diaper-log.jpeg" width="200" alt="Diaper change log">
-  <img src="docs/images/nap-log.jpeg" width="200" alt="Nap log">
-  <img src="docs/images/feeding-log.jpeg" width="200" alt="Feeding log showing breast and bottle feedings">
-</p>
 
 ## Technology Stack
 
@@ -126,7 +144,26 @@ make stop             # Stop containers
 
 1. Access the application at `http://localhost:8000`
 2. Create an account or log in
-3. Access the admin panel at `http://localhost:8000/admin/` (requires superuser)
+3. Add a child from the main page
+4. Start logging feedings, diapers, and naps
+
+### Sharing Access with Others
+
+To share a child's profile with a partner, family member, or caregiver:
+
+1. From the child list, click **Share** on the child you want to share
+2. Select a role:
+   - **Co-parent**: Full access (view, add, edit, delete)
+   - **Caregiver**: Limited access (view, add only)
+3. Click **Create Invite Link**
+4. Copy the link and send it to the person you want to share with
+5. They click the link while logged into their account to gain access
+
+To revoke access, return to the Share page and click **Remove** next to the user.
+
+### Admin Panel
+
+Access the admin panel at `http://localhost:8000/admin/` (requires superuser).
 
 To create a superuser in containers:
 

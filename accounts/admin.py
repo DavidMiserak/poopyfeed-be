@@ -17,3 +17,4 @@ class CustomerUserAdmin(UserAdmin):
         "username",
         "is_superuser",
     ]
+    search_fields = ["email", "username"]
