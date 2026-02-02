@@ -11,17 +11,17 @@ pre-commit-setup:
 	pre-commit run --all-files
 
 .PHONY: image-build
-image-build:
-	$(RUNTIME) build -t poopyfeed .
+image-build: Containerfile
+	$(RUNTIME) build -t poopyfeed -f Containerfile .
 
 .PHONY: stop
 stop:
 	$(RUNTIME) compose down
 
 .PHONY: run
-run: image-build
+run: podman-compose.yaml image-build
 	$(RUNTIME) compose down || true
-	$(RUNTIME) compose up --build -d
+	$(RUNTIME) compose -f $< up -d
 
 .PHONY: test
 test:
