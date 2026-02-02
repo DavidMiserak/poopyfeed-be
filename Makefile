@@ -37,10 +37,6 @@ logs:
 	sleep 2
 	$(RUNTIME) compose logs
 
-.PHONY: stripe-listen
-stripe-listen:
-	stripe listen --forward-to localhost:8000/webhooks/stripe/
-
 # Render deployment
 .PHONY: render-build
 render-build:

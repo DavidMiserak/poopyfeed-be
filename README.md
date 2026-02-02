@@ -12,16 +12,16 @@ for infants.
 - **Diapers**: Log wet, dirty, or both diaper changes
 - **Naps**: Track sleep times
 - **Multi-Child Support**: Manage multiple children per account
+- **Email Authentication**: Secure email-based login via django-allauth
 
 ### Planned
 
+- **REST API**: Mobile app support via Django REST Framework + Djoser
 - **Pumping**: Record pumping sessions and milk output
 - **Temperature**: Record body temperature
 - **Weight**: Monitor growth measurements
 - **Medication**: Log medication administration
 - **Multi-Caregiver Access**: Shared access for parents, family members, and babysitters
-- **REST API**: Django REST Framework + Djoser (dependencies installed, not yet configured)
-- **Payments**: Stripe integration (dependency installed, not yet configured)
 
 ## Screenshots
 
@@ -44,9 +44,9 @@ for infants.
 
 ### System Dependencies
 
-- Python 3.13+
-- PostgreSQL 14+ (for container-based development)
-- Podman or Docker with compose support
+- Python 3.13+ (3.14 recommended)
+- PostgreSQL 14+ (for container/production deployment)
+- Podman or Docker with compose support (for local container development)
 
 ### Python Dependencies
 
@@ -55,6 +55,7 @@ See `requirements.txt` for full list. Key packages:
 - Django 6.0
 - django-allauth (authentication)
 - django-crispy-forms + crispy-bootstrap5 (forms)
+- djangorestframework + djoser (REST API)
 - psycopg2-binary (PostgreSQL)
 - whitenoise (static files)
 - gunicorn (production server)
@@ -133,14 +134,42 @@ To create a superuser in containers:
 podman compose exec web python manage.py createsuperuser
 ```
 
-## Self-Hosting
+## Deployment
 
-This application is designed for self-hosting with the following considerations:
+### Render (Recommended)
+
+Deploy to [Render](https://render.com) using the included `render.yaml` Blueprint:
+
+1. Fork this repository to your GitHub account
+2. Create a new Render account and connect your GitHub
+3. Click "New" > "Blueprint" and select your forked repository
+4. Render will automatically provision:
+   - A PostgreSQL database (free tier)
+   - A Python web service running gunicorn
+   - Auto-generated `DJANGO_SECRET_KEY`
+5. After deployment, create a superuser via the Render shell:
+
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+Required environment variables are configured automatically by the Blueprint.
+
+### Self-Hosting
+
+For self-hosting on your own infrastructure:
 
 - Configure HTTPS for production deployment
 - Set up proper backup procedures for PostgreSQL database
 - Configure reverse proxy (nginx/Apache) for production deployment
 - Set environment variables for secrets (see `podman-compose.yaml` for reference)
+
+Required environment variables:
+
+- `DATABASE_URL`: PostgreSQL connection string
+- `DJANGO_SECRET_KEY`: Secret key for cryptographic signing
+- `DJANGO_DEBUG`: Set to `false` in production
+- `DJANGO_ALLOWED_HOSTS`: Comma-separated list of allowed hosts
 
 ## Contributing
 
@@ -150,10 +179,6 @@ When contributing to PoopyFeed:
 2. Follow conventional commit format for all commits (enforced by hooks)
 3. Run `pre-commit run --all-files` before committing
 4. Ensure tests pass with `make test`
-
-## License
-
-[Add your chosen license here]
 
 ---
 
