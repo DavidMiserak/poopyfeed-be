@@ -1,0 +1,26 @@
+databases:
+  - name: poopyfeed-db
+    plan: free
+    databaseName: poopyfeed
+    user: poopyfeed
+
+services:
+  - type: web
+    name: poopyfeed
+    runtime: python
+    plan: free
+    buildCommand: make render-build
+    startCommand: gunicorn django_project.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: poopyfeed-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.13.0"

@@ -40,3 +40,10 @@ logs:
 .PHONY: stripe-listen
 stripe-listen:
 	stripe listen --forward-to localhost:8000/webhooks/stripe/
+
+# Render deployment
+.PHONY: render-build
+render-build:
+	pip install -r requirements.txt
+	python manage.py collectstatic --no-input
+	python manage.py migrate

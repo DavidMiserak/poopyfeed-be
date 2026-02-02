@@ -1,5 +1,8 @@
 # requirements.txt
 asgiref==3.11.0
+dj-database-url==2.3.0
+gunicorn==23.0.0
+whitenoise[brotli]==6.9.0
 crispy-bootstrap5==2025.6
 Django==6.0
 django_allauth==65.13.1
