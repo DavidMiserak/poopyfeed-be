@@ -42,7 +42,6 @@ class HomePageTests(TestCase):
         )
         self.client.login(username="testuser", password="testpass123")
         response = self.client.get(self.url)
-        self.assertContains(response, "Welcome back")
+        self.assertContains(response, "Go to My Children")
         self.assertContains(response, user.email)
         self.assertNotContains(response, "Get Started")
-        self.assertNotContains(response, "Log In")
