@@ -23,6 +23,15 @@ for infants.
 - **REST API**: Django REST Framework + Djoser (dependencies installed, not yet configured)
 - **Payments**: Stripe integration (dependency installed, not yet configured)
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/child-card.jpeg" width="200" alt="Child profile card with activity summary">
+  <img src="docs/images/diaper-log.jpeg" width="200" alt="Diaper change log">
+  <img src="docs/images/nap-log.jpeg" width="200" alt="Nap log">
+  <img src="docs/images/feeding-log.jpeg" width="200" alt="Feeding log showing breast and bottle feedings">
+</p>
+
 ## Technology Stack
 
 - **Backend**: Django 6.0 (Python web framework)
