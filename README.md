@@ -13,9 +13,9 @@ for infants.
 - **Naps**: Track sleep times
 
 <p align="center">
-  <img src="docs/images/feeding-log.jpeg" width="200" alt="Feeding log showing breast and bottle feedings" />
-  <img src="docs/images/diaper-log.jpeg" width="200" alt="Diaper change log" />
-  <img src="docs/images/nap-log.jpeg" width="200" alt="Nap log" />
+  <img src="docs/images/feeding-log.png" width="200" alt="Feeding log showing breast and bottle feedings" />
+  <img src="docs/images/diaper-log.png" width="200" alt="Diaper change log" />
+  <img src="docs/images/nap-log.png" width="200" alt="Nap log" />
 </p>
 
 ### Child Sharing
