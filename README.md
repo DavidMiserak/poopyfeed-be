@@ -23,6 +23,16 @@ A baby care tracking web application built with Django. PoopyFeed helps
 parents and caregivers monitor feeding, diaper changes, and sleep patterns
 for infants.
 
+## Table of Contents
+
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+
 ## Features
 
 ### Tracking
