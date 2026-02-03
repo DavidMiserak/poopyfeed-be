@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from children.models import Child
+from children.models import Child, ChildShare
 
 from .forms import NapForm
 from .models import Nap
@@ -100,6 +100,18 @@ class NapFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("napped_at", form.errors)
+
+    def test_form_converts_local_time_to_utc(self):
+        form = NapForm(
+            data={
+                "napped_at": "2026-02-01T14:00",
+                "tz_offset": -330,  # UTC+5:30 (IST)
+            }
+        )
+        self.assertTrue(form.is_valid())
+        # 14:00 local - 330 minutes = 08:30 UTC
+        self.assertEqual(form.cleaned_data["napped_at"].hour, 8)
+        self.assertEqual(form.cleaned_data["napped_at"].minute, 30)
 
 
 class NapViewTests(TestCase):
@@ -237,3 +249,62 @@ class NapViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Nap.objects.filter(pk=nap_pk).exists())
+
+    def test_nap_edit_get_shows_context(self):
+        self.client.login(email="parent@example.com", password="testpass123")
+        response = self.client.get(
+            reverse(
+                "naps:nap_edit", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["child"], self.child)
+
+    def test_coparent_can_edit_nap(self):
+        coparent = get_user_model().objects.create_user(
+            username="coparent",
+            email="coparent@example.com",
+            password="testpass123",
+        )
+        ChildShare.objects.create(
+            child=self.child,
+            user=coparent,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.user,
+        )
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "naps:nap_edit", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
+            ),
+            {"napped_at": "2026-02-01T16:00"},
+        )
+        self.assertRedirects(
+            response,
+            reverse("naps:nap_list", kwargs={"child_pk": self.child.pk}),
+        )
+
+    def test_coparent_can_delete_nap(self):
+        coparent = get_user_model().objects.create_user(
+            username="coparent2",
+            email="coparent2@example.com",
+            password="testpass123",
+        )
+        ChildShare.objects.create(
+            child=self.child,
+            user=coparent,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.user,
+        )
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=timezone.now(),
+        )
+        self.client.login(email="coparent2@example.com", password="testpass123")
+        response = self.client.post(
+            reverse("naps:nap_delete", kwargs={"child_pk": self.child.pk, "pk": nap.pk})
+        )
+        self.assertRedirects(
+            response,
+            reverse("naps:nap_list", kwargs={"child_pk": self.child.pk}),
+        )
