@@ -1,0 +1,24 @@
+{% extends "_base.html" %}
+{% load static %}
+
+{% block title %}Offline - PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6 text-center">
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body py-5">
+        <i class="fa-solid fa-wifi-slash fa-4x text-body-secondary mb-4 d-block opacity-50"></i>
+        <h2 class="h3 mb-3">You're Offline</h2>
+        <p class="text-body-secondary mb-4">
+          It looks like you've lost your internet connection.
+          Please check your connection and try again.
+        </p>
+        <button onclick="window.location.reload()" class="btn btn-primary btn-lg px-5 py-3">
+          <i class="fa-solid fa-rotate-right me-2"></i>Try Again
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

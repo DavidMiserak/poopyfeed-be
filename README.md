@@ -1,5 +1,9 @@
 # PoopyFeed
 
+<p align="center">
+  <img src="static/images/favicon.svg" width="128" alt="PoopyFeed logo" />
+</p>
+
 A baby care tracking web application built with Django. PoopyFeed helps
 parents and caregivers monitor feeding, diaper changes, and sleep patterns
 for infants.
@@ -42,6 +46,7 @@ Share access to children with other accounts via invite links:
 
 - **Multi-Child Support**: Manage multiple children per account
 - **Email Authentication**: Secure email-based login via django-allauth
+- **Progressive Web App**: Install on your phone's home screen for quick access
 
 ### Planned
 
@@ -56,6 +61,7 @@ Share access to children with other accounts via invite links:
 - **Backend**: Django 6.0 (Python web framework)
 - **Database**: PostgreSQL (containers) or SQLite (local dev)
 - **Frontend**: Django Templates with Bootstrap 5 (via crispy-forms)
+- **PWA**: Service worker with offline support
 - **Authentication**: django-allauth with email-based login
 - **Containers**: Podman (or Docker)
 
@@ -147,6 +153,24 @@ make stop             # Stop containers
 2. Create an account or log in
 3. Add a child from the main page
 4. Start logging feedings, diapers, and naps
+
+### Install on Mobile
+
+PoopyFeed is a Progressive Web App (PWA) that can be installed on your phone:
+
+**Android (Chrome):**
+
+1. Visit the site in Chrome
+2. Tap the 3-dot menu → "Install app" or "Add to Home screen"
+3. The app will appear on your home screen
+
+**iOS (Safari):**
+
+1. Visit the site in Safari
+2. Tap the Share button → "Add to Home Screen"
+3. The app will appear on your home screen
+
+Once installed, the app launches in full-screen mode without browser chrome.
 
 ### Sharing Access with Others
 

@@ -11,6 +11,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Favicon -->
     <link rel="icon" type="image/svg" href="{% static 'images/favicon.svg' %}">
+    <!-- PWA -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#74C0FC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PoopyFeed">
+    <link rel="apple-touch-icon" href="{% static 'images/favicon.svg' %}">
     {% block extra_css %}{% endblock extra_css %}
   </head>
   <body class="d-flex flex-column min-vh-100 bg-body-tertiary">
@@ -85,6 +92,13 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
     <script>dayjs.extend(dayjs_plugin_relativeTime);</script>
     <script src="{% static 'js/datetime.js' %}"></script>
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .catch(function() {});
+      }
+    </script>
     {% block extra_js %}
     {% endblock extra_js %}
   </body>
