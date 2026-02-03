@@ -573,6 +573,15 @@ class CreateInviteViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(ShareInvite.objects.count(), 0)
 
+    def test_create_invite_invalid_role_defaults_to_caregiver(self):
+        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.post(
+            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            {"role": "INVALID"},
+        )
+        invite = ShareInvite.objects.first()
+        self.assertEqual(invite.role, ChildShare.Role.CAREGIVER)
+
 
 class AcceptInviteViewTests(TestCase):
     @classmethod
@@ -791,6 +800,58 @@ class ToggleInviteViewTests(TestCase):
         )
         invite.refresh_from_db()
         self.assertTrue(invite.is_active)
+
+
+class DeleteInviteViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="testpass123",
+        )
+        cls.other_user = get_user_model().objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Jane",
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_delete_invite_owner(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.client.login(email="owner@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "children:delete_invite",
+                kwargs={"pk": self.child.pk, "invite_pk": invite.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ShareInvite.objects.filter(pk=invite.pk).exists())
+
+    def test_delete_invite_non_owner_denied(self):
+        invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        self.client.login(email="other@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "children:delete_invite",
+                kwargs={"pk": self.child.pk, "invite_pk": invite.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(ShareInvite.objects.filter(pk=invite.pk).exists())
 
 
 class SharedChildListViewTests(TestCase):
