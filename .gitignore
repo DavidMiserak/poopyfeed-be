@@ -55,6 +55,9 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Private keys
+*.pem
+
 # Other
 build/
 *~

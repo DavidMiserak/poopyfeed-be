@@ -42,6 +42,7 @@ licensing URL accordingly. For example:
 ```xml
 <!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
 ```
+
 - Updated:
 
 ```xml
@@ -58,6 +59,7 @@ licensing URL accordingly. For example:
 ```xml
 <!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
 ```
+
 1. Right before the `<path>` element, add the following metadata comment with
    the appropriate values:
 
