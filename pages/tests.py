@@ -132,10 +132,8 @@ class ManifestTests(TestCase):
         return json.loads(manifest_path.read_text())
 
     def test_manifest_is_valid_json(self):
-        try:
-            self._load_manifest()
-        except json.JSONDecodeError:
-            self.fail("manifest.json is not valid JSON")
+        # Will raise json.JSONDecodeError if invalid, failing the test
+        self._load_manifest()
 
     def test_manifest_contains_required_fields(self):
         manifest = self._load_manifest()
