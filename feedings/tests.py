@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from children.models import Child
+from children.models import Child, ChildShare
 
 from .forms import FeedingForm
 from .models import Feeding
@@ -238,6 +238,20 @@ class FeedingFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("feeding_type", form.errors)
 
+    def test_form_converts_local_time_to_utc(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": "2026-02-01T10:30",
+                "amount_oz": "4.0",
+                "tz_offset": 300,  # UTC-5 (EST)
+            }
+        )
+        self.assertTrue(form.is_valid())
+        # 10:30 local + 300 minutes = 15:30 UTC
+        self.assertEqual(form.cleaned_data["fed_at"].hour, 15)
+        self.assertEqual(form.cleaned_data["fed_at"].minute, 30)
+
 
 class FeedingViewTests(TestCase):
     @classmethod
@@ -429,3 +443,73 @@ class FeedingViewTests(TestCase):
         response = self.client.get(reverse("children:child_list"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Feedings")
+
+    def test_feeding_edit_get_shows_context(self):
+        self.client.login(email="parent@example.com", password="testpass123")
+        response = self.client.get(
+            reverse(
+                "feedings:feeding_edit",
+                kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["child"], self.child)
+
+    def test_coparent_can_edit_feeding(self):
+        coparent = get_user_model().objects.create_user(
+            username="coparent",
+            email="coparent@example.com",
+            password="testpass123",
+        )
+        ChildShare.objects.create(
+            child=self.child,
+            user=coparent,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.user,
+        )
+        self.client.login(email="coparent@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "feedings:feeding_edit",
+                kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
+            ),
+            {
+                "feeding_type": "bottle",
+                "fed_at": "2026-02-01T12:00",
+                "amount_oz": "7.0",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk}),
+        )
+
+    def test_coparent_can_delete_feeding(self):
+        coparent = get_user_model().objects.create_user(
+            username="coparent2",
+            email="coparent2@example.com",
+            password="testpass123",
+        )
+        ChildShare.objects.create(
+            child=self.child,
+            user=coparent,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.user,
+        )
+        feeding = Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=timezone.now(),
+            amount_oz=3.0,
+        )
+        self.client.login(email="coparent2@example.com", password="testpass123")
+        response = self.client.post(
+            reverse(
+                "feedings:feeding_delete",
+                kwargs={"child_pk": self.child.pk, "pk": feeding.pk},
+            )
+        )
+        self.assertRedirects(
+            response,
+            reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk}),
+        )
