@@ -21,6 +21,9 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
+    # REST API
+    path("api/v1/", include("django_project.api_urls")),
+    # Web UI
     path("children/", include("children.urls")),
     path("children/<int:child_pk>/diapers/", include("diapers.urls")),
     path("children/<int:child_pk>/feedings/", include("feedings.urls")),
