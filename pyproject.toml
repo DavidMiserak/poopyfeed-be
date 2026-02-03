@@ -3,3 +3,23 @@ exclude_dirs = ["tests", "*/tests", "*/migrations"]
 skips = ["B101"]
 severity = "medium"
 confidence = "medium"
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+  "*/migrations/*",
+  "*/tests/*",
+  "*/__pycache__/*",
+  "manage.py",
+  "django_project/asgi.py",
+  "django_project/wsgi.py",
+  ".venv/*",
+]
+
+[tool.coverage.report]
+show_missing = false
+skip_covered = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+]

@@ -25,7 +25,18 @@ run: podman-compose.yaml image-build
 
 .PHONY: test
 test:
-	$(RUNTIME) compose exec web python manage.py test
+	$(RUNTIME) compose exec web coverage run manage.py test
+	$(RUNTIME) compose exec web coverage report
+
+.PHONY: test-local
+test-local:
+	DJANGO_DEBUG=True coverage run manage.py test
+	coverage report
+
+.PHONY: coverage-html
+coverage-html: test
+	$(RUNTIME) compose exec web coverage html
+	@echo "Coverage report generated at htmlcov/index.html"
 
 .PHONY: migrate
 migrate:

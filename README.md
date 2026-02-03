@@ -4,6 +4,21 @@
   <img src="static/images/favicon.svg" width="128" alt="PoopyFeed logo" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/DavidMiserak/poopyfeed/actions/workflows/test.yml">
+    <img src="https://github.com/DavidMiserak/poopyfeed/actions/workflows/test.yml/badge.svg" alt="Tests" />
+  </a>
+  <a href="https://codecov.io/gh/DavidMiserak/poopyfeed">
+    <img src="https://codecov.io/gh/DavidMiserak/poopyfeed/branch/main/graph/badge.svg" alt="codecov" />
+  </a>
+  <img src="https://img.shields.io/badge/python-3.13+-blue.svg" alt="Python 3.13+" />
+  <img src="https://img.shields.io/badge/django-6.0-green.svg" alt="Django 6.0" />
+  <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
+  <a href="https://github.com/pre-commit/pre-commit">
+    <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit" alt="pre-commit" />
+  </a>
+</p>
+
 A baby care tracking web application built with Django. PoopyFeed helps
 parents and caregivers monitor feeding, diaper changes, and sleep patterns
 for infants.
