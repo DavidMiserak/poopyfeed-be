@@ -1,0 +1,21 @@
+[Unit]
+Description=PoopyFeed Django migrations
+After=poopyfeed-db.service
+Requires=poopyfeed-db.service
+
+[Container]
+ContainerName=poopyfeed-migrate
+Image=docker.io/davidmiserak/poopyfeed:latest
+Network=poopyfeed.network
+Exec=python /code/manage.py migrate --no-input
+Environment=DATABASE_HOST=db
+Environment=DATABASE_NAME=postgres
+Environment=DATABASE_USER=postgres
+Environment=DATABASE_PASSWORD=
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+
+[Install]
+WantedBy=default.target

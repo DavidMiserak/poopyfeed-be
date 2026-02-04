@@ -1,0 +1,50 @@
+# Version control
+.git
+.gitattributes
+.gitignore
+
+# Python
+.venv
+__pycache__
+*.py[cod]
+
+# Testing and coverage
+htmlcov
+.coverage
+TEST*.xml
+
+# IDE
+.idea
+
+# Container and deployment
+.dockerignore
+.containerignore
+Containerfile
+podman-compose.yaml
+quadlet
+
+# CI/CD and docs
+.github
+CLAUDE.md
+CHANGELOG.md
+README.md
+docs
+
+# Linting and config
+.pre-commit-config.yaml
+.editorconfig
+.markdownlint.yaml
+.codespellignore
+
+# Database
+db.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keys
+*.pem
+
+# Render
+render.yaml

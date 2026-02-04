@@ -1,0 +1,30 @@
+[Unit]
+Description=PoopyFeed Django web application
+After=poopyfeed-migrate.service
+Requires=poopyfeed-migrate.service
+
+[Container]
+ContainerName=web
+Image=docker.io/davidmiserak/poopyfeed:latest
+PublishPort=8000:8000
+Network=poopyfeed.network
+Exec=python /code/manage.py runserver 0.0.0.0:8000
+Environment=DJANGO_SECRET_KEY=change-this-key
+Environment=DJANGO_DEBUG=True
+Environment=DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+Environment=DJANGO_SECURE_SSL_REDIRECT=False
+Environment=DJANGO_SECURE_HSTS_SECONDS=0
+Environment=DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=False
+Environment=DJANGO_SECURE_HSTS_PRELOAD=False
+Environment=DJANGO_SESSION_COOKIE_SECURE=False
+Environment=DJANGO_CSRF_COOKIE_SECURE=False
+Environment=DATABASE_HOST=db
+Environment=DATABASE_NAME=postgres
+Environment=DATABASE_USER=postgres
+Environment=DATABASE_PASSWORD=
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

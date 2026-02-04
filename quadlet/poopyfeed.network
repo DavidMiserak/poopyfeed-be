@@ -1,0 +1,3 @@
+[Network]
+Subnet=172.20.0.0/24
+Gateway=172.20.0.1

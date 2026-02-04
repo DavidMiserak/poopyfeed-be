@@ -1,0 +1,15 @@
+[Unit]
+Description=PoopyFeed PostgreSQL database
+
+[Container]
+ContainerName=db
+Image=docker.io/postgres:14
+Network=poopyfeed.network
+Volume=postgres_data.volume:/var/lib/postgresql/data/
+Environment=POSTGRES_HOST_AUTH_METHOD=trust
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
