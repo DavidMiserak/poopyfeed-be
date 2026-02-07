@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import IntegrityError, transaction
 from django.db.models import Max, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -175,15 +176,22 @@ class AcceptInviteView(LoginRequiredMixin, View):
             messages.warning(request, "You are already the owner of this child")
             return redirect("children:child_list")
 
-        # Create or get existing share (handles race conditions)
-        share, created = ChildShare.objects.get_or_create(
-            child=invite.child,
-            user=request.user,
-            defaults={
-                "role": invite.role,
-                "created_by": invite.created_by,
-            },
-        )
+        # Handle potential race condition with get_or_create
+        with transaction.atomic():
+            try:
+                share, created = ChildShare.objects.get_or_create(
+                    child=invite.child,
+                    user=request.user,
+                    defaults={
+                        "role": invite.role,
+                        "created_by": invite.created_by,
+                    },
+                )
+            except IntegrityError:
+                # Race condition: another request created the share concurrently
+                # Fetch the existing share
+                share = ChildShare.objects.get(child=invite.child, user=request.user)
+                created = False
 
         if created:
             role_display = dict(ChildShare.Role.choices).get(invite.role, invite.role)

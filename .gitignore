@@ -58,6 +58,9 @@ Thumbs.db
 # Private keys
 *.pem
 
+# SonarQube
+.scannerwork/
+
 # Other
 build/
 *~

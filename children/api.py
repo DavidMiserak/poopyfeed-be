@@ -1,5 +1,6 @@
 """REST API for children app: Child, ChildShare, ShareInvite."""
 
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -229,15 +230,22 @@ class AcceptInviteViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Create or get existing share
-        share, created = ChildShare.objects.get_or_create(
-            child=invite.child,
-            user=request.user,
-            defaults={
-                "role": invite.role,
-                "created_by": invite.created_by,
-            },
-        )
+        # Handle potential race condition with get_or_create
+        with transaction.atomic():
+            try:
+                share, created = ChildShare.objects.get_or_create(
+                    child=invite.child,
+                    user=request.user,
+                    defaults={
+                        "role": invite.role,
+                        "created_by": invite.created_by,
+                    },
+                )
+            except IntegrityError:
+                # Race condition: another request created the share concurrently
+                # Fetch the existing share
+                share = ChildShare.objects.get(child=invite.child, user=request.user)
+                created = False
 
         # Return the child data
         child_serializer = ChildSerializer(invite.child, context={"request": request})
