@@ -9,6 +9,8 @@ from children.models import Child, ChildShare
 from .forms import NapForm
 from .models import Nap
 
+URL_NAP_LIST = "naps:nap_list"
+
 
 class NapListView(ChildAccessMixin, ListView):
     model = Nap
@@ -35,7 +37,7 @@ class NapCreateView(ChildAccessMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse("naps:nap_list", kwargs={"child_pk": self.child.pk})
+        return reverse(URL_NAP_LIST, kwargs={"child_pk": self.child.pk})
 
 
 class NapUpdateView(ChildEditMixin, UpdateView):
@@ -58,7 +60,7 @@ class NapUpdateView(ChildEditMixin, UpdateView):
         ).distinct()
 
     def get_success_url(self):
-        return reverse("naps:nap_list", kwargs={"child_pk": self.object.child.pk})
+        return reverse(URL_NAP_LIST, kwargs={"child_pk": self.object.child.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -85,4 +87,4 @@ class NapDeleteView(ChildEditMixin, DeleteView):
         ).distinct()
 
     def get_success_url(self):
-        return reverse("naps:nap_list", kwargs={"child_pk": self.object.child.pk})
+        return reverse(URL_NAP_LIST, kwargs={"child_pk": self.object.child.pk})

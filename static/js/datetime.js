@@ -1,7 +1,7 @@
 /**
  * Shared Day.js datetime utilities for timezone conversion and display.
  */
-var DateTimeUtils = (function() {
+const DateTimeUtils = (function() {
   'use strict';
 
   /**
@@ -11,18 +11,18 @@ var DateTimeUtils = (function() {
    * - Defaults new entries to current local time
    */
   function initFormDatetime() {
-    var tzOffset = new Date().getTimezoneOffset();
-    var tzInput = document.querySelector('.tz-offset');
+    const tzOffset = new Date().getTimezoneOffset();
+    const tzInput = document.querySelector('.tz-offset');
     if (tzInput) {
       tzInput.value = tzOffset;
     }
 
-    var dtInput = document.querySelector('.local-datetime');
+    const dtInput = document.querySelector('.local-datetime');
     if (dtInput) {
       if (dtInput.value) {
         // Editing: convert UTC value to local time for display
-        var utcDate = dayjs(dtInput.value);
-        var localDate = utcDate.subtract(tzOffset, 'minute');
+        const utcDate = dayjs(dtInput.value);
+        const localDate = utcDate.subtract(tzOffset, 'minute');
         dtInput.value = localDate.format('YYYY-MM-DDTHH:mm');
       } else {
         // Creating: default to current local time
@@ -37,7 +37,7 @@ var DateTimeUtils = (function() {
    */
   function formatRelativeTimes() {
     document.querySelectorAll('.local-time-relative').forEach(function(el) {
-      var date = dayjs(el.getAttribute('data-datetime'));
+      const date = dayjs(el.getAttribute('data-datetime'));
       el.textContent = date.fromNow();
     });
   }
@@ -48,7 +48,7 @@ var DateTimeUtils = (function() {
    */
   function formatExactTimes() {
     document.querySelectorAll('.local-time-exact').forEach(function(el) {
-      var date = dayjs(el.getAttribute('data-datetime'));
+      const date = dayjs(el.getAttribute('data-datetime'));
       el.textContent = date.format('MMM D, h:mm A');
     });
   }
@@ -59,7 +59,7 @@ var DateTimeUtils = (function() {
    */
   function formatRelativeTimeElements() {
     document.querySelectorAll('.relative-time').forEach(function(el) {
-      var date = dayjs(el.getAttribute('datetime'));
+      const date = dayjs(el.getAttribute('datetime'));
       el.textContent = date.fromNow();
     });
   }
@@ -70,8 +70,8 @@ var DateTimeUtils = (function() {
    */
   function formatChildAges() {
     document.querySelectorAll('.child-age').forEach(function(el) {
-      var dob = dayjs(el.getAttribute('data-dob'));
-      var age = dayjs().to(dob, true);
+      const dob = dayjs(el.getAttribute('data-dob'));
+      const age = dayjs().to(dob, true);
       el.textContent = '(' + age + ' old)';
     });
   }

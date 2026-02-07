@@ -244,7 +244,7 @@ class AcceptInviteViewSet(viewsets.ViewSet):
             except IntegrityError:
                 # Race condition: another request created the share concurrently
                 # Fetch the existing share
-                share = ChildShare.objects.get(child=invite.child, user=request.user)
+                ChildShare.objects.get(child=invite.child, user=request.user)
                 created = False
 
         # Return the child data

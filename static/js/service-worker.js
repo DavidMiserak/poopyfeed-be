@@ -124,8 +124,7 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         // Try to focus existing window
-        for (let i = 0; i < clientList.length; i++) {
-          const client = clientList[i];
+        for (const client of clientList) {
           if (client.url.includes('/children') && 'focus' in client) {
             return client.focus();
           }

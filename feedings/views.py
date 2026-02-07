@@ -9,6 +9,8 @@ from children.models import Child, ChildShare
 from .forms import FeedingForm
 from .models import Feeding
 
+URL_FEEDING_LIST = "feedings:feeding_list"
+
 
 class FeedingListView(ChildAccessMixin, ListView):
     model = Feeding
@@ -35,7 +37,7 @@ class FeedingCreateView(ChildAccessMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk})
+        return reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.child.pk})
 
 
 class FeedingUpdateView(ChildEditMixin, UpdateView):
@@ -58,9 +60,7 @@ class FeedingUpdateView(ChildEditMixin, UpdateView):
         ).distinct()
 
     def get_success_url(self):
-        return reverse(
-            "feedings:feeding_list", kwargs={"child_pk": self.object.child.pk}
-        )
+        return reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.object.child.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -87,6 +87,4 @@ class FeedingDeleteView(ChildEditMixin, DeleteView):
         ).distinct()
 
     def get_success_url(self):
-        return reverse(
-            "feedings:feeding_list", kwargs={"child_pk": self.object.child.pk}
-        )
+        return reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.object.child.pk})

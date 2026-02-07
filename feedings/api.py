@@ -56,16 +56,18 @@ class FeedingSerializer(serializers.ModelSerializer):
             },
         }
 
-    def validate(self, data):
-        """Validate bottle vs breast fields."""
-        feeding_type = data.get("feeding_type") or (
-            self.instance.feeding_type if self.instance else None
+    def _has_value(self, data, field_name):
+        """Check if field has a value in submitted data or on the existing instance."""
+        return data.get(field_name) or (
+            self.instance and getattr(self.instance, field_name, None)
         )
 
+    def validate(self, data):
+        """Validate bottle vs breast fields."""
+        feeding_type = self._has_value(data, "feeding_type")
+
         if feeding_type == Feeding.FeedingType.BOTTLE:
-            if not data.get("amount_oz") and not (
-                self.instance and self.instance.amount_oz
-            ):
+            if not self._has_value(data, "amount_oz"):
                 raise serializers.ValidationError(
                     {"amount_oz": "Amount is required for bottle feedings."}
                 )
@@ -74,13 +76,11 @@ class FeedingSerializer(serializers.ModelSerializer):
             data["side"] = ""
 
         elif feeding_type == Feeding.FeedingType.BREAST:
-            if not data.get("duration_minutes") and not (
-                self.instance and self.instance.duration_minutes
-            ):
+            if not self._has_value(data, "duration_minutes"):
                 raise serializers.ValidationError(
                     {"duration_minutes": "Duration is required for breast feedings."}
                 )
-            if not data.get("side") and not (self.instance and self.instance.side):
+            if not self._has_value(data, "side"):
                 raise serializers.ValidationError(
                     {"side": "Side is required for breast feedings."}
                 )

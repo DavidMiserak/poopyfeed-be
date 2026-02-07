@@ -17,6 +17,9 @@ from .forms import ChildForm
 from .mixins import ChildEditMixin, ChildOwnerMixin
 from .models import Child, ChildShare, ShareInvite
 
+URL_CHILD_LIST = "children:child_list"
+URL_CHILD_SHARING = "children:child_sharing"
+
 
 class ChildListView(LoginRequiredMixin, ListView):
     model = Child
@@ -57,7 +60,7 @@ class ChildCreateView(LoginRequiredMixin, CreateView):
     model = Child
     form_class = ChildForm
     template_name = "children/child_form.html"
-    success_url = reverse_lazy("children:child_list")
+    success_url = reverse_lazy(URL_CHILD_LIST)
 
     def form_valid(self, form):
         form.instance.parent = self.request.user
@@ -68,7 +71,7 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
     model = Child
     form_class = ChildForm
     template_name = "children/child_form.html"
-    success_url = reverse_lazy("children:child_list")
+    success_url = reverse_lazy(URL_CHILD_LIST)
 
     def get_queryset(self):
         # Allow editing by owner or co-parent
@@ -81,7 +84,7 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
 class ChildDeleteView(ChildOwnerMixin, DeleteView):
     model = Child
     template_name = "children/child_confirm_delete.html"
-    success_url = reverse_lazy("children:child_list")
+    success_url = reverse_lazy(URL_CHILD_LIST)
 
     def get_queryset(self):
         # Only owners can delete
@@ -123,7 +126,7 @@ class CreateInviteView(ChildOwnerMixin, View):
         )
 
         messages.success(request, f"Invite link created for {self.child.name}")
-        return redirect("children:child_sharing", pk=pk)
+        return redirect(URL_CHILD_SHARING, pk=pk)
 
 
 class RevokeAccessView(ChildOwnerMixin, View):
@@ -136,7 +139,7 @@ class RevokeAccessView(ChildOwnerMixin, View):
         share.delete()
 
         messages.success(request, f"Access revoked for {user_email}")
-        return redirect("children:child_sharing", pk=pk)
+        return redirect(URL_CHILD_SHARING, pk=pk)
 
 
 class ToggleInviteView(ChildOwnerMixin, View):
@@ -150,7 +153,7 @@ class ToggleInviteView(ChildOwnerMixin, View):
 
         status = "activated" if invite.is_active else "deactivated"
         messages.success(request, f"Invite link {status}")
-        return redirect("children:child_sharing", pk=pk)
+        return redirect(URL_CHILD_SHARING, pk=pk)
 
 
 class DeleteInviteView(ChildOwnerMixin, View):
@@ -162,7 +165,7 @@ class DeleteInviteView(ChildOwnerMixin, View):
         invite.delete()
 
         messages.success(request, "Invite link deleted")
-        return redirect("children:child_sharing", pk=pk)
+        return redirect(URL_CHILD_SHARING, pk=pk)
 
 
 class AcceptInviteView(LoginRequiredMixin, View):
@@ -174,7 +177,7 @@ class AcceptInviteView(LoginRequiredMixin, View):
         # Check if user is already the owner
         if invite.child.parent == request.user:
             messages.warning(request, "You are already the owner of this child")
-            return redirect("children:child_list")
+            return redirect(URL_CHILD_LIST)
 
         # Handle potential race condition with get_or_create
         with transaction.atomic():
@@ -205,4 +208,4 @@ class AcceptInviteView(LoginRequiredMixin, View):
                 f"You already have {share.get_role_display()} "
                 f"access to {invite.child.name}",
             )
-        return redirect("children:child_list")
+        return redirect(URL_CHILD_LIST)

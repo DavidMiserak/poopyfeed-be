@@ -9,6 +9,8 @@ from children.models import Child, ChildShare
 from .forms import DiaperChangeForm
 from .models import DiaperChange
 
+URL_DIAPER_LIST = "diapers:diaper_list"
+
 
 class DiaperChangeListView(ChildAccessMixin, ListView):
     model = DiaperChange
@@ -35,7 +37,7 @@ class DiaperChangeCreateView(ChildAccessMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk})
+        return reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk})
 
 
 class DiaperChangeUpdateView(ChildEditMixin, UpdateView):
@@ -59,7 +61,7 @@ class DiaperChangeUpdateView(ChildEditMixin, UpdateView):
         ).distinct()
 
     def get_success_url(self):
-        return reverse("diapers:diaper_list", kwargs={"child_pk": self.object.child.pk})
+        return reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.object.child.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -86,4 +88,4 @@ class DiaperChangeDeleteView(ChildEditMixin, DeleteView):
         ).distinct()
 
     def get_success_url(self):
-        return reverse("diapers:diaper_list", kwargs={"child_pk": self.object.child.pk})
+        return reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.object.child.pk})
