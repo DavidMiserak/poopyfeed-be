@@ -8,7 +8,7 @@ from children.forms import LocalDateTimeFormMixin
 from .models import Feeding
 
 # UI constants
-BOTTLE_STEP = Decimal("0.5")
+BOTTLE_STEP = Decimal("0.1")
 
 
 class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):

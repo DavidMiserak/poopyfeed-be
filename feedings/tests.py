@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
@@ -325,6 +326,13 @@ class FeedingFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("duration_minutes", form.errors)
+
+    def test_amount_oz_step_allows_whole_numbers(self):
+        """HTML step attribute must allow whole-number ounce values like 1.0."""
+        form = FeedingForm()
+        step = Decimal(form.fields["amount_oz"].widget.attrs["step"])
+        min_val = Decimal(form.fields["amount_oz"].widget.attrs["min"])
+        self.assertEqual((Decimal("1.0") - min_val) % step, 0)
 
     def test_large_duration_invalid(self):
         form = FeedingForm(
