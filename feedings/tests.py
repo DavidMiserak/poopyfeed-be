@@ -11,13 +11,20 @@ from children.models import Child, ChildShare
 from .forms import FeedingForm
 from .models import Feeding
 
+TEST_PARENT_EMAIL = "parent@example.com"
+TEST_DATETIME = "2026-02-01T10:30"
+URL_FEEDING_LIST = "feedings:feeding_list"
+URL_FEEDING_ADD = "feedings:feeding_add"
+URL_FEEDING_EDIT = "feedings:feeding_edit"
+URL_FEEDING_DELETE = "feedings:feeding_delete"
+
 
 class FeedingModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
@@ -137,7 +144,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "4.5",
             }
         )
@@ -147,7 +154,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "15",
                 "side": Feeding.BreastSide.LEFT,
             }
@@ -158,7 +165,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "",
             }
         )
@@ -169,7 +176,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "",
                 "side": Feeding.BreastSide.RIGHT,
             }
@@ -181,7 +188,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "10",
                 "side": "",
             }
@@ -193,7 +200,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "4.0",
                 "duration_minutes": "15",
                 "side": Feeding.BreastSide.LEFT,
@@ -207,7 +214,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "10",
                 "side": Feeding.BreastSide.BOTH,
                 "amount_oz": "4.0",
@@ -231,7 +238,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": "",
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "4.0",
             }
         )
@@ -242,7 +249,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "4.0",
                 "tz_offset": 300,  # UTC-5 (EST)
             }
@@ -256,7 +263,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "-1.0",
             }
         )
@@ -267,7 +274,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "0.0",
             }
         )
@@ -278,7 +285,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "0.5",
             }
         )
@@ -288,7 +295,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "60.0",
             }
         )
@@ -299,7 +306,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "-5",
                 "side": Feeding.BreastSide.LEFT,
             }
@@ -311,7 +318,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "0",
                 "side": Feeding.BreastSide.LEFT,
             }
@@ -323,7 +330,7 @@ class FeedingFormTests(TestCase):
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BREAST,
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "duration_minutes": "200",
                 "side": Feeding.BreastSide.LEFT,
             }
@@ -337,7 +344,7 @@ class FeedingViewTests(TestCase):
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
@@ -364,21 +371,21 @@ class FeedingViewTests(TestCase):
 
     def test_feeding_list_requires_login(self):
         response = self.client.get(
-            reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk})
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_feeding_list_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("feedings:feeding_list", kwargs={"child_pk": self.other_child.pk})
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_feeding_list_shows_feedings(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk})
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Bottle")
@@ -386,24 +393,24 @@ class FeedingViewTests(TestCase):
 
     def test_feeding_create_requires_login(self):
         response = self.client.get(
-            reverse("feedings:feeding_add", kwargs={"child_pk": self.child.pk})
+            reverse(URL_FEEDING_ADD, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_feeding_create_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("feedings:feeding_add", kwargs={"child_pk": self.other_child.pk})
+            reverse(URL_FEEDING_ADD, kwargs={"child_pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_feeding_create_adds_bottle_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("feedings:feeding_add", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_FEEDING_ADD, kwargs={"child_pk": self.child.pk}),
             {
                 "feeding_type": "bottle",
-                "fed_at": "2026-02-01T10:30",
+                "fed_at": TEST_DATETIME,
                 "amount_oz": "5.0",
             },
         )
@@ -417,9 +424,9 @@ class FeedingViewTests(TestCase):
         )
 
     def test_feeding_create_adds_breast_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("feedings:feeding_add", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_FEEDING_ADD, kwargs={"child_pk": self.child.pk}),
             {
                 "feeding_type": "breast",
                 "fed_at": "2026-02-01T11:00",
@@ -440,14 +447,14 @@ class FeedingViewTests(TestCase):
     def test_feeding_edit_requires_login(self):
         response = self.client.get(
             reverse(
-                "feedings:feeding_edit",
+                URL_FEEDING_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
             )
         )
         self.assertEqual(response.status_code, 302)
 
     def test_feeding_edit_only_own_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         other_feeding = Feeding.objects.create(
             child=self.other_child,
             feeding_type=Feeding.FeedingType.BOTTLE,
@@ -456,17 +463,17 @@ class FeedingViewTests(TestCase):
         )
         response = self.client.get(
             reverse(
-                "feedings:feeding_edit",
+                URL_FEEDING_EDIT,
                 kwargs={"child_pk": self.other_child.pk, "pk": other_feeding.pk},
             )
         )
         self.assertEqual(response.status_code, 404)
 
     def test_feeding_edit_updates_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
-                "feedings:feeding_edit",
+                URL_FEEDING_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
             ),
             {
@@ -482,14 +489,14 @@ class FeedingViewTests(TestCase):
     def test_feeding_delete_requires_login(self):
         response = self.client.get(
             reverse(
-                "feedings:feeding_delete",
+                URL_FEEDING_DELETE,
                 kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
             )
         )
         self.assertEqual(response.status_code, 302)
 
     def test_feeding_delete_only_own_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         other_feeding = Feeding.objects.create(
             child=self.other_child,
             feeding_type=Feeding.FeedingType.BREAST,
@@ -499,18 +506,18 @@ class FeedingViewTests(TestCase):
         )
         response = self.client.post(
             reverse(
-                "feedings:feeding_delete",
+                URL_FEEDING_DELETE,
                 kwargs={"child_pk": self.other_child.pk, "pk": other_feeding.pk},
             )
         )
         self.assertEqual(response.status_code, 404)
 
     def test_feeding_delete_deletes_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         feeding_pk = self.feeding.pk
         response = self.client.post(
             reverse(
-                "feedings:feeding_delete",
+                URL_FEEDING_DELETE,
                 kwargs={"child_pk": self.child.pk, "pk": feeding_pk},
             )
         )
@@ -518,16 +525,16 @@ class FeedingViewTests(TestCase):
         self.assertFalse(Feeding.objects.filter(pk=feeding_pk).exists())
 
     def test_child_list_shows_last_feeding(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(reverse("children:child_list"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Feedings")
 
     def test_feeding_edit_get_shows_context(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
             reverse(
-                "feedings:feeding_edit",
+                URL_FEEDING_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
             )
         )
@@ -549,7 +556,7 @@ class FeedingViewTests(TestCase):
         self.client.login(email="coparent@example.com", password="testpass123")
         response = self.client.post(
             reverse(
-                "feedings:feeding_edit",
+                URL_FEEDING_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.feeding.pk},
             ),
             {
@@ -560,7 +567,7 @@ class FeedingViewTests(TestCase):
         )
         self.assertRedirects(
             response,
-            reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.child.pk}),
         )
 
     def test_coparent_can_delete_feeding(self):
@@ -584,11 +591,11 @@ class FeedingViewTests(TestCase):
         self.client.login(email="coparent2@example.com", password="testpass123")
         response = self.client.post(
             reverse(
-                "feedings:feeding_delete",
+                URL_FEEDING_DELETE,
                 kwargs={"child_pk": self.child.pk, "pk": feeding.pk},
             )
         )
         self.assertRedirects(
             response,
-            reverse("feedings:feeding_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.child.pk}),
         )

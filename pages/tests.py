@@ -36,8 +36,8 @@ class HomePageTests(TestCase):
         self.assertContains(self.response, reverse("account_login"))
 
     def test_homepage_shows_welcome_for_authenticated_user(self):
-        User = get_user_model()
-        user = User.objects.create_user(
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
             username="testuser",
             email="test@example.com",
             password="testpass123",

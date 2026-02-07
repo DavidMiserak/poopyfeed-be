@@ -9,29 +9,31 @@ from children.models import Child, ChildShare
 
 from .models import DiaperChange
 
+TEST_DATETIME = "2025-01-15T10:00:00Z"
+
 
 class DiaperChangeAPITests(APITestCase):
     """Tests for DiaperChange API endpoints."""
 
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
-        cls.owner = User.objects.create_user(
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
             password="testpass123",
         )
-        cls.coparent = User.objects.create_user(
+        cls.coparent = user_model.objects.create_user(
             username="coparent",
             email="coparent@example.com",
             password="testpass123",
         )
-        cls.caregiver = User.objects.create_user(
+        cls.caregiver = user_model.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
             password="testpass123",
         )
-        cls.stranger = User.objects.create_user(
+        cls.stranger = user_model.objects.create_user(
             username="stranger",
             email="stranger@example.com",
             password="testpass123",
@@ -56,7 +58,7 @@ class DiaperChangeAPITests(APITestCase):
         cls.diaper = DiaperChange.objects.create(
             child=cls.child,
             change_type=DiaperChange.ChangeType.WET,
-            changed_at="2025-01-15T10:00:00Z",
+            changed_at=TEST_DATETIME,
         )
 
     def setUp(self):
@@ -123,7 +125,7 @@ class DiaperChangeAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         data = {
             "change_type": "both",
-            "changed_at": "2025-01-15T10:00:00Z",
+            "changed_at": TEST_DATETIME,
         }
         response = self.client.put(
             f"/api/v1/children/{self.child.pk}/diapers/{self.diaper.pk}/", data
@@ -136,7 +138,7 @@ class DiaperChangeAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         data = {
             "change_type": "dirty",
-            "changed_at": "2025-01-15T10:00:00Z",
+            "changed_at": TEST_DATETIME,
         }
         response = self.client.put(
             f"/api/v1/children/{self.child.pk}/diapers/{self.diaper.pk}/", data
@@ -148,7 +150,7 @@ class DiaperChangeAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.caregiver_token.key}")
         data = {
             "change_type": "dirty",
-            "changed_at": "2025-01-15T10:00:00Z",
+            "changed_at": TEST_DATETIME,
         }
         response = self.client.put(
             f"/api/v1/children/{self.child.pk}/diapers/{self.diaper.pk}/", data
@@ -207,6 +209,6 @@ class DiaperChangeAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.put(
             f"/api/v1/children/{self.child.pk}/diapers/99999/",
-            {"change_type": "wet", "changed_at": "2025-01-15T10:00:00Z"},
+            {"change_type": "wet", "changed_at": TEST_DATETIME},
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

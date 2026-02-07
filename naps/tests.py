@@ -11,13 +11,19 @@ from children.models import Child, ChildShare
 from .forms import NapForm
 from .models import Nap
 
+TEST_PARENT_EMAIL = "parent@example.com"
+URL_NAP_LIST = "naps:nap_list"
+URL_NAP_ADD = "naps:nap_add"
+URL_NAP_EDIT = "naps:nap_edit"
+URL_NAP_DELETE = "naps:nap_delete"
+
 
 class NapModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
@@ -119,7 +125,7 @@ class NapViewTests(TestCase):
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
@@ -144,42 +150,42 @@ class NapViewTests(TestCase):
 
     def test_nap_list_requires_login(self):
         response = self.client.get(
-            reverse("naps:nap_list", kwargs={"child_pk": self.child.pk})
+            reverse(URL_NAP_LIST, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_nap_list_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("naps:nap_list", kwargs={"child_pk": self.other_child.pk})
+            reverse(URL_NAP_LIST, kwargs={"child_pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_nap_list_shows_naps(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("naps:nap_list", kwargs={"child_pk": self.child.pk})
+            reverse(URL_NAP_LIST, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nap")
 
     def test_nap_create_requires_login(self):
         response = self.client.get(
-            reverse("naps:nap_add", kwargs={"child_pk": self.child.pk})
+            reverse(URL_NAP_ADD, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_nap_create_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("naps:nap_add", kwargs={"child_pk": self.other_child.pk})
+            reverse(URL_NAP_ADD, kwargs={"child_pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_nap_create_adds_nap(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("naps:nap_add", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_NAP_ADD, kwargs={"child_pk": self.child.pk}),
             {"napped_at": "2026-02-01T14:00"},
         )
         self.assertEqual(response.status_code, 302)
@@ -187,31 +193,29 @@ class NapViewTests(TestCase):
 
     def test_nap_edit_requires_login(self):
         response = self.client.get(
-            reverse(
-                "naps:nap_edit", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
-            )
+            reverse(URL_NAP_EDIT, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_nap_edit_only_own_nap(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         other_nap = Nap.objects.create(
             child=self.other_child,
             napped_at=timezone.now(),
         )
         response = self.client.get(
             reverse(
-                "naps:nap_edit",
+                URL_NAP_EDIT,
                 kwargs={"child_pk": self.other_child.pk, "pk": other_nap.pk},
             )
         )
         self.assertEqual(response.status_code, 404)
 
     def test_nap_edit_updates_nap(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
-                "naps:nap_edit", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
+                URL_NAP_EDIT, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
             ),
             {"napped_at": "2026-02-01T15:00"},
         )
@@ -222,40 +226,38 @@ class NapViewTests(TestCase):
     def test_nap_delete_requires_login(self):
         response = self.client.get(
             reverse(
-                "naps:nap_delete", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
+                URL_NAP_DELETE, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
             )
         )
         self.assertEqual(response.status_code, 302)
 
     def test_nap_delete_only_own_nap(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         other_nap = Nap.objects.create(
             child=self.other_child,
             napped_at=timezone.now(),
         )
         response = self.client.post(
             reverse(
-                "naps:nap_delete",
+                URL_NAP_DELETE,
                 kwargs={"child_pk": self.other_child.pk, "pk": other_nap.pk},
             )
         )
         self.assertEqual(response.status_code, 404)
 
     def test_nap_delete_deletes_nap(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         nap_pk = self.nap.pk
         response = self.client.post(
-            reverse("naps:nap_delete", kwargs={"child_pk": self.child.pk, "pk": nap_pk})
+            reverse(URL_NAP_DELETE, kwargs={"child_pk": self.child.pk, "pk": nap_pk})
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Nap.objects.filter(pk=nap_pk).exists())
 
     def test_nap_edit_get_shows_context(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse(
-                "naps:nap_edit", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
-            )
+            reverse(URL_NAP_EDIT, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk})
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["child"], self.child)
@@ -275,13 +277,13 @@ class NapViewTests(TestCase):
         self.client.login(email="coparent@example.com", password="testpass123")
         response = self.client.post(
             reverse(
-                "naps:nap_edit", kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
+                URL_NAP_EDIT, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
             ),
             {"napped_at": "2026-02-01T16:00"},
         )
         self.assertRedirects(
             response,
-            reverse("naps:nap_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_NAP_LIST, kwargs={"child_pk": self.child.pk}),
         )
 
     def test_coparent_can_delete_nap(self):
@@ -302,9 +304,9 @@ class NapViewTests(TestCase):
         )
         self.client.login(email="coparent2@example.com", password="testpass123")
         response = self.client.post(
-            reverse("naps:nap_delete", kwargs={"child_pk": self.child.pk, "pk": nap.pk})
+            reverse(URL_NAP_DELETE, kwargs={"child_pk": self.child.pk, "pk": nap.pk})
         )
         self.assertRedirects(
             response,
-            reverse("naps:nap_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_NAP_LIST, kwargs={"child_pk": self.child.pk}),
         )

@@ -7,36 +7,41 @@ from rest_framework.test import APITestCase
 
 from .models import Child, ChildShare, ShareInvite
 
+TEST_COPARENT_EMAIL = "coparent@example.com"
+TEST_BABY_NAME = "Test Baby"
+API_CHILDREN_URL = "/api/v1/children/"
+API_ACCEPT_INVITE_URL = "/api/v1/invites/accept/"
+
 
 class ChildAPITests(APITestCase):
     """Tests for Child API endpoints."""
 
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
-        cls.owner = User.objects.create_user(
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
             password="testpass123",
         )
-        cls.coparent = User.objects.create_user(
+        cls.coparent = user_model.objects.create_user(
             username="coparent",
-            email="coparent@example.com",
+            email=TEST_COPARENT_EMAIL,
             password="testpass123",
         )
-        cls.caregiver = User.objects.create_user(
+        cls.caregiver = user_model.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
             password="testpass123",
         )
-        cls.stranger = User.objects.create_user(
+        cls.stranger = user_model.objects.create_user(
             username="stranger",
             email="stranger@example.com",
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Test Baby",
+            name=TEST_BABY_NAME,
             date_of_birth="2025-01-01",
         )
         ChildShare.objects.create(
@@ -60,22 +65,22 @@ class ChildAPITests(APITestCase):
 
     def test_list_children_requires_auth(self):
         """Unauthenticated requests should be denied."""
-        response = self.client.get("/api/v1/children/")
+        response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_list_children_owner(self):
         """Owner sees their children."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.get("/api/v1/children/")
+        response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["name"], "Test Baby")
+        self.assertEqual(response.data["results"][0]["name"], TEST_BABY_NAME)
         self.assertEqual(response.data["results"][0]["user_role"], "owner")
 
     def test_list_children_coparent(self):
         """Co-parent sees shared children."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
-        response = self.client.get("/api/v1/children/")
+        response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["user_role"], "co")
@@ -83,7 +88,7 @@ class ChildAPITests(APITestCase):
     def test_list_children_caregiver(self):
         """Caregiver sees shared children."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.caregiver_token.key}")
-        response = self.client.get("/api/v1/children/")
+        response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["user_role"], "cg")
@@ -91,7 +96,7 @@ class ChildAPITests(APITestCase):
     def test_list_children_stranger(self):
         """Stranger sees no children."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.stranger_token.key}")
-        response = self.client.get("/api/v1/children/")
+        response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 0)
 
@@ -103,7 +108,7 @@ class ChildAPITests(APITestCase):
             "date_of_birth": "2025-06-01",
             "gender": "F",
         }
-        response = self.client.post("/api/v1/children/", data)
+        response = self.client.post(API_CHILDREN_URL, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], "New Baby")
         self.assertEqual(response.data["user_role"], "owner")
@@ -113,7 +118,7 @@ class ChildAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.get(f"/api/v1/children/{self.child.pk}/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], "Test Baby")
+        self.assertEqual(response.data["name"], TEST_BABY_NAME)
 
     def test_retrieve_child_stranger_denied(self):
         """Stranger cannot retrieve child details."""
@@ -166,25 +171,25 @@ class SharingAPITests(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
-        cls.owner = User.objects.create_user(
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
             password="testpass123",
         )
-        cls.coparent = User.objects.create_user(
+        cls.coparent = user_model.objects.create_user(
             username="coparent",
-            email="coparent@example.com",
+            email=TEST_COPARENT_EMAIL,
             password="testpass123",
         )
-        cls.new_user = User.objects.create_user(
+        cls.new_user = user_model.objects.create_user(
             username="newuser",
             email="newuser@example.com",
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Test Baby",
+            name=TEST_BABY_NAME,
             date_of_birth="2025-01-01",
         )
         cls.share = ChildShare.objects.create(
@@ -205,7 +210,7 @@ class SharingAPITests(APITestCase):
         response = self.client.get(f"/api/v1/children/{self.child.pk}/shares/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["user_email"], "coparent@example.com")
+        self.assertEqual(response.data[0]["user_email"], TEST_COPARENT_EMAIL)
 
     def test_list_shares_coparent_denied(self):
         """Co-parent cannot list shares."""
@@ -224,7 +229,7 @@ class SharingAPITests(APITestCase):
 
     def test_list_invites_owner(self):
         """Owner can list invites."""
-        invite = ShareInvite.objects.create(
+        ShareInvite.objects.create(
             child=self.child,
             role=ChildShare.Role.CAREGIVER,
             created_by=self.owner,
@@ -252,7 +257,7 @@ class SharingAPITests(APITestCase):
             created_by=self.owner,
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.new_user_token.key}")
-        response = self.client.post("/api/v1/invites/accept/", {"token": invite.token})
+        response = self.client.post(API_ACCEPT_INVITE_URL, {"token": invite.token})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(
             ChildShare.objects.filter(child=self.child, user=self.new_user).exists()
@@ -266,13 +271,13 @@ class SharingAPITests(APITestCase):
             created_by=self.owner,
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.post("/api/v1/invites/accept/", {"token": invite.token})
+        response = self.client.post(API_ACCEPT_INVITE_URL, {"token": invite.token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_accept_invite_invalid_token(self):
         """Invalid token returns error."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.new_user_token.key}")
-        response = self.client.post("/api/v1/invites/accept/", {"token": "invalid"})
+        response = self.client.post(API_ACCEPT_INVITE_URL, {"token": "invalid"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_accept_invite_already_shared(self):
@@ -284,7 +289,7 @@ class SharingAPITests(APITestCase):
         )
         # coparent already has access
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
-        response = self.client.post("/api/v1/invites/accept/", {"token": invite.token})
+        response = self.client.post(API_ACCEPT_INVITE_URL, {"token": invite.token})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_toggle_invite_owner(self):
@@ -392,15 +397,15 @@ class PermissionEdgeCaseTests(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
-        cls.user = User.objects.create_user(
+        user_model = get_user_model()
+        cls.user = user_model.objects.create_user(
             username="user",
             email="user@example.com",
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.user,
-            name="Test Baby",
+            name=TEST_BABY_NAME,
             date_of_birth="2025-01-01",
         )
 
@@ -442,5 +447,5 @@ class PermissionEdgeCaseTests(APITestCase):
         )
         other_token = Token.objects.create(user=other_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {other_token.key}")
-        response = self.client.post("/api/v1/invites/accept/", {"token": invite.token})
+        response = self.client.post(API_ACCEPT_INVITE_URL, {"token": invite.token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

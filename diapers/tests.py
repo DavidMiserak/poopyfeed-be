@@ -11,13 +11,19 @@ from children.models import Child, ChildShare
 from .forms import DiaperChangeForm
 from .models import DiaperChange
 
+TEST_PARENT_EMAIL = "parent@example.com"
+TEST_DATETIME = "2026-02-01T10:30"
+URL_DIAPER_LIST = "diapers:diaper_list"
+URL_DIAPER_EDIT = "diapers:diaper_edit"
+URL_DIAPER_DELETE = "diapers:diaper_delete"
+
 
 class DiaperChangeModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
@@ -69,7 +75,7 @@ class DiaperChangeFormTests(TestCase):
         form = DiaperChangeForm(
             data={
                 "change_type": DiaperChange.ChangeType.WET,
-                "changed_at": "2026-02-01T10:30",
+                "changed_at": TEST_DATETIME,
             }
         )
         self.assertTrue(form.is_valid())
@@ -78,7 +84,7 @@ class DiaperChangeFormTests(TestCase):
         form = DiaperChangeForm(
             data={
                 "change_type": DiaperChange.ChangeType.WET,
-                "changed_at": "2026-02-01T10:30",
+                "changed_at": TEST_DATETIME,
                 "tz_offset": 300,  # UTC-5 (EST)
             }
         )
@@ -93,7 +99,7 @@ class DiaperChangeViewTests(TestCase):
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
@@ -119,14 +125,14 @@ class DiaperChangeViewTests(TestCase):
 
     def test_diaper_list_requires_login(self):
         response = self.client.get(
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk})
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_diaper_list_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.other_child.pk})
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
@@ -137,10 +143,10 @@ class DiaperChangeViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_diaper_create_adds_change(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
             reverse("diapers:diaper_add", kwargs={"child_pk": self.child.pk}),
-            {"change_type": "dirty", "changed_at": "2026-02-01T10:30"},
+            {"change_type": "dirty", "changed_at": TEST_DATETIME},
         )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
@@ -150,7 +156,7 @@ class DiaperChangeViewTests(TestCase):
         )
 
     def test_diaper_edit_only_own_change(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         other_change = DiaperChange.objects.create(
             child=self.other_child,
             change_type=DiaperChange.ChangeType.BOTH,
@@ -158,14 +164,14 @@ class DiaperChangeViewTests(TestCase):
         )
         response = self.client.get(
             reverse(
-                "diapers:diaper_edit",
+                URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.other_child.pk, "pk": other_change.pk},
             )
         )
         self.assertEqual(response.status_code, 404)
 
     def test_diaper_delete_only_own_change(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         other_change = DiaperChange.objects.create(
             child=self.other_child,
             change_type=DiaperChange.ChangeType.WET,
@@ -173,41 +179,41 @@ class DiaperChangeViewTests(TestCase):
         )
         response = self.client.post(
             reverse(
-                "diapers:diaper_delete",
+                URL_DIAPER_DELETE,
                 kwargs={"child_pk": self.other_child.pk, "pk": other_change.pk},
             )
         )
         self.assertEqual(response.status_code, 404)
 
     def test_diaper_list_shows_changes(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk})
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Wet")
 
     def test_diaper_edit_success(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
-                "diapers:diaper_edit",
+                URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.change.pk},
             ),
             {"change_type": "dirty", "changed_at": "2026-02-01T11:00"},
         )
         self.assertRedirects(
             response,
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk}),
         )
         self.change.refresh_from_db()
         self.assertEqual(self.change.change_type, DiaperChange.ChangeType.DIRTY)
 
     def test_diaper_edit_get_shows_context(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
             reverse(
-                "diapers:diaper_edit",
+                URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.change.pk},
             )
         )
@@ -215,17 +221,17 @@ class DiaperChangeViewTests(TestCase):
         self.assertEqual(response.context["child"], self.child)
 
     def test_diaper_delete_success(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         change_pk = self.change.pk
         response = self.client.post(
             reverse(
-                "diapers:diaper_delete",
+                URL_DIAPER_DELETE,
                 kwargs={"child_pk": self.child.pk, "pk": change_pk},
             )
         )
         self.assertRedirects(
             response,
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk}),
         )
         self.assertFalse(DiaperChange.objects.filter(pk=change_pk).exists())
 
@@ -244,14 +250,14 @@ class DiaperChangeViewTests(TestCase):
         self.client.login(email="coparent@example.com", password="testpass123")
         response = self.client.post(
             reverse(
-                "diapers:diaper_edit",
+                URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.change.pk},
             ),
             {"change_type": "both", "changed_at": "2026-02-01T12:00"},
         )
         self.assertRedirects(
             response,
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk}),
         )
 
     def test_coparent_can_delete_diaper(self):
@@ -274,13 +280,13 @@ class DiaperChangeViewTests(TestCase):
         self.client.login(email="coparent2@example.com", password="testpass123")
         response = self.client.post(
             reverse(
-                "diapers:diaper_delete",
+                URL_DIAPER_DELETE,
                 kwargs={"child_pk": self.child.pk, "pk": change.pk},
             )
         )
         self.assertRedirects(
             response,
-            reverse("diapers:diaper_list", kwargs={"child_pk": self.child.pk}),
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk}),
         )
 
     def test_caregiver_cannot_edit_diaper(self):
@@ -298,7 +304,7 @@ class DiaperChangeViewTests(TestCase):
         self.client.login(email="caregiver@example.com", password="testpass123")
         response = self.client.get(
             reverse(
-                "diapers:diaper_edit",
+                URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.change.pk},
             )
         )

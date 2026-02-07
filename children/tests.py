@@ -8,30 +8,46 @@ from django.urls import reverse
 from .forms import ChildForm
 from .models import Child, ChildShare, ShareInvite
 
+TEST_PARENT_EMAIL = "parent@example.com"
+TEST_OWNER_EMAIL = "owner@example.com"
+TEST_OTHER_EMAIL = "other@example.com"
+TEST_SHARED_EMAIL = "shared@example.com"
+TEST_COPARENT_EMAIL = "coparent@example.com"
+TEST_CAREGIVER_EMAIL = "caregiver@example.com"
+TEST_NEW_EMAIL = "new@example.com"
+TEST_BABY_NAME = "Baby Jane"
+TEST_BABY_NAME_ALT = "Baby Test"
+URL_CHILD_LIST = "children:child_list"
+URL_CHILD_EDIT = "children:child_edit"
+URL_CHILD_DELETE = "children:child_delete"
+URL_CHILD_SHARING = "children:child_sharing"
+URL_CREATE_INVITE = "children:create_invite"
+URL_ACCEPT_INVITE = "children:accept_invite"
+
 
 class ChildModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.user,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
             gender=Child.Gender.FEMALE,
         )
 
     def test_child_creation(self):
-        self.assertEqual(self.child.name, "Baby Jane")
+        self.assertEqual(self.child.name, TEST_BABY_NAME)
         self.assertEqual(self.child.date_of_birth, date(2025, 6, 15))
         self.assertEqual(self.child.gender, "F")
         self.assertEqual(self.child.parent, self.user)
 
     def test_child_str(self):
-        self.assertEqual(str(self.child), "Baby Jane")
+        self.assertEqual(str(self.child), TEST_BABY_NAME)
 
     def test_child_ordering(self):
         older_child = Child.objects.create(
@@ -88,7 +104,7 @@ class ChildFormTests(TestCase):
     def test_valid_form(self):
         form = ChildForm(
             data={
-                "name": "Baby Test",
+                "name": TEST_BABY_NAME_ALT,
                 "date_of_birth": "2025-06-15",
                 "gender": "M",
             }
@@ -98,7 +114,7 @@ class ChildFormTests(TestCase):
     def test_valid_form_without_gender(self):
         form = ChildForm(
             data={
-                "name": "Baby Test",
+                "name": TEST_BABY_NAME_ALT,
                 "date_of_birth": "2025-06-15",
                 "gender": "",
             }
@@ -118,7 +134,7 @@ class ChildFormTests(TestCase):
     def test_invalid_form_missing_dob(self):
         form = ChildForm(
             data={
-                "name": "Baby Test",
+                "name": TEST_BABY_NAME_ALT,
                 "date_of_birth": "",
             }
         )
@@ -131,17 +147,17 @@ class ChildViewTests(TestCase):
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(
             username="testparent",
-            email="parent@example.com",
+            email=TEST_PARENT_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
             username="otherparent",
-            email="other@example.com",
+            email=TEST_OTHER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.user,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
         cls.other_child = Child.objects.create(
@@ -151,15 +167,15 @@ class ChildViewTests(TestCase):
         )
 
     def test_list_view_requires_login(self):
-        response = self.client.get(reverse("children:child_list"))
+        response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertEqual(response.status_code, 302)
         self.assertIn("accounts/login", response.url)
 
     def test_list_view_shows_only_own_children(self):
-        self.client.login(email="parent@example.com", password="testpass123")
-        response = self.client.get(reverse("children:child_list"))
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
+        response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Baby Jane")
+        self.assertContains(response, TEST_BABY_NAME)
         self.assertNotContains(response, "Other Baby")
 
     def test_create_view_requires_login(self):
@@ -167,7 +183,7 @@ class ChildViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_create_view_adds_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
             reverse("children:child_add"),
             {
@@ -183,21 +199,21 @@ class ChildViewTests(TestCase):
 
     def test_update_view_requires_login(self):
         response = self.client.get(
-            reverse("children:child_edit", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_update_view_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:child_edit", kwargs={"pk": self.other_child.pk})
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_update_view_updates_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("children:child_edit", kwargs={"pk": self.child.pk}),
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk}),
             {
                 "name": "Updated Name",
                 "date_of_birth": "2025-06-15",
@@ -210,23 +226,21 @@ class ChildViewTests(TestCase):
 
     def test_delete_view_requires_login(self):
         response = self.client.get(
-            reverse("children:child_delete", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_DELETE, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_delete_view_only_own_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("children:child_delete", kwargs={"pk": self.other_child.pk})
+            reverse(URL_CHILD_DELETE, kwargs={"pk": self.other_child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_delete_view_deletes_child(self):
-        self.client.login(email="parent@example.com", password="testpass123")
+        self.client.login(email=TEST_PARENT_EMAIL, password="testpass123")
         child_pk = self.child.pk
-        response = self.client.post(
-            reverse("children:child_delete", kwargs={"pk": child_pk})
-        )
+        response = self.client.post(reverse(URL_CHILD_DELETE, kwargs={"pk": child_pk}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Child.objects.filter(pk=child_pk).exists())
 
@@ -236,17 +250,17 @@ class ChildShareModelTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.shared_user = get_user_model().objects.create_user(
             username="shared",
-            email="shared@example.com",
+            email=TEST_SHARED_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
@@ -314,12 +328,12 @@ class ShareInviteModelTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
@@ -369,17 +383,17 @@ class ChildSharingMethodTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.coparent = get_user_model().objects.create_user(
             username="coparent",
-            email="coparent@example.com",
+            email=TEST_COPARENT_EMAIL,
             password="testpass123",
         )
         cls.caregiver = get_user_model().objects.create_user(
             username="caregiver",
-            email="caregiver@example.com",
+            email=TEST_CAREGIVER_EMAIL,
             password="testpass123",
         )
         cls.stranger = get_user_model().objects.create_user(
@@ -389,7 +403,7 @@ class ChildSharingMethodTests(TestCase):
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
         ChildShare.objects.create(
@@ -470,44 +484,44 @@ class ChildSharingViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.coparent = get_user_model().objects.create_user(
             username="coparent",
-            email="coparent@example.com",
+            email=TEST_COPARENT_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
             username="other",
-            email="other@example.com",
+            email=TEST_OTHER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
     def test_sharing_view_requires_login(self):
         response = self.client.get(
-            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_SHARING, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_sharing_view_owner_access(self):
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_SHARING, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Share")
         self.assertContains(response, self.child.name)
 
     def test_sharing_view_non_owner_denied(self):
-        self.client.login(email="other@example.com", password="testpass123")
+        self.client.login(email=TEST_OTHER_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_SHARING, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
@@ -517,9 +531,9 @@ class ChildSharingViewTests(TestCase):
             user=self.coparent,
             role=ChildShare.Role.CO_PARENT,
         )
-        self.client.login(email="coparent@example.com", password="testpass123")
+        self.client.login(email=TEST_COPARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:child_sharing", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_SHARING, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
@@ -529,24 +543,24 @@ class CreateInviteViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
             username="other",
-            email="other@example.com",
+            email=TEST_OTHER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
     def test_create_invite_owner(self):
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            reverse(URL_CREATE_INVITE, kwargs={"pk": self.child.pk}),
             {"role": ChildShare.Role.CAREGIVER},
         )
         self.assertEqual(response.status_code, 302)
@@ -556,27 +570,27 @@ class CreateInviteViewTests(TestCase):
         self.assertEqual(invite.role, ChildShare.Role.CAREGIVER)
 
     def test_create_invite_coparent_role(self):
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         self.client.post(
-            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            reverse(URL_CREATE_INVITE, kwargs={"pk": self.child.pk}),
             {"role": ChildShare.Role.CO_PARENT},
         )
         invite = ShareInvite.objects.first()
         self.assertEqual(invite.role, ChildShare.Role.CO_PARENT)
 
     def test_create_invite_non_owner_denied(self):
-        self.client.login(email="other@example.com", password="testpass123")
+        self.client.login(email=TEST_OTHER_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            reverse(URL_CREATE_INVITE, kwargs={"pk": self.child.pk}),
             {"role": ChildShare.Role.CAREGIVER},
         )
         self.assertEqual(response.status_code, 404)
         self.assertEqual(ShareInvite.objects.count(), 0)
 
     def test_create_invite_invalid_role_defaults_to_caregiver(self):
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         self.client.post(
-            reverse("children:create_invite", kwargs={"pk": self.child.pk}),
+            reverse(URL_CREATE_INVITE, kwargs={"pk": self.child.pk}),
             {"role": "INVALID"},
         )
         invite = ShareInvite.objects.first()
@@ -588,17 +602,17 @@ class AcceptInviteViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.new_user = get_user_model().objects.create_user(
             username="newuser",
-            email="new@example.com",
+            email=TEST_NEW_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
@@ -609,7 +623,7 @@ class AcceptInviteViewTests(TestCase):
             created_by=self.owner,
         )
         response = self.client.get(
-            reverse("children:accept_invite", kwargs={"token": invite.token})
+            reverse(URL_ACCEPT_INVITE, kwargs={"token": invite.token})
         )
         self.assertEqual(response.status_code, 302)
         self.assertIn("accounts/login", response.url)
@@ -620,9 +634,9 @@ class AcceptInviteViewTests(TestCase):
             role=ChildShare.Role.CAREGIVER,
             created_by=self.owner,
         )
-        self.client.login(email="new@example.com", password="testpass123")
+        self.client.login(email=TEST_NEW_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:accept_invite", kwargs={"token": invite.token})
+            reverse(URL_ACCEPT_INVITE, kwargs={"token": invite.token})
         )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
@@ -637,10 +651,8 @@ class AcceptInviteViewTests(TestCase):
             role=ChildShare.Role.CO_PARENT,
             created_by=self.owner,
         )
-        self.client.login(email="new@example.com", password="testpass123")
-        self.client.get(
-            reverse("children:accept_invite", kwargs={"token": invite.token})
-        )
+        self.client.login(email=TEST_NEW_EMAIL, password="testpass123")
+        self.client.get(reverse(URL_ACCEPT_INVITE, kwargs={"token": invite.token}))
         share = ChildShare.objects.get(child=self.child, user=self.new_user)
         self.assertEqual(share.role, ChildShare.Role.CO_PARENT)
 
@@ -650,9 +662,9 @@ class AcceptInviteViewTests(TestCase):
             role=ChildShare.Role.CAREGIVER,
             created_by=self.owner,
         )
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:accept_invite", kwargs={"token": invite.token})
+            reverse(URL_ACCEPT_INVITE, kwargs={"token": invite.token})
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
@@ -670,9 +682,9 @@ class AcceptInviteViewTests(TestCase):
             role=ChildShare.Role.CO_PARENT,
             created_by=self.owner,
         )
-        self.client.login(email="new@example.com", password="testpass123")
+        self.client.login(email=TEST_NEW_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:accept_invite", kwargs={"token": invite.token})
+            reverse(URL_ACCEPT_INVITE, kwargs={"token": invite.token})
         )
         self.assertEqual(response.status_code, 302)
         # Should not change role since already shared
@@ -686,16 +698,16 @@ class AcceptInviteViewTests(TestCase):
             created_by=self.owner,
             is_active=False,
         )
-        self.client.login(email="new@example.com", password="testpass123")
+        self.client.login(email=TEST_NEW_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:accept_invite", kwargs={"token": invite.token})
+            reverse(URL_ACCEPT_INVITE, kwargs={"token": invite.token})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_accept_invite_invalid_token(self):
-        self.client.login(email="new@example.com", password="testpass123")
+        self.client.login(email=TEST_NEW_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:accept_invite", kwargs={"token": "invalid-token"})
+            reverse(URL_ACCEPT_INVITE, kwargs={"token": "invalid-token"})
         )
         self.assertEqual(response.status_code, 404)
 
@@ -705,17 +717,17 @@ class RevokeAccessViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.shared_user = get_user_model().objects.create_user(
             username="shared",
-            email="shared@example.com",
+            email=TEST_SHARED_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
@@ -725,7 +737,7 @@ class RevokeAccessViewTests(TestCase):
             user=self.shared_user,
             role=ChildShare.Role.CAREGIVER,
         )
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
                 "children:revoke_access",
@@ -741,7 +753,7 @@ class RevokeAccessViewTests(TestCase):
             user=self.shared_user,
             role=ChildShare.Role.CAREGIVER,
         )
-        self.client.login(email="shared@example.com", password="testpass123")
+        self.client.login(email=TEST_SHARED_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
                 "children:revoke_access",
@@ -757,12 +769,12 @@ class ToggleInviteViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
@@ -773,7 +785,7 @@ class ToggleInviteViewTests(TestCase):
             created_by=self.owner,
             is_active=True,
         )
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
                 "children:toggle_invite",
@@ -791,7 +803,7 @@ class ToggleInviteViewTests(TestCase):
             created_by=self.owner,
             is_active=False,
         )
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         self.client.post(
             reverse(
                 "children:toggle_invite",
@@ -807,17 +819,17 @@ class DeleteInviteViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.other_user = get_user_model().objects.create_user(
             username="other",
-            email="other@example.com",
+            email=TEST_OTHER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
 
@@ -827,7 +839,7 @@ class DeleteInviteViewTests(TestCase):
             role=ChildShare.Role.CAREGIVER,
             created_by=self.owner,
         )
-        self.client.login(email="owner@example.com", password="testpass123")
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
                 "children:delete_invite",
@@ -843,7 +855,7 @@ class DeleteInviteViewTests(TestCase):
             role=ChildShare.Role.CAREGIVER,
             created_by=self.owner,
         )
-        self.client.login(email="other@example.com", password="testpass123")
+        self.client.login(email=TEST_OTHER_EMAIL, password="testpass123")
         response = self.client.post(
             reverse(
                 "children:delete_invite",
@@ -859,22 +871,22 @@ class SharedChildListViewTests(TestCase):
     def setUpTestData(cls):
         cls.owner = get_user_model().objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email=TEST_OWNER_EMAIL,
             password="testpass123",
         )
         cls.coparent = get_user_model().objects.create_user(
             username="coparent",
-            email="coparent@example.com",
+            email=TEST_COPARENT_EMAIL,
             password="testpass123",
         )
         cls.caregiver = get_user_model().objects.create_user(
             username="caregiver",
-            email="caregiver@example.com",
+            email=TEST_CAREGIVER_EMAIL,
             password="testpass123",
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
-            name="Baby Jane",
+            name=TEST_BABY_NAME,
             date_of_birth=date(2025, 6, 15),
         )
         ChildShare.objects.create(
@@ -889,53 +901,53 @@ class SharedChildListViewTests(TestCase):
         )
 
     def test_shared_child_appears_in_coparent_list(self):
-        self.client.login(email="coparent@example.com", password="testpass123")
-        response = self.client.get(reverse("children:child_list"))
+        self.client.login(email=TEST_COPARENT_EMAIL, password="testpass123")
+        response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Baby Jane")
+        self.assertContains(response, TEST_BABY_NAME)
         self.assertContains(response, "Co-parent")
 
     def test_shared_child_appears_in_caregiver_list(self):
-        self.client.login(email="caregiver@example.com", password="testpass123")
-        response = self.client.get(reverse("children:child_list"))
+        self.client.login(email=TEST_CAREGIVER_EMAIL, password="testpass123")
+        response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Baby Jane")
+        self.assertContains(response, TEST_BABY_NAME)
         self.assertContains(response, "Caregiver")
 
     def test_coparent_can_edit_child(self):
-        self.client.login(email="coparent@example.com", password="testpass123")
+        self.client.login(email=TEST_COPARENT_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:child_edit", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 200)
 
     def test_caregiver_cannot_edit_child(self):
-        self.client.login(email="caregiver@example.com", password="testpass123")
+        self.client.login(email=TEST_CAREGIVER_EMAIL, password="testpass123")
         response = self.client.get(
-            reverse("children:child_edit", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_coparent_cannot_delete_child(self):
-        self.client.login(email="coparent@example.com", password="testpass123")
+        self.client.login(email=TEST_COPARENT_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("children:child_delete", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_DELETE, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_caregiver_cannot_delete_child(self):
-        self.client.login(email="caregiver@example.com", password="testpass123")
+        self.client.login(email=TEST_CAREGIVER_EMAIL, password="testpass123")
         response = self.client.post(
-            reverse("children:child_delete", kwargs={"pk": self.child.pk})
+            reverse(URL_CHILD_DELETE, kwargs={"pk": self.child.pk})
         )
         self.assertEqual(response.status_code, 404)
 
     def test_share_button_visible_only_for_owner(self):
-        self.client.login(email="owner@example.com", password="testpass123")
-        response = self.client.get(reverse("children:child_list"))
+        self.client.login(email=TEST_OWNER_EMAIL, password="testpass123")
+        response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertContains(response, "fa-share-nodes")
 
     def test_share_button_hidden_for_coparent(self):
-        self.client.login(email="coparent@example.com", password="testpass123")
-        response = self.client.get(reverse("children:child_list"))
+        self.client.login(email=TEST_COPARENT_EMAIL, password="testpass123")
+        response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertNotContains(response, "fa-share-nodes")

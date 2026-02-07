@@ -9,19 +9,21 @@ from children.models import Child, ChildShare
 
 from .models import Feeding
 
+TEST_DATETIME = "2025-01-15T10:00:00Z"
+
 
 class FeedingAPITests(APITestCase):
     """Tests for Feeding API endpoints."""
 
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
-        cls.owner = User.objects.create_user(
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
             password="testpass123",
         )
-        cls.caregiver = User.objects.create_user(
+        cls.caregiver = user_model.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
             password="testpass123",
@@ -47,7 +49,7 @@ class FeedingAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         data = {
             "feeding_type": "bottle",
-            "fed_at": "2025-01-15T10:00:00Z",
+            "fed_at": TEST_DATETIME,
             "amount_oz": "4.5",
         }
         response = self.client.post(f"/api/v1/children/{self.child.pk}/feedings/", data)
@@ -60,7 +62,7 @@ class FeedingAPITests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         data = {
             "feeding_type": "bottle",
-            "fed_at": "2025-01-15T10:00:00Z",
+            "fed_at": TEST_DATETIME,
         }
         response = self.client.post(f"/api/v1/children/{self.child.pk}/feedings/", data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -110,7 +112,7 @@ class FeedingAPITests(APITestCase):
         Feeding.objects.create(
             child=self.child,
             feeding_type=Feeding.FeedingType.BOTTLE,
-            fed_at="2025-01-15T10:00:00Z",
+            fed_at=TEST_DATETIME,
             amount_oz=4,
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")

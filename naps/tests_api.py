@@ -15,13 +15,13 @@ class NapAPITests(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
-        cls.owner = User.objects.create_user(
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
             password="testpass123",
         )
-        cls.caregiver = User.objects.create_user(
+        cls.caregiver = user_model.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
             password="testpass123",
@@ -131,8 +131,8 @@ class NapAPITests(APITestCase):
 
     def test_stranger_cannot_create(self):
         """Stranger cannot create naps."""
-        User = get_user_model()
-        stranger = User.objects.create_user(
+        user_model = get_user_model()
+        stranger = user_model.objects.create_user(
             username="stranger",
             email="stranger@example.com",
             password="testpass123",
