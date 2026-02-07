@@ -5,7 +5,7 @@ from django import forms
 from .models import Nap
 
 
-class LocalDateTimeFormMixin:
+class LocalDateTimeFormMixin(forms.Form):
     """Mixin to handle local timezone input for datetime fields."""
 
     datetime_field_name = None  # Subclasses must set this
@@ -35,10 +35,6 @@ class LocalDateTimeFormMixin:
 class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
     datetime_field_name = "napped_at"
 
-    tz_offset = forms.IntegerField(
-        widget=forms.HiddenInput(attrs={"class": "tz-offset"}),
-        required=False,
-    )
     napped_at = forms.DateTimeField(
         widget=forms.DateTimeInput(
             attrs={

@@ -64,3 +64,4 @@ build/
 CLAUDE.md
 htmlcov/
 .coverage
+memory/
