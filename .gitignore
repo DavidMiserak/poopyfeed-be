@@ -68,3 +68,4 @@ CLAUDE.md
 htmlcov/
 .coverage
 memory/
+staticfiles/
