@@ -46,8 +46,14 @@ class FeedingSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         extra_kwargs = {
-            "amount_oz": {"min_value": Decimal("0.1"), "max_value": Decimal("50")},
-            "duration_minutes": {"min_value": 1, "max_value": 180},
+            "amount_oz": {
+                "min_value": Feeding.MIN_BOTTLE_OZ,
+                "max_value": Feeding.MAX_BOTTLE_OZ,
+            },
+            "duration_minutes": {
+                "min_value": Feeding.MIN_BREAST_MINUTES,
+                "max_value": Feeding.MAX_BREAST_MINUTES,
+            },
         }
 
     def validate(self, data):

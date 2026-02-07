@@ -6,6 +6,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 from .models import Feeding
 
+# UI constants
+BOTTLE_STEP = Decimal("0.5")
+
 
 class LocalDateTimeFormMixin(forms.Form):
     """Mixin to handle local timezone input for datetime fields."""
@@ -46,30 +49,33 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
         ),
     )
     amount_oz = forms.DecimalField(
-        max_digits=4,
-        decimal_places=1,
+        max_digits=Feeding.BOTTLE_MAX_DIGITS,
+        decimal_places=Feeding.BOTTLE_DECIMAL_PLACES,
         required=False,
         validators=[
-            MinValueValidator(Decimal("0.1")),
-            MaxValueValidator(Decimal("50")),
+            MinValueValidator(Feeding.MIN_BOTTLE_OZ),
+            MaxValueValidator(Feeding.MAX_BOTTLE_OZ),
         ],
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control form-control-lg border-2",
-                "step": "0.5",
-                "min": "0.1",
-                "max": "50",
+                "step": str(BOTTLE_STEP),
+                "min": str(Feeding.MIN_BOTTLE_OZ),
+                "max": str(Feeding.MAX_BOTTLE_OZ),
             }
         ),
     )
     duration_minutes = forms.IntegerField(
         required=False,
-        validators=[MinValueValidator(1), MaxValueValidator(180)],
+        validators=[
+            MinValueValidator(Feeding.MIN_BREAST_MINUTES),
+            MaxValueValidator(Feeding.MAX_BREAST_MINUTES),
+        ],
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control form-control-lg border-2",
-                "min": "1",
-                "max": "180",
+                "min": str(Feeding.MIN_BREAST_MINUTES),
+                "max": str(Feeding.MAX_BREAST_MINUTES),
             }
         ),
     )

@@ -16,6 +16,14 @@ class Feeding(models.Model):
         RIGHT = "right", "Right"
         BOTH = "both", "Both"
 
+    # Validation constants
+    MIN_BOTTLE_OZ = Decimal("0.1")
+    MAX_BOTTLE_OZ = Decimal("50")
+    MIN_BREAST_MINUTES = 1
+    MAX_BREAST_MINUTES = 180
+    BOTTLE_MAX_DIGITS = 4
+    BOTTLE_DECIMAL_PLACES = 1
+
     child = models.ForeignKey(
         Child,
         on_delete=models.CASCADE,
@@ -26,13 +34,13 @@ class Feeding(models.Model):
 
     # Bottle fields
     amount_oz = models.DecimalField(
-        max_digits=4,
-        decimal_places=1,
+        max_digits=BOTTLE_MAX_DIGITS,
+        decimal_places=BOTTLE_DECIMAL_PLACES,
         null=True,
         blank=True,
         validators=[
-            MinValueValidator(Decimal("0.1")),
-            MaxValueValidator(Decimal("50")),
+            MinValueValidator(MIN_BOTTLE_OZ),
+            MaxValueValidator(MAX_BOTTLE_OZ),
         ],
     )
 
@@ -40,7 +48,10 @@ class Feeding(models.Model):
     duration_minutes = models.PositiveIntegerField(
         null=True,
         blank=True,
-        validators=[MinValueValidator(1), MaxValueValidator(180)],
+        validators=[
+            MinValueValidator(MIN_BREAST_MINUTES),
+            MaxValueValidator(MAX_BREAST_MINUTES),
+        ],
     )
     side = models.CharField(max_length=10, choices=BreastSide.choices, blank=True)
 
