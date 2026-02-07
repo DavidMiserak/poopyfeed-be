@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from children.models import Child
@@ -23,11 +26,22 @@ class Feeding(models.Model):
 
     # Bottle fields
     amount_oz = models.DecimalField(
-        max_digits=4, decimal_places=1, null=True, blank=True
+        max_digits=4,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("0.1")),
+            MaxValueValidator(Decimal("50")),
+        ],
     )
 
     # Breast fields
-    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    duration_minutes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(180)],
+    )
     side = models.CharField(max_length=10, choices=BreastSide.choices, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

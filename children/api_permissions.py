@@ -18,6 +18,16 @@ class HasChildAccess(BasePermission):
 
     message = "You do not have access to this child."
 
+    def has_permission(self, request, view):
+        """Check permission for list/create actions.
+
+        For list: queryset filters ensure only accessible children are returned.
+        For create: any authenticated user can create a child (becomes owner).
+        Specific child access checks are handled in has_object_permission
+        or in view's perform_create/get_queryset methods.
+        """
+        return True
+
     def has_object_permission(self, request, view, obj):
         child = self._get_child(obj)
         if child is None:

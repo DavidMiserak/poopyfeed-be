@@ -119,7 +119,7 @@ class ChildViewSet(viewsets.ModelViewSet):
     """ViewSet for Child CRUD operations."""
 
     serializer_class = ChildSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasChildAccess]
 
     def get_queryset(self):
         """Return children accessible to the current user."""

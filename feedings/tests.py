@@ -252,6 +252,85 @@ class FeedingFormTests(TestCase):
         self.assertEqual(form.cleaned_data["fed_at"].hour, 15)
         self.assertEqual(form.cleaned_data["fed_at"].minute, 30)
 
+    def test_negative_amount_invalid(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": "2026-02-01T10:30",
+                "amount_oz": "-1.0",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("amount_oz", form.errors)
+
+    def test_zero_amount_invalid(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": "2026-02-01T10:30",
+                "amount_oz": "0.0",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("amount_oz", form.errors)
+
+    def test_small_valid_amount(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": "2026-02-01T10:30",
+                "amount_oz": "0.5",
+            }
+        )
+        self.assertTrue(form.is_valid())
+
+    def test_large_amount_invalid(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": "2026-02-01T10:30",
+                "amount_oz": "60.0",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("amount_oz", form.errors)
+
+    def test_negative_duration_invalid(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BREAST,
+                "fed_at": "2026-02-01T10:30",
+                "duration_minutes": "-5",
+                "side": Feeding.BreastSide.LEFT,
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("duration_minutes", form.errors)
+
+    def test_zero_duration_invalid(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BREAST,
+                "fed_at": "2026-02-01T10:30",
+                "duration_minutes": "0",
+                "side": Feeding.BreastSide.LEFT,
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("duration_minutes", form.errors)
+
+    def test_large_duration_invalid(self):
+        form = FeedingForm(
+            data={
+                "feeding_type": Feeding.FeedingType.BREAST,
+                "fed_at": "2026-02-01T10:30",
+                "duration_minutes": "200",
+                "side": Feeding.BreastSide.LEFT,
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("duration_minutes", form.errors)
+
 
 class FeedingViewTests(TestCase):
     @classmethod

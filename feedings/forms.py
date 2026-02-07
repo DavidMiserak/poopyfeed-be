@@ -1,6 +1,8 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django import forms
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 from .models import Feeding
 
@@ -51,18 +53,28 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
         max_digits=4,
         decimal_places=1,
         required=False,
+        validators=[
+            MinValueValidator(Decimal("0.1")),
+            MaxValueValidator(Decimal("50")),
+        ],
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control form-control-lg border-2",
                 "step": "0.5",
-                "min": "0",
+                "min": "0.1",
+                "max": "50",
             }
         ),
     )
     duration_minutes = forms.IntegerField(
         required=False,
+        validators=[MinValueValidator(1), MaxValueValidator(180)],
         widget=forms.NumberInput(
-            attrs={"class": "form-control form-control-lg border-2", "min": "1"}
+            attrs={
+                "class": "form-control form-control-lg border-2",
+                "min": "1",
+                "max": "180",
+            }
         ),
     )
 

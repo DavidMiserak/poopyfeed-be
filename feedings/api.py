@@ -1,5 +1,7 @@
 """REST API for feedings app: Feeding."""
 
+from decimal import Decimal
+
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.routers import DefaultRouter
@@ -43,6 +45,10 @@ class FeedingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        extra_kwargs = {
+            "amount_oz": {"min_value": Decimal("0.1"), "max_value": Decimal("50")},
+            "duration_minutes": {"min_value": 1, "max_value": 180},
+        }
 
     def validate(self, data):
         """Validate bottle vs breast fields."""
