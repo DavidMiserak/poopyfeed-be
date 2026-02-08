@@ -14,6 +14,29 @@ from .mixins import ChildAccessMixin, ChildEditMixin
 from .models import Child, ChildShare
 
 
+class TrackingEditQuerysetMixin:
+    """Mixin for edit views (Update/Delete) with shared queryset filtering.
+
+    Filters queryset to allow editing/deleting by owner or co-parent only.
+    Used by both TrackingUpdateView and TrackingDeleteView.
+    """
+
+    def get_queryset(self):
+        """Allow editing/deleting by owner or co-parent."""
+        return self.model.objects.filter(
+            Q(child__parent=self.request.user)
+            | Q(
+                child__shares__user=self.request.user,
+                child__shares__role=ChildShare.Role.CO_PARENT,
+            )
+        ).distinct()
+
+    def get_child_for_access_check(self):
+        """Get child from the tracking record object."""
+        obj = self.get_object()
+        return obj.child
+
+
 class TrackingListView(ChildAccessMixin, ListView):
     """Base ListView for tracking records (diaper changes, feedings, naps).
 
@@ -68,7 +91,7 @@ class TrackingCreateView(ChildAccessMixin, CreateView):
         return reverse(self.success_url_name, kwargs={"child_pk": self.child.pk})
 
 
-class TrackingUpdateView(ChildEditMixin, UpdateView):
+class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
     """Base UpdateView for tracking records.
 
     Allows editing by owner or co-parent (enforced by ChildEditMixin).
@@ -89,21 +112,6 @@ class TrackingUpdateView(ChildEditMixin, UpdateView):
 
     success_url_name = None  # Must be set by subclass
 
-    def get_child_for_access_check(self):
-        # Get child from the tracking record object
-        obj = self.get_object()
-        return obj.child
-
-    def get_queryset(self):
-        # Allow editing by owner or co-parent
-        return self.model.objects.filter(
-            Q(child__parent=self.request.user)
-            | Q(
-                child__shares__user=self.request.user,
-                child__shares__role=ChildShare.Role.CO_PARENT,
-            )
-        ).distinct()
-
     def get_success_url(self):
         if not self.success_url_name:
             raise NotImplementedError("Subclass must set success_url_name")
@@ -115,7 +123,7 @@ class TrackingUpdateView(ChildEditMixin, UpdateView):
         return context
 
 
-class TrackingDeleteView(ChildEditMixin, DeleteView):
+class TrackingDeleteView(TrackingEditQuerysetMixin, ChildEditMixin, DeleteView):
     """Base DeleteView for tracking records.
 
     Allows deleting by owner or co-parent (enforced by ChildEditMixin).
@@ -133,20 +141,6 @@ class TrackingDeleteView(ChildEditMixin, DeleteView):
     """
 
     success_url_name = None  # Must be set by subclass
-
-    def get_child_for_access_check(self):
-        obj = self.get_object()
-        return obj.child
-
-    def get_queryset(self):
-        # Allow deleting by owner or co-parent
-        return self.model.objects.filter(
-            Q(child__parent=self.request.user)
-            | Q(
-                child__shares__user=self.request.user,
-                child__shares__role=ChildShare.Role.CO_PARENT,
-            )
-        ).distinct()
 
     def get_success_url(self):
         if not self.success_url_name:
