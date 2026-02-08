@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import resolve, reverse
 
+from django_project.test_constants import TEST_PASSWORD
+
 from .views import HomePageView, OfflinePageView, ServiceWorkerView
 
 
@@ -40,9 +42,9 @@ class HomePageTests(TestCase):
         user = user_model.objects.create_user(
             username="testuser",
             email="test@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
-        self.client.login(username="testuser", password="testpass123")
+        self.client.login(username="testuser", password=TEST_PASSWORD)
         response = self.client.get(self.url)
         self.assertContains(response, "Go to My Children")
         self.assertContains(response, user.email)

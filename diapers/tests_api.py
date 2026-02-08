@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from children.models import Child, ChildShare
+from django_project.test_constants import TEST_PASSWORD
 
 from .models import DiaperChange
 
@@ -21,22 +22,22 @@ class DiaperChangeAPITests(APITestCase):
         cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.coparent = user_model.objects.create_user(
             username="coparent",
             email="coparent@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.caregiver = user_model.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.stranger = user_model.objects.create_user(
             username="stranger",
             email="stranger@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner,

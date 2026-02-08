@@ -5,6 +5,8 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
+from django_project.test_constants import TEST_PASSWORD
+
 from .models import Child, ChildShare, ShareInvite
 
 TEST_COPARENT_EMAIL = "coparent@example.com"
@@ -22,22 +24,22 @@ class ChildAPITests(APITestCase):
         cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.coparent = user_model.objects.create_user(
             username="coparent",
             email=TEST_COPARENT_EMAIL,
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.caregiver = user_model.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.stranger = user_model.objects.create_user(
             username="stranger",
             email="stranger@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
@@ -175,17 +177,17 @@ class SharingAPITests(APITestCase):
         cls.owner = user_model.objects.create_user(
             username="owner",
             email="owner@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.coparent = user_model.objects.create_user(
             username="coparent",
             email=TEST_COPARENT_EMAIL,
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.new_user = user_model.objects.create_user(
             username="newuser",
             email="newuser@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
@@ -401,7 +403,7 @@ class PermissionEdgeCaseTests(APITestCase):
         cls.user = user_model.objects.create_user(
             username="user",
             email="user@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -443,7 +445,7 @@ class PermissionEdgeCaseTests(APITestCase):
         other_user = get_user_model().objects.create_user(
             username="other",
             email="other@example.com",
-            password="testpass123",
+            password=TEST_PASSWORD,
         )
         other_token = Token.objects.create(user=other_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {other_token.key}")

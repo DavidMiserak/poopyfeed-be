@@ -2,12 +2,14 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from django_project.test_constants import TEST_PASSWORD
+
 
 class CustomUserTests(TestCase):
     def test_create_user(self):
         user_model = get_user_model()
         user = user_model.objects.create_user(
-            username="will", email="will@email.com", password="testpass123"
+            username="will", email="will@email.com", password=TEST_PASSWORD
         )
         self.assertEqual(user.username, "will")
         self.assertEqual(user.email, "will@email.com")
@@ -18,7 +20,7 @@ class CustomUserTests(TestCase):
     def test_create_superuser(self):
         user_model = get_user_model()
         admin_user = user_model.objects.create_superuser(
-            username="superadmin", email="superadmin@email.com", password="testpass123"
+            username="superadmin", email="superadmin@email.com", password=TEST_PASSWORD
         )
         self.assertEqual(admin_user.username, "superadmin")
         self.assertEqual(admin_user.email, "superadmin@email.com")
@@ -43,8 +45,8 @@ class SignUpPageTests(TestCase):
             reverse("account_signup"),
             {
                 "email": "testuser@email.com",
-                "password1": "testpass123",
-                "password2": "testpass123",
+                "password1": TEST_PASSWORD,
+                "password2": TEST_PASSWORD,
             },
         )
         self.assertEqual(user_model.objects.count(), 1)
