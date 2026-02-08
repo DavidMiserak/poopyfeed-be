@@ -13,6 +13,9 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from .mixins import ChildAccessMixin, ChildEditMixin
 from .models import Child, ChildShare
 
+# Error message for missing success_url_name attribute
+ERROR_MISSING_SUCCESS_URL_NAME = "Subclass must set success_url_name"
+
 
 class TrackingEditQuerysetMixin:
     """Mixin for edit views (Update/Delete) with shared queryset filtering.
@@ -87,7 +90,7 @@ class TrackingCreateView(ChildAccessMixin, CreateView):
 
     def get_success_url(self):
         if not self.success_url_name:
-            raise NotImplementedError("Subclass must set success_url_name")
+            raise NotImplementedError(ERROR_MISSING_SUCCESS_URL_NAME)
         return reverse(self.success_url_name, kwargs={"child_pk": self.child.pk})
 
 
@@ -114,7 +117,7 @@ class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
 
     def get_success_url(self):
         if not self.success_url_name:
-            raise NotImplementedError("Subclass must set success_url_name")
+            raise NotImplementedError(ERROR_MISSING_SUCCESS_URL_NAME)
         return reverse(self.success_url_name, kwargs={"child_pk": self.object.child.pk})
 
     def get_context_data(self, **kwargs):
@@ -144,5 +147,5 @@ class TrackingDeleteView(TrackingEditQuerysetMixin, ChildEditMixin, DeleteView):
 
     def get_success_url(self):
         if not self.success_url_name:
-            raise NotImplementedError("Subclass must set success_url_name")
+            raise NotImplementedError(ERROR_MISSING_SUCCESS_URL_NAME)
         return reverse(self.success_url_name, kwargs={"child_pk": self.object.child.pk})
