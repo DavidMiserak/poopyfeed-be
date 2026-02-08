@@ -2,12 +2,10 @@
 
 from decimal import Decimal
 
-from rest_framework import serializers, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 from rest_framework.routers import DefaultRouter
 
-from children.api_permissions import CanEditChild, HasChildAccess
-from children.models import Child
+from children.tracking_api import TrackingViewSet
 
 from .models import Feeding
 
@@ -115,50 +113,12 @@ class NestedFeedingSerializer(FeedingSerializer):
         ]
 
 
-class FeedingViewSet(viewsets.ModelViewSet):
+class FeedingViewSet(TrackingViewSet):
     """ViewSet for Feeding CRUD (nested under children)."""
 
-    permission_classes = [IsAuthenticated, HasChildAccess]
-
-    def get_serializer_class(self):
-        """Use nested serializer when child is in URL."""
-        if "child_pk" in self.kwargs:
-            return NestedFeedingSerializer
-        return FeedingSerializer
-
-    def get_queryset(self):
-        """Return feedings for the child, filtered by user access."""
-        child_pk = self.kwargs.get("child_pk")
-        if child_pk:
-            # Nested route: /children/{child_pk}/feedings/
-            child = Child.objects.filter(pk=child_pk).first()
-            if child and child.has_access(self.request.user):
-                return Feeding.objects.filter(child=child)
-            return Feeding.objects.none()
-
-        # Top-level route: /feedings/ - return all accessible
-        accessible_children = Child.for_user(self.request.user)
-        return Feeding.objects.filter(child__in=accessible_children)
-
-    def get_permissions(self):
-        """Apply edit permission for update/delete."""
-        if self.action in ["update", "partial_update", "destroy"]:
-            return [IsAuthenticated(), CanEditChild()]
-        return super().get_permissions()
-
-    def perform_create(self, serializer):
-        """Set child from URL parameter."""
-        child_pk = self.kwargs.get("child_pk")
-        if child_pk:
-            child = Child.objects.get(pk=child_pk)
-            if not child.has_access(self.request.user):
-                from rest_framework.exceptions import PermissionDenied
-
-                raise PermissionDenied("You do not have access to this child.")
-            serializer.save(child=child)
-        else:
-            # Top-level route: child must be in request data
-            serializer.save()
+    queryset = Feeding.objects.all()
+    serializer_class = FeedingSerializer
+    nested_serializer_class = NestedFeedingSerializer
 
 
 # Router for top-level /feedings/ endpoint
