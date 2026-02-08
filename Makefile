@@ -27,11 +27,13 @@ run: podman-compose.yaml image-build
 test:
 	$(RUNTIME) compose exec web coverage run manage.py test
 	$(RUNTIME) compose exec web coverage report
+	$(RUNTIME) compose exec web coverage xml
 
 .PHONY: test-local
 test-local:
 	DJANGO_DEBUG=True coverage run manage.py test
 	coverage report
+	coverage xml
 
 .PHONY: coverage-html
 coverage-html: test

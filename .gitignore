@@ -67,5 +67,6 @@ build/
 CLAUDE.md
 htmlcov/
 .coverage
+coverage.xml
 memory/
 staticfiles/
