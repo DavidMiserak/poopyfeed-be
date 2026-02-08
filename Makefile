@@ -1,6 +1,7 @@
 # Makefile
 
 RUNTIME := podman # podman or docker
+IMAGE_NAME := poopyfeed-be
 
 .PHONY: pre-commit-setup
 pre-commit-setup:
@@ -12,7 +13,7 @@ pre-commit-setup:
 
 .PHONY: image-build
 image-build: Containerfile
-	$(RUNTIME) build -t poopyfeed -f Containerfile .
+	$(RUNTIME) build -t $(IMAGE_NAME)poopyfeed -f Containerfile .
 
 .PHONY: stop
 stop:

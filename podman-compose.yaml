@@ -2,35 +2,35 @@
 version: "3.9"
 
 services:
-  web:
-    image: localhost/poopyfeed:latest
-    command: python /code/manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/code
-    ports:
-      - 8000:8000
-    environment:
-      - "DJANGO_SECRET_KEY=change-this-key" # nosec B105
-      - "DJANGO_DEBUG=True"
-      - "DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0"
-      - "DJANGO_SECURE_SSL_REDIRECT=False"
-      - "DJANGO_SECURE_HSTS_SECONDS=0"
-      - "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=False"
-      - "DJANGO_SECURE_HSTS_PRELOAD=False"
-      - "DJANGO_SESSION_COOKIE_SECURE=False"
-      - "DJANGO_CSRF_COOKIE_SECURE=False"
-      - "DATABASE_HOST=db"
-      - "DATABASE_NAME=postgres"
-      - "DATABASE_USER=postgres"
-      - "DATABASE_PASSWORD="
-    depends_on:
-      - db
-  db:
-    image: docker.io/postgres:14
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    web:
+        image: localhost/poopyfeed-be:latest
+        command: python /code/manage.py runserver 0.0.0.0:8000
+        volumes:
+            - .:/code
+        ports:
+            - 8000:8000
+        environment:
+            - "DJANGO_SECRET_KEY=change-this-key" # nosec B105
+            - "DJANGO_DEBUG=True"
+            - "DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0"
+            - "DJANGO_SECURE_SSL_REDIRECT=False"
+            - "DJANGO_SECURE_HSTS_SECONDS=0"
+            - "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=False"
+            - "DJANGO_SECURE_HSTS_PRELOAD=False"
+            - "DJANGO_SESSION_COOKIE_SECURE=False"
+            - "DJANGO_CSRF_COOKIE_SECURE=False"
+            - "DATABASE_HOST=db"
+            - "DATABASE_NAME=postgres"
+            - "DATABASE_USER=postgres"
+            - "DATABASE_PASSWORD="
+        depends_on:
+            - db
+    db:
+        image: docker.io/postgres:14
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            - "POSTGRES_HOST_AUTH_METHOD=trust"
 
 volumes:
-  postgres_data:
+    postgres_data:
