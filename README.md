@@ -72,10 +72,10 @@ Share access to children with other accounts via invite links:
 - **Multi-Child Support**: Manage multiple children per account
 - **Email Authentication**: Secure email-based login via django-allauth
 - **Progressive Web App**: Install on your phone's home screen for quick access
+- **REST API**: Token-authenticated API at `/api/v1/` via Django REST Framework + Djoser for mobile app integration
 
 ### Planned
 
-- **REST API**: Mobile app support via Django REST Framework + Djoser
 - **Pumping**: Record pumping sessions and milk output
 - **Temperature**: Record body temperature
 - **Weight**: Monitor growth measurements
@@ -223,7 +223,52 @@ podman compose exec web python manage.py createsuperuser
 
 ## Deployment
 
-### Render (Recommended)
+### Official Docker Image
+
+PoopyFeed is available as an official Docker image on Docker Hub:
+
+```text
+docker.io/davidmiserak/poopyfeed:latest
+```
+
+Use this image with Docker Compose, Podman Compose, or Quadlet for easy deployment.
+
+### Quadlet (systemd)
+
+Deploy PoopyFeed as systemd services using Podman Quadlet:
+
+1. Copy quadlet files to your systemd user directory:
+
+   ```bash
+   mkdir -p ~/.config/containers/systemd/
+   cp quadlet/* ~/.config/containers/systemd/
+   ```
+
+2. Update environment variables in `poopyfeed-web.container`:
+   - Set `DJANGO_SECRET_KEY` to a secure random value
+   - Set `DJANGO_DEBUG=False` for production
+   - Update `DJANGO_ALLOWED_HOSTS` with your domain
+   - Configure database credentials
+
+3. Reload systemd and start services:
+
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user start poopyfeed-web.service
+   systemctl --user enable poopyfeed-web.service
+   ```
+
+4. Access at `http://localhost:8000` or configure a reverse proxy
+
+The Quadlet setup includes:
+
+- `poopyfeed-web.container` - Django web service
+- `poopyfeed-db.container` - PostgreSQL database
+- `poopyfeed-migrate.container` - Automatic migrations on startup
+- `poopyfeed.network` - Container network
+- `postgres_data.volume` - Persistent database storage
+
+### Render (Cloud Hosting)
 
 Deploy to [Render](https://render.com) using the included `render.yaml` Blueprint:
 
