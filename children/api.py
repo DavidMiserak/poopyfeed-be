@@ -20,6 +20,9 @@ class ChildSerializer(serializers.ModelSerializer):
     user_role = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_manage_sharing = serializers.SerializerMethodField()
+    last_diaper_change = serializers.DateTimeField(read_only=True, allow_null=True)
+    last_nap = serializers.DateTimeField(read_only=True, allow_null=True)
+    last_feeding = serializers.DateTimeField(read_only=True, allow_null=True)
 
     class Meta:
         model = Child
@@ -33,6 +36,9 @@ class ChildSerializer(serializers.ModelSerializer):
             "user_role",
             "can_edit",
             "can_manage_sharing",
+            "last_diaper_change",
+            "last_nap",
+            "last_feeding",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -155,8 +161,18 @@ class ChildViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasChildAccess]
 
     def get_queryset(self):
-        """Return children accessible to the current user."""
-        return Child.for_user(self.request.user)
+        """Return children accessible to the current user with last activity annotations."""
+        from django.db.models import Max
+
+        return (
+            Child.for_user(self.request.user)
+            .annotate(
+                last_diaper_change=Max("diaper_changes__changed_at"),
+                last_nap=Max("naps__napped_at"),
+                last_feeding=Max("feedings__fed_at"),
+            )
+            .order_by("-date_of_birth")
+        )
 
     def get_permissions(self):
         """Apply different permissions based on action."""
