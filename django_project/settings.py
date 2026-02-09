@@ -56,12 +56,12 @@ INSTALLED_APPS = [
     # Third-party
     "allauth",
     "allauth.account",
+    "allauth.headless",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
     "rest_framework",
     "rest_framework.authtoken",
-    "djoser",
     # Local
     "accounts",
     "children",
@@ -77,6 +77,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django_project.middleware.CSRFExemptMiddleware",  # Must be before CsrfViewMiddleware
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -229,6 +230,11 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# Exempt allauth headless API from CSRF (for token-based SPA authentication)
+CSRF_EXEMPT_URLS = [
+    r"^api/v1/auth/",  # allauth headless endpoints (no leading slash)
+]
+
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
@@ -241,8 +247,7 @@ if not DEBUG:
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
-        # SessionAuthentication removed - not needed for REST API with separate frontend
-        # This also avoids CSRF token requirements
+        "rest_framework.authentication.SessionAuthentication",  # Needed for allauth login flow
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -251,11 +256,13 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 50,
 }
 
-# Djoser
-DJOSER = {
-    "USER_ID_FIELD": "id",
-    "LOGIN_FIELD": "email",
-    "USER_CREATE_PASSWORD_RETYPE": True,  # nosec B105
+# django-allauth headless configuration
+HEADLESS_ONLY = False  # Allow both web UI and API
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "http://localhost:4200/auth/verify-email/{key}",
+    "account_reset_password": "http://localhost:4200/auth/reset-password/{key}",
+    "account_reset_password_from_key": "http://localhost:4200/auth/reset-password/{key}",
+    "account_signup": "http://localhost:4200/signup",
 }
 
 # CORS

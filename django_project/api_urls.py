@@ -6,6 +6,7 @@ All API endpoints are prefixed with /api/v1/.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from accounts.api import get_auth_token
 from children.api import AcceptInviteViewSet, ChildViewSet
 from diapers.api import DiaperChangeViewSet
 from feedings.api import FeedingViewSet
@@ -22,9 +23,10 @@ router.register("invites", AcceptInviteViewSet, basename="invite")
 urlpatterns = [
     # DRF browsable API login (for browser testing)
     path("api-auth/", include("rest_framework.urls")),
-    # Djoser authentication endpoints
-    path("auth/", include("djoser.urls")),
-    path("auth/", include("djoser.urls.authtoken")),
+    # django-allauth headless API endpoints
+    path("auth/", include("allauth.headless.urls")),
+    # Get auth token for current session user
+    path("auth/token/", get_auth_token, name="get-auth-token"),
     # Main router (children, invites)
     path("", include(router.urls)),
     # Nested tracking routes under children
