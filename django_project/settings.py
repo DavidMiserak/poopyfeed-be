@@ -221,18 +221,27 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Security settings for production
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        "CSRF_TRUSTED_ORIGINS",
-        "",
-    ).split(",")
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = (
+    [
+        "http://localhost:4200",  # Angular dev server
+        "http://127.0.0.1:4200",
+        "http://localhost:3000",  # Alternative frontend port
+        "http://127.0.0.1:3000",
+    ]
+    if DEBUG
+    else [
+        origin.strip()
+        for origin in os.environ.get(
+            "CSRF_TRUSTED_ORIGINS",
+            "",
+        ).split(",")
+        if origin.strip()
+    ]
+)
 
 # Exempt allauth headless API from CSRF (for token-based SPA authentication)
 CSRF_EXEMPT_URLS = [
-    r"^api/v1/auth/",  # allauth headless endpoints (no leading slash)
+    r"^api/v1/browser/v1/auth/",  # allauth headless endpoints (no leading slash)
 ]
 
 if not DEBUG:
