@@ -23,10 +23,10 @@ router.register("invites", AcceptInviteViewSet, basename="invite")
 urlpatterns = [
     # DRF browsable API login (for browser testing)
     path("api-auth/", include("rest_framework.urls")),
-    # django-allauth headless API endpoints
-    path("auth/", include("allauth.headless.urls")),
+    # django-allauth headless API endpoints (mounted at root to avoid nested /auth/)
+    path("", include("allauth.headless.urls")),
     # Get auth token for current session user
-    path("auth/token/", get_auth_token, name="get-auth-token"),
+    path("browser/v1/auth/token/", get_auth_token, name="get-auth-token"),
     # Main router (children, invites)
     path("", include(router.urls)),
     # Nested tracking routes under children
