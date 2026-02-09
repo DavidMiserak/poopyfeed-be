@@ -59,6 +59,7 @@ class ChildShareSerializer(serializers.ModelSerializer):
     """ChildShare serializer with user email."""
 
     user_email = serializers.EmailField(source="user.email", read_only=True)
+    role = serializers.SerializerMethodField()
     role_display = serializers.CharField(source="get_role_display", read_only=True)
 
     class Meta:
@@ -72,10 +73,19 @@ class ChildShareSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "user_email", "role_display", "created_at"]
 
+    def get_role(self, obj):
+        """Return full role string for frontend compatibility."""
+        role_map = {
+            ChildShare.Role.CO_PARENT: "co-parent",
+            ChildShare.Role.CAREGIVER: "caregiver",
+        }
+        return role_map.get(obj.role)
+
 
 class ShareInviteSerializer(serializers.ModelSerializer):
     """ShareInvite serializer with invite URL."""
 
+    role = serializers.CharField()
     role_display = serializers.CharField(source="get_role_display", read_only=True)
     invite_url = serializers.SerializerMethodField()
 
@@ -91,6 +101,28 @@ class ShareInviteSerializer(serializers.ModelSerializer):
             "invite_url",
         ]
         read_only_fields = ["id", "token", "role_display", "created_at", "invite_url"]
+
+    def validate_role(self, value):
+        """Validate and transform role from API format to database format."""
+        role_map = {
+            "co-parent": ChildShare.Role.CO_PARENT,
+            "caregiver": ChildShare.Role.CAREGIVER,
+        }
+        if value not in role_map:
+            raise serializers.ValidationError(
+                f"Invalid role. Must be 'co-parent' or 'caregiver'."
+            )
+        return role_map[value]
+
+    def to_representation(self, instance):
+        """Transform role from database format to API format."""
+        data = super().to_representation(instance)
+        role_map = {
+            ChildShare.Role.CO_PARENT: "co-parent",
+            ChildShare.Role.CAREGIVER: "caregiver",
+        }
+        data["role"] = role_map.get(instance.role)
+        return data
 
     def get_invite_url(self, obj):
         request = self.context.get("request")

@@ -23,9 +23,9 @@
               <div class="card-body pb-2">
                 <div class="d-flex justify-content-between align-items-start">
                   <h2 class="h4 fw-bold mb-1">{{ child.name }}</h2>
-                  {% if role == "co" %}
+                  {% if role == "co-parent" %}
                     <span class="badge bg-primary">Co-parent</span>
-                  {% elif role == "cg" %}
+                  {% elif role == "caregiver" %}
                     <span class="badge bg-secondary">Caregiver</span>
                   {% endif %}
                 </div>

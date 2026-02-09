@@ -435,10 +435,10 @@ class ChildSharingMethodTests(TestCase):
         self.assertEqual(self.child.get_user_role(self.owner), "owner")
 
     def test_get_user_role_coparent(self):
-        self.assertEqual(self.child.get_user_role(self.coparent), "co")
+        self.assertEqual(self.child.get_user_role(self.coparent), "co-parent")
 
     def test_get_user_role_caregiver(self):
-        self.assertEqual(self.child.get_user_role(self.caregiver), "cg")
+        self.assertEqual(self.child.get_user_role(self.caregiver), "caregiver")
 
     def test_get_user_role_stranger(self):
         self.assertIsNone(self.child.get_user_role(self.stranger))

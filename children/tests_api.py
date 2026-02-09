@@ -85,7 +85,7 @@ class ChildAPITests(APITestCase):
         response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["user_role"], "co")
+        self.assertEqual(response.data["results"][0]["user_role"], "co-parent")
 
     def test_list_children_caregiver(self):
         """Caregiver sees shared children."""
@@ -93,7 +93,7 @@ class ChildAPITests(APITestCase):
         response = self.client.get(API_CHILDREN_URL)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["user_role"], "cg")
+        self.assertEqual(response.data["results"][0]["user_role"], "caregiver")
 
     def test_list_children_stranger(self):
         """Stranger sees no children."""
@@ -245,10 +245,10 @@ class SharingAPITests(APITestCase):
     def test_create_invite_owner(self):
         """Owner can create invites."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        data = {"role": "CG"}
+        data = {"role": "caregiver"}
         response = self.client.post(f"/api/v1/children/{self.child.pk}/invites/", data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["role"], "CG")
+        self.assertEqual(response.data["role"], "caregiver")
         self.assertIn("token", response.data)
 
     def test_accept_invite(self):

@@ -117,18 +117,23 @@ class Child(models.Model):
         return self.parent == user or self.shares.filter(user=user).exists()
 
     def get_user_role(self, user):
-        """Get user's role: 'owner', 'co_parent', 'caregiver', or None."""
+        """Get user's role: 'owner', 'co-parent', 'caregiver', or None."""
         if self.parent == user:
             return "owner"
         share = self.shares.filter(user=user).first()
         if share:
-            return share.role.lower()
+            # Map abbreviated roles to full strings for frontend compatibility
+            role_map = {
+                ChildShare.Role.CO_PARENT: "co-parent",
+                ChildShare.Role.CAREGIVER: "caregiver",
+            }
+            return role_map.get(share.role)
         return None
 
     def can_edit(self, user):
         """Check if user can edit child or tracking records."""
         role = self.get_user_role(user)
-        return role in ["owner", "co"]
+        return role in ["owner", "co-parent"]
 
     def can_manage_sharing(self, user):
         """Only owner can manage sharing."""
