@@ -31,6 +31,7 @@ class ChildListView(LoginRequiredMixin, ListView):
             Child.objects.filter(
                 Q(parent=self.request.user) | Q(shares__user=self.request.user)
             )
+            .prefetch_related("shares__user")
             .distinct()
             .annotate(
                 last_diaper_change=Max("diaper_changes__changed_at"),
@@ -75,10 +76,11 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
 
     def get_queryset(self):
         # Allow editing by owner or co-parent
+        # Prefetch shares to avoid N+1 queries if form accesses role info
         return Child.objects.filter(
             Q(parent=self.request.user)
             | Q(shares__user=self.request.user, shares__role=ChildShare.Role.CO_PARENT)
-        ).distinct()
+        ).prefetch_related("shares__user").distinct()
 
 
 class ChildDeleteView(ChildOwnerMixin, DeleteView):
