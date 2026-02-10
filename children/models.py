@@ -119,6 +119,9 @@ class Child(models.Model):
     class Meta:
         verbose_name_plural = "children"
         ordering = ["-date_of_birth"]
+        indexes = [
+            models.Index(fields=["parent", "-date_of_birth"]),
+        ]
 
     def __str__(self):
         return self.name
