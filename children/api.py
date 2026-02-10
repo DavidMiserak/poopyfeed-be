@@ -204,26 +204,82 @@ class AcceptInviteSerializer(serializers.Serializer):
 
 
 class ChildViewSet(viewsets.ModelViewSet):
-    """ViewSet for Child CRUD operations."""
+    """ViewSet for Child CRUD operations.
+
+    Uses cached last-activity annotations to avoid expensive database aggregations.
+    Cache is automatically invalidated when tracking records are created/updated/deleted.
+    """
 
     serializer_class = ChildSerializer
     permission_classes = [IsAuthenticated, HasChildAccess]
 
     def get_queryset(self):
-        """Return children accessible to the current user with last activity annotations."""
-        from django.db.models import Max
+        """Return children accessible to the current user without annotations.
 
+        Annotations are applied via _apply_cached_annotations() method to use
+        cached values instead of expensive database aggregations.
+        """
         return (
             Child.for_user(self.request.user)
             .select_related("parent")
             .prefetch_related("shares__user")
-            .annotate(
-                last_diaper_change=Max("diaper_changes__changed_at"),
-                last_nap=Max("naps__napped_at"),
-                last_feeding=Max("feedings__fed_at"),
-            )
             .order_by("-date_of_birth")
         )
+
+    def _apply_cached_annotations(self, children):
+        """Apply cached last-activity annotations to child objects.
+
+        This method is called after the queryset is evaluated (and paginated)
+        to apply cached annotation values instead of using database aggregations.
+        This avoids the expensive Max() queries on every request.
+
+        Args:
+            children: List of Child objects from paginated queryset
+
+        Returns:
+            Same list with last_diaper_change, last_nap, last_feeding attached
+        """
+        from .cache_utils import get_child_last_activities
+
+        if not children:
+            return children
+
+        child_ids = [child.id for child in children]
+        activities = get_child_last_activities(child_ids)
+
+        # Attach cached annotation values to each child
+        for child in children:
+            activity = activities.get(child.id, {})
+            child.last_diaper_change = activity.get('last_diaper_change')
+            child.last_nap = activity.get('last_nap')
+            child.last_feeding = activity.get('last_feeding')
+
+        return children
+
+    def list(self, request, *args, **kwargs):
+        """List children with cached annotations applied before serialization."""
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            # Apply cached annotations to paginated results before serialization
+            page = self._apply_cached_annotations(page)
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Non-paginated response (shouldn't happen with default pagination)
+        queryset = list(queryset)
+        queryset = self._apply_cached_annotations(queryset)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve single child with cached annotations."""
+        instance = self.get_object()
+        # Apply cached annotations for single object
+        instance = self._apply_cached_annotations([instance])[0]
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def get_permissions(self):
         """Apply different permissions based on action."""

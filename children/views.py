@@ -33,18 +33,29 @@ class ChildListView(LoginRequiredMixin, ListView):
             )
             .prefetch_related("shares__user")
             .distinct()
-            .annotate(
-                last_diaper_change=Max("diaper_changes__changed_at"),
-                last_nap=Max("naps__napped_at"),
-                last_feeding=Max("feedings__fed_at"),
-            )
+            # Annotations will be applied in get_context_data via cache_utils
+            # to avoid expensive Max() aggregations on every request
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Apply cached last-activity annotations
+        from .cache_utils import get_child_last_activities
+
+        children = context["children"]
+        if children:
+            child_ids = [child.id for child in children]
+            activities = get_child_last_activities(child_ids)
+            for child in children:
+                activity = activities.get(child.id, {})
+                child.last_diaper_change = activity.get('last_diaper_change')
+                child.last_nap = activity.get('last_nap')
+                child.last_feeding = activity.get('last_feeding')
+
         # Add role info for each child
         children_with_roles = []
-        for child in context["children"]:
+        for child in children:
             children_with_roles.append(
                 {
                     "child": child,
