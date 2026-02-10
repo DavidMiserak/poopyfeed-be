@@ -6,7 +6,12 @@ All API endpoints are prefixed with /api/v1/.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from accounts.api import get_auth_token
+from accounts.api import (
+    ChangePasswordView,
+    DeleteAccountView,
+    UserProfileView,
+    get_auth_token,
+)
 from children.api import AcceptInviteViewSet, ChildViewSet
 from diapers.api import DiaperChangeViewSet
 from feedings.api import FeedingViewSet
@@ -21,6 +26,22 @@ router.register("invites", AcceptInviteViewSet, basename="invite")
 # Using custom URL patterns for nested resources
 
 urlpatterns = [
+    # Account management
+    path(
+        "account/profile/",
+        UserProfileView.as_view(),
+        name="account-profile",
+    ),
+    path(
+        "account/password/",
+        ChangePasswordView.as_view(),
+        name="account-password",
+    ),
+    path(
+        "account/delete/",
+        DeleteAccountView.as_view(),
+        name="account-delete",
+    ),
     # DRF browsable API login (for browser testing)
     path("api-auth/", include("rest_framework.urls")),
     # django-allauth headless API endpoints (mounted at root to avoid nested /auth/)

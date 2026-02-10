@@ -18,8 +18,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from accounts.views import AccountSettingsView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("accounts/settings/", AccountSettingsView.as_view(), name="account_settings"),
     path("accounts/", include("allauth.urls")),
     # REST API
     path("api/v1/", include("django_project.api_urls")),

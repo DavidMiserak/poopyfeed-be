@@ -15,6 +15,7 @@ class CustomerUserAdmin(UserAdmin):
     list_display = [
         "email",
         "username",
+        "timezone",
         "is_superuser",
     ]
     search_fields = ["email", "username"]

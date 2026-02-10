@@ -28,6 +28,23 @@ class CustomUserTests(TestCase):
         self.assertTrue(admin_user.is_staff)
         self.assertTrue(admin_user.is_superuser)
 
+    def test_timezone_default(self):
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            username="tzuser", email="tz@email.com", password=TEST_PASSWORD
+        )
+        self.assertEqual(user.timezone, "UTC")
+
+    def test_timezone_custom(self):
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            username="tzuser2",
+            email="tz2@email.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        self.assertEqual(user.timezone, "America/New_York")
+
 
 class SignUpPageTests(TestCase):
     def setUp(self):

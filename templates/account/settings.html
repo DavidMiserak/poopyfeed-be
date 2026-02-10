@@ -1,0 +1,124 @@
+{% extends "_base.html" %}
+
+{% block title %}Account Settings | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="text-center mb-4">
+      <i class="fa-solid fa-gear fa-2x text-primary mb-3"></i>
+      <h2 class="h4 fw-bold">Account Settings</h2>
+      <p class="text-body-secondary">Manage your profile, timezone, and security</p>
+    </div>
+
+    <!-- Profile & Timezone Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        <h3 class="h6 mb-0"><i class="fa-solid fa-user me-2"></i>Profile & Timezone</h3>
+      </div>
+      <div class="card-body p-4">
+        {% if profile_success %}
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-check-circle me-1"></i>
+            Profile updated successfully.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="profile">
+
+          <div class="row mb-3">
+            <div class="col-sm-6">
+              <label for="id_first_name" class="form-label">First Name</label>
+              {{ profile_form.first_name }}
+              {% if profile_form.first_name.errors %}
+                <div class="invalid-feedback d-block">{{ profile_form.first_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label for="id_last_name" class="form-label">Last Name</label>
+              {{ profile_form.last_name }}
+              {% if profile_form.last_name.errors %}
+                <div class="invalid-feedback d-block">{{ profile_form.last_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_email" class="form-label">Email</label>
+            {{ profile_form.email }}
+            {% if profile_form.email.errors %}
+              <div class="invalid-feedback d-block">{{ profile_form.email.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label for="id_timezone" class="form-label">Timezone</label>
+            {{ profile_form.timezone }}
+            {% if profile_form.timezone.errors %}
+              <div class="invalid-feedback d-block">{{ profile_form.timezone.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="fa-solid fa-check me-1"></i>Save Profile
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Password Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        <h3 class="h6 mb-0"><i class="fa-solid fa-key me-2"></i>Password</h3>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-body-secondary mb-3">Update your password to keep your account secure.</p>
+        <a href="{% url 'account_change_password' %}" class="btn btn-outline-primary">
+          <i class="fa-solid fa-key me-1"></i>Change Password
+        </a>
+      </div>
+    </div>
+
+    <!-- Danger Zone Card -->
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger bg-opacity-10">
+        <h3 class="h6 mb-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Danger Zone</h3>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-body-secondary mb-3">
+          Permanently delete your account and all associated data. This action cannot be undone.
+        </p>
+
+        <button class="btn btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#deleteSection" aria-expanded="false" aria-controls="deleteSection">
+          <i class="fa-solid fa-trash me-1"></i>Delete Account
+        </button>
+
+        <div class="collapse mt-3" id="deleteSection">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+
+            <div class="mb-3">
+              <label for="id_current_password" class="form-label">{{ delete_form.current_password.label }}</label>
+              {{ delete_form.current_password }}
+              {% if delete_form.current_password.errors %}
+                <div class="invalid-feedback d-block">{{ delete_form.current_password.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
+              <i class="fa-solid fa-trash me-1"></i>Permanently Delete Account
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock content %}
