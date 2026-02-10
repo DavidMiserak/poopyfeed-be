@@ -16,7 +16,12 @@ from .models import Child, ChildShare, ShareInvite
 
 
 class ChildSerializer(serializers.ModelSerializer):
-    """Child serializer with computed permission fields."""
+    """Child serializer with computed permission fields.
+
+    Optimized to avoid N+1 queries by using prefetched shares instead of
+    calling model methods that would re-query the database.
+    Requires: get_queryset() must include .prefetch_related("shares__user")
+    """
 
     user_role = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
@@ -43,23 +48,66 @@ class ChildSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
+    def _get_user_share(self, obj, user):
+        """Find user's share in prefetched shares (avoids database query).
+
+        Loops through obj.shares.all() which uses prefetched data when available,
+        falling back to database query only if shares weren't prefetched.
+        """
+        user_id = user.id
+        for share in obj.shares.all():
+            if share.user_id == user_id:
+                return share
+        return None
+
     def get_user_role(self, obj):
+        """Get user's role using prefetched share data.
+
+        Returns 'owner', 'co-parent', 'caregiver', or None.
+        Uses prefetched shares to avoid N+1 queries in list views.
+        """
         request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            return obj.get_user_role(request.user)
+        if not request or not request.user.is_authenticated:
+            return None
+
+        # Check if user is owner (fast, no query)
+        if obj.parent_id == request.user.id:
+            return "owner"
+
+        # Use prefetched shares instead of calling obj.get_user_role()
+        share = self._get_user_share(obj, request.user)
+        if share:
+            role_map = {
+                ChildShare.Role.CO_PARENT: "co-parent",
+                ChildShare.Role.CAREGIVER: "caregiver",
+            }
+            return role_map.get(share.role)
+
         return None
 
     def get_can_edit(self, obj):
+        """Check if user can edit child or tracking records.
+
+        Uses prefetched share data to avoid queries.
+        """
         request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            return obj.can_edit(request.user)
-        return False
+        if not request or not request.user.is_authenticated:
+            return False
+
+        # Get user_role without querying the database
+        user_role = self.get_user_role(obj)
+        return user_role in ["owner", "co-parent"]
 
     def get_can_manage_sharing(self, obj):
+        """Check if user can manage sharing (owner only).
+
+        This is always fast (no shares.filter() needed).
+        """
         request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            return obj.can_manage_sharing(request.user)
-        return False
+        if not request or not request.user.is_authenticated:
+            return False
+
+        return obj.parent_id == request.user.id
 
 
 class ChildShareSerializer(serializers.ModelSerializer):
