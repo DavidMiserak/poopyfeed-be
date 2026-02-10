@@ -1,9 +1,16 @@
-from decimal import Decimal
-
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from children.models import Child
+
+from .constants import (
+    BOTTLE_DECIMAL_PLACES,
+    BOTTLE_MAX_DIGITS,
+    MAX_BOTTLE_OZ,
+    MAX_BREAST_MINUTES,
+    MIN_BOTTLE_OZ,
+    MIN_BREAST_MINUTES,
+)
 
 
 class Feeding(models.Model):
@@ -16,13 +23,13 @@ class Feeding(models.Model):
         RIGHT = "right", "Right"
         BOTH = "both", "Both"
 
-    # Validation constants
-    MIN_BOTTLE_OZ = Decimal("0.1")
-    MAX_BOTTLE_OZ = Decimal("50")
-    MIN_BREAST_MINUTES = 1
-    MAX_BREAST_MINUTES = 180
-    BOTTLE_MAX_DIGITS = 4
-    BOTTLE_DECIMAL_PLACES = 1
+    # Re-export constants for backwards compatibility
+    MIN_BOTTLE_OZ = MIN_BOTTLE_OZ
+    MAX_BOTTLE_OZ = MAX_BOTTLE_OZ
+    MIN_BREAST_MINUTES = MIN_BREAST_MINUTES
+    MAX_BREAST_MINUTES = MAX_BREAST_MINUTES
+    BOTTLE_MAX_DIGITS = BOTTLE_MAX_DIGITS
+    BOTTLE_DECIMAL_PLACES = BOTTLE_DECIMAL_PLACES
 
     child = models.ForeignKey(
         Child,

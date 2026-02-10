@@ -1,12 +1,16 @@
 """REST API for feedings app: Feeding."""
 
-from decimal import Decimal
-
 from rest_framework import serializers
 from rest_framework.routers import DefaultRouter
 
 from children.tracking_api import TrackingViewSet
 
+from .constants import (
+    MAX_BOTTLE_OZ,
+    MAX_BREAST_MINUTES,
+    MIN_BOTTLE_OZ,
+    MIN_BREAST_MINUTES,
+)
 from .models import Feeding
 
 
@@ -45,12 +49,12 @@ class FeedingSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             "amount_oz": {
-                "min_value": Feeding.MIN_BOTTLE_OZ,
-                "max_value": Feeding.MAX_BOTTLE_OZ,
+                "min_value": MIN_BOTTLE_OZ,
+                "max_value": MAX_BOTTLE_OZ,
             },
             "duration_minutes": {
-                "min_value": Feeding.MIN_BREAST_MINUTES,
-                "max_value": Feeding.MAX_BREAST_MINUTES,
+                "min_value": MIN_BREAST_MINUTES,
+                "max_value": MAX_BREAST_MINUTES,
             },
         }
 

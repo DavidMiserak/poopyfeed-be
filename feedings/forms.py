@@ -1,14 +1,18 @@
-from decimal import Decimal
-
 from django import forms
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from children.forms import LocalDateTimeFormMixin
 
+from .constants import (
+    BOTTLE_DECIMAL_PLACES,
+    BOTTLE_MAX_DIGITS,
+    BOTTLE_STEP,
+    MAX_BOTTLE_OZ,
+    MAX_BREAST_MINUTES,
+    MIN_BOTTLE_OZ,
+    MIN_BREAST_MINUTES,
+)
 from .models import Feeding
-
-# UI constants
-BOTTLE_STEP = Decimal("0.1")
 
 
 class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
@@ -23,33 +27,33 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
         ),
     )
     amount_oz = forms.DecimalField(
-        max_digits=Feeding.BOTTLE_MAX_DIGITS,
-        decimal_places=Feeding.BOTTLE_DECIMAL_PLACES,
+        max_digits=BOTTLE_MAX_DIGITS,
+        decimal_places=BOTTLE_DECIMAL_PLACES,
         required=False,
         validators=[
-            MinValueValidator(Feeding.MIN_BOTTLE_OZ),
-            MaxValueValidator(Feeding.MAX_BOTTLE_OZ),
+            MinValueValidator(MIN_BOTTLE_OZ),
+            MaxValueValidator(MAX_BOTTLE_OZ),
         ],
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control form-control-lg border-2",
                 "step": str(BOTTLE_STEP),
-                "min": str(Feeding.MIN_BOTTLE_OZ),
-                "max": str(Feeding.MAX_BOTTLE_OZ),
+                "min": str(MIN_BOTTLE_OZ),
+                "max": str(MAX_BOTTLE_OZ),
             }
         ),
     )
     duration_minutes = forms.IntegerField(
         required=False,
         validators=[
-            MinValueValidator(Feeding.MIN_BREAST_MINUTES),
-            MaxValueValidator(Feeding.MAX_BREAST_MINUTES),
+            MinValueValidator(MIN_BREAST_MINUTES),
+            MaxValueValidator(MAX_BREAST_MINUTES),
         ],
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control form-control-lg border-2",
-                "min": str(Feeding.MIN_BREAST_MINUTES),
-                "max": str(Feeding.MAX_BREAST_MINUTES),
+                "min": str(MIN_BREAST_MINUTES),
+                "max": str(MAX_BREAST_MINUTES),
             }
         ),
     )
