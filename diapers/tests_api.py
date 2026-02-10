@@ -89,3 +89,35 @@ class DiaperChangeAPITests(BaseTrackingAPITests):
             f"/api/v1/children/{self.child.pk}/diapers/99999/", data
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_pagination_applied(self):
+        """Verify pagination is applied to list endpoints (PAGE_SIZE=50)."""
+        # Create 60 diapers to exceed PAGE_SIZE (50)
+        for i in range(60):
+            DiaperChange.objects.create(
+                child=self.child,
+                change_type=DiaperChange.ChangeType.WET,
+                changed_at=TEST_DATETIME,
+            )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.get(self.get_list_url())
+
+        # Verify pagination structure
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("count", response.data)
+        self.assertIn("results", response.data)
+        self.assertIn("next", response.data)
+        self.assertIn("previous", response.data)
+
+        # Verify PAGE_SIZE limit (should be 50)
+        self.assertEqual(len(response.data["results"]), 50)
+        self.assertEqual(response.data["count"], 60)
+        self.assertIsNotNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+
+        # Test second page
+        response_page2 = self.client.get(response.data["next"])
+        self.assertEqual(len(response_page2.data["results"]), 10)
+        self.assertIsNone(response_page2.data["next"])
+        self.assertIsNotNone(response_page2.data["previous"])
