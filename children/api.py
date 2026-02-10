@@ -166,6 +166,8 @@ class ChildViewSet(viewsets.ModelViewSet):
 
         return (
             Child.for_user(self.request.user)
+            .select_related("parent")
+            .prefetch_related("shares__user")
             .annotate(
                 last_diaper_change=Max("diaper_changes__changed_at"),
                 last_nap=Max("naps__napped_at"),
@@ -217,7 +219,7 @@ class ChildViewSet(viewsets.ModelViewSet):
         child = self.get_object()
 
         if request.method == "GET":
-            invites = child.invites.all()
+            invites = child.invites.select_related("created_by")
             serializer = ShareInviteSerializer(
                 invites, many=True, context={"request": request}
             )

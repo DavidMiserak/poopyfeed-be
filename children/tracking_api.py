@@ -55,7 +55,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
             if child and child.has_access(self.request.user):
                 # Get model class from queryset
                 model = self.queryset.model
-                return model.objects.filter(child=child)
+                return model.objects.filter(child=child).select_related("child")
             # Return empty queryset if no access
             model = self.queryset.model
             return model.objects.none()
@@ -63,7 +63,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
         # Top-level route: /tracking/ - return all accessible
         accessible_children = Child.for_user(self.request.user)
         model = self.queryset.model
-        return model.objects.filter(child__in=accessible_children)
+        return model.objects.filter(child__in=accessible_children).select_related("child")
 
     def get_permissions(self):
         """Apply edit permission for update/delete actions."""
