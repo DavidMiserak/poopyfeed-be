@@ -1,6 +1,7 @@
 import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.db.models import Q
 
@@ -42,6 +43,21 @@ class ChildShare(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.child.name} ({self.get_role_display()})"
+
+    def save(self, *args, **kwargs):
+        """Invalidate shared user's cache when share is created/updated."""
+        super().save(*args, **kwargs)
+        # Invalidate cache for the shared user
+        from .models import Child
+        Child.invalidate_user_cache(self.user)
+
+    def delete(self, *args, **kwargs):
+        """Invalidate shared user's cache when share is deleted."""
+        user = self.user
+        super().delete(*args, **kwargs)
+        # Invalidate cache for the shared user
+        from .models import Child
+        Child.invalidate_user_cache(user)
 
 
 class ShareInvite(models.Model):
@@ -107,10 +123,47 @@ class Child(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        """Invalidate parent's cache when child is created/updated."""
+        super().save(*args, **kwargs)
+        # Invalidate cache for the parent (owner)
+        Child.invalidate_user_cache(self.parent)
+
+    def delete(self, *args, **kwargs):
+        """Invalidate parent's cache when child is deleted."""
+        parent = self.parent
+        super().delete(*args, **kwargs)
+        # Invalidate cache for the parent (owner)
+        Child.invalidate_user_cache(parent)
+
     @classmethod
     def for_user(cls, user):
-        """Get all children the user has access to (owned or shared)."""
-        return cls.objects.filter(Q(parent=user) | Q(shares__user=user)).distinct()
+        """Get all children the user has access to (owned or shared).
+
+        Results are cached to avoid expensive queries for users with many shares.
+        Cache is invalidated when ChildShare or Child objects are created/updated/deleted.
+        """
+        cache_key = f"accessible_children_{user.id}"
+        cached_ids = cache.get(cache_key)
+
+        if cached_ids is not None:
+            # Return cached child IDs as a QuerySet
+            return cls.objects.filter(id__in=cached_ids)
+
+        # Query database and cache the results
+        queryset = cls.objects.filter(Q(parent=user) | Q(shares__user=user)).distinct()
+        child_ids = list(queryset.values_list("id", flat=True))
+
+        # Cache for 1 hour (3600 seconds)
+        cache.set(cache_key, child_ids, 3600)
+
+        return queryset
+
+    @classmethod
+    def invalidate_user_cache(cls, user):
+        """Invalidate the cached accessible children for a user."""
+        cache_key = f"accessible_children_{user.id}"
+        cache.delete(cache_key)
 
     def has_access(self, user):
         """Check if user has any access to this child."""
