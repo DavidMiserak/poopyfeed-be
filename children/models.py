@@ -27,6 +27,7 @@ class ChildShare(models.Model):
         max_length=2,
         choices=Role.choices,
         default=Role.CAREGIVER,
+        db_index=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
