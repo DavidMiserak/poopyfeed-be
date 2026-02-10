@@ -131,15 +131,35 @@ TEMPLATES = [
 
 
 def _get_database_config():
-    """Get database configuration based on environment."""
+    """Get database configuration based on environment.
+
+    Includes connection pooling and health checks for production stability.
+    """
+    # Connection pool settings (for PostgreSQL)
+    # Min pool size: minimum connections to maintain
+    # Max pool size: maximum connections in the pool
+    min_pool_size = int(os.environ.get("DB_POOL_MIN_SIZE", "2"))
+    max_pool_size = int(os.environ.get("DB_POOL_MAX_SIZE", "10"))
+    # Connection lifetime: reuse connections for this many seconds
+    conn_max_age = int(os.environ.get("DB_CONN_MAX_AGE", "600"))
+
     if os.environ.get("DATABASE_URL"):
         # Render or other cloud providers
-        return dj_database_url.config(
-            conn_max_age=600,
+        config = dj_database_url.config(
+            conn_max_age=conn_max_age,
             conn_health_checks=True,
         )
+        # Add pooling options for cloud PostgreSQL
+        if config.get("ENGINE") == "django.db.backends.postgresql":
+            config.setdefault("CONN_MAX_AGE", conn_max_age)
+            config.setdefault("OPTIONS", {}).update({
+                "connect_timeout": 10,
+                "options": "-c statement_timeout=30000",  # 30 second statement timeout
+            })
+        return config
+
     elif os.environ.get("DATABASE_HOST"):
-        # Docker/Podman compose setup
+        # Docker/Podman compose setup with connection pooling
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.environ.get("DATABASE_NAME", "postgres"),
@@ -147,18 +167,48 @@ def _get_database_config():
             "PASSWORD": os.environ.get("DATABASE_PASSWORD", ""),
             "HOST": os.environ.get("DATABASE_HOST"),
             "PORT": os.environ.get("DATABASE_PORT", "5432"),
+            # Connection pooling and persistence
+            "CONN_MAX_AGE": conn_max_age,
+            "OPTIONS": {
+                # Connection timeout (seconds)
+                "connect_timeout": 10,
+                # Statement timeout (milliseconds)
+                "options": f"-c statement_timeout={int(conn_max_age * 1000)}",
+            },
+            # Enable connection pooling in psycopg2
+            "ATOMIC_REQUESTS": False,  # Allow concurrent requests
         }
     else:
         # Local development with SQLite
         return {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+            # SQLite WAL mode for better concurrency
+            "OPTIONS": {
+                "timeout": 20,
+                "isolation_level": None,  # Autocommit mode
+            },
         }
 
 
 DATABASES = {
     "default": _get_database_config(),
 }
+
+# =============================================================================
+# Database Connection Pooling
+# =============================================================================
+
+# Connection pool configuration
+# These can be overridden via environment variables:
+# - DB_POOL_MIN_SIZE: Minimum connections to maintain (default: 2)
+# - DB_POOL_MAX_SIZE: Maximum connections in pool (default: 10)
+# - DB_CONN_MAX_AGE: Connection lifetime in seconds (default: 600 = 10 min)
+#
+# Production recommendations:
+# - DB_POOL_MIN_SIZE=5 (more aggressive pre-warming)
+# - DB_POOL_MAX_SIZE=20 (handle more concurrent requests)
+# - DB_CONN_MAX_AGE=300 (shorter connection lifetime for better freshness)
 
 # =============================================================================
 # Authentication & Authorization
