@@ -30,7 +30,7 @@ class Feeding(models.Model):
         related_name="feedings",
     )
     feeding_type = models.CharField(max_length=10, choices=FeedingType.choices)
-    fed_at = models.DateTimeField()
+    fed_at = models.DateTimeField(db_index=True)
 
     # Bottle fields
     amount_oz = models.DecimalField(

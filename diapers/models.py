@@ -15,7 +15,7 @@ class DiaperChange(models.Model):
         related_name="diaper_changes",
     )
     change_type = models.CharField(max_length=10, choices=ChangeType.choices)
-    changed_at = models.DateTimeField()
+    changed_at = models.DateTimeField(db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
