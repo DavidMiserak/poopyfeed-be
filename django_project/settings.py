@@ -16,36 +16,52 @@ from pathlib import Path
 import dj_database_url
 from django.core.management.utils import get_random_secret_key
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# =============================================================================
+# Path Configuration
+# =============================================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# =============================================================================
+# Environment Variables Helper
+# =============================================================================
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
+def env_bool(name: str, default: bool = False) -> bool:
+    """Get boolean environment variable."""
+    return os.environ.get(name, str(default)).lower() in ("true", "1", "yes")
+
+
+def env_list(name: str, default: str = "") -> list[str]:
+    """Get comma-separated list from environment variable."""
+    value = os.environ.get(name, default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+# =============================================================================
+# Core Settings
+# =============================================================================
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", get_random_secret_key())
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = (
     ["*"]
     if DEBUG
-    else [
-        host.strip()
-        for host in os.environ.get(
-            "DJANGO_ALLOWED_HOSTS",
-            "localhost,127.0.0.1",
-        ).split(",")
-        if host.strip()
-    ]
+    else env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 )
 
+ROOT_URLCONF = "django_project.urls"
+WSGI_APPLICATION = "django_project.wsgi.application"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+AUTH_USER_MODEL = "accounts.CustomUser"
 
-# Application definition
+# =============================================================================
+# Installed Applications
+# =============================================================================
 
 INSTALLED_APPS = [
+    # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -53,7 +69,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
-    # Third-party
+    # Third-party apps
     "allauth",
     "allauth.account",
     "allauth.headless",
@@ -62,7 +78,7 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "rest_framework",
     "rest_framework.authtoken",
-    # Local
+    # Local apps
     "accounts",
     "children",
     "diapers",
@@ -71,13 +87,18 @@ INSTALLED_APPS = [
     "pages",
 ]
 
+# =============================================================================
+# Middleware
+# =============================================================================
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django_project.middleware.CSRFExemptMiddleware",  # Must be before CsrfViewMiddleware
+    # Must be before CsrfViewMiddleware
+    "django_project.middleware.CSRFExemptMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -85,7 +106,9 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-ROOT_URLCONF = "django_project.urls"
+# =============================================================================
+# Templates
+# =============================================================================
 
 TEMPLATES = [
     {
@@ -102,24 +125,22 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "django_project.wsgi.application"
+# =============================================================================
+# Database Configuration
+# =============================================================================
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-if os.environ.get("DATABASE_URL"):
-    # Render provides DATABASE_URL
-    DATABASES = {
-        "default": dj_database_url.config(
+def _get_database_config():
+    """Get database configuration based on environment."""
+    if os.environ.get("DATABASE_URL"):
+        # Render or other cloud providers
+        return dj_database_url.config(
             conn_max_age=600,
             conn_health_checks=True,
         )
-    }
-elif os.environ.get("DATABASE_HOST"):
-    # Podman/Docker compose setup
-    DATABASES = {
-        "default": {
+    elif os.environ.get("DATABASE_HOST"):
+        # Docker/Podman compose setup
+        return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.environ.get("DATABASE_NAME", "postgres"),
             "USER": os.environ.get("DATABASE_USER", "postgres"),
@@ -127,19 +148,26 @@ elif os.environ.get("DATABASE_HOST"):
             "HOST": os.environ.get("DATABASE_HOST"),
             "PORT": os.environ.get("DATABASE_PORT", "5432"),
         }
-    }
-else:
-    # Local development with SQLite
-    DATABASES = {
-        "default": {
+    else:
+        # Local development with SQLite
+        return {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
-    }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+DATABASES = {
+    "default": _get_database_config(),
+}
+
+# =============================================================================
+# Authentication & Authorization
+# =============================================================================
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -156,25 +184,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+# =============================================================================
 # Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+# =============================================================================
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
+# =============================================================================
+# Static Files
+# =============================================================================
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -188,62 +214,49 @@ STORAGES = {
     },
 }
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+# =============================================================================
+# Email Configuration
+# =============================================================================
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# Custom user model
-AUTH_USER_MODEL = "accounts.CustomUser"
-
-# django-allauth
-SITE_ID = 1
-AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
-]
-LOGIN_REDIRECT_URL = "home"
-ACCOUNT_LOGOUT_REDIRECT_URL = "home"
-ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
-ACCOUNT_EMAIL_VERIFICATION = "none"
-
-# Email
 EMAIL_BACKEND = os.environ.get(
     "DJANGO_EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend",
 )
 
-# django-crispy-forms
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
+# =============================================================================
+# Security Settings
+# =============================================================================
 
-# Security settings for production
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Development CORS and CSRF settings
+_DEV_ORIGINS = [
+    "http://localhost:4200",      # Angular dev server
+    "http://127.0.0.1:4200",
+    "http://localhost:3000",      # Alternative frontend port
+    "http://127.0.0.1:3000",
+]
+
 CSRF_TRUSTED_ORIGINS = (
-    [
-        "http://localhost:4200",  # Angular dev server
-        "http://127.0.0.1:4200",
-        "http://localhost:3000",  # Alternative frontend port
-        "http://127.0.0.1:3000",
-    ]
+    _DEV_ORIGINS
     if DEBUG
-    else [
-        origin.strip()
-        for origin in os.environ.get(
-            "CSRF_TRUSTED_ORIGINS",
-            "",
-        ).split(",")
-        if origin.strip()
-    ]
+    else env_list("CSRF_TRUSTED_ORIGINS")
 )
+
+CORS_ALLOWED_ORIGINS = (
+    _DEV_ORIGINS
+    if DEBUG
+    else env_list("CORS_ALLOWED_ORIGINS")
+)
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Exempt allauth headless API from CSRF (for token-based SPA authentication)
 CSRF_EXEMPT_URLS = [
     r"^api/v1/browser/v1/auth/",  # allauth headless endpoints (no leading slash)
 ]
 
+# Production-only security settings
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
@@ -252,11 +265,14 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
+# =============================================================================
 # Django REST Framework
+# =============================================================================
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
-        "rest_framework.authentication.SessionAuthentication",  # Needed for allauth login flow
+        "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -265,8 +281,20 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 50,
 }
 
-# django-allauth headless configuration
+# =============================================================================
+# Django-allauth Configuration
+# =============================================================================
+
+SITE_ID = 1
+
+LOGIN_REDIRECT_URL = "home"
+ACCOUNT_LOGOUT_REDIRECT_URL = "home"
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
 HEADLESS_ONLY = False  # Allow both web UI and API
+
 HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "http://localhost:4200/auth/verify-email/{key}",
     "account_reset_password": "http://localhost:4200/auth/reset-password/{key}",
@@ -274,19 +302,9 @@ HEADLESS_FRONTEND_URLS = {
     "account_signup": "http://localhost:4200/signup",
 }
 
-# CORS
-CORS_ALLOWED_ORIGINS = (
-    [
-        "http://localhost:4200",  # Angular dev server
-        "http://127.0.0.1:4200",
-        "http://localhost:3000",  # Alternative frontend port
-        "http://127.0.0.1:3000",
-    ]
-    if DEBUG
-    else [
-        origin.strip()
-        for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
-        if origin.strip()
-    ]
-)
-CORS_ALLOW_CREDENTIALS = True
+# =============================================================================
+# Django-crispy-forms Configuration
+# =============================================================================
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
