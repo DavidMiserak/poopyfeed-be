@@ -9,6 +9,7 @@ from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
+from django_project.throttles import TrackingCreateThrottle
 from .api_permissions import CanEditChild, HasChildAccess
 from .models import Child
 
@@ -37,6 +38,17 @@ class TrackingViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated, HasChildAccess]
     nested_serializer_class = None  # Must be set by subclass
+
+    def get_throttles(self):
+        """Apply stricter rate limiting for create/update operations.
+
+        Default throttle (1000/hour) applies to list and retrieve.
+        Stricter throttle (120/hour) applies to create/update to prevent mass-insertion.
+        """
+        throttles = super().get_throttles()
+        if self.action in ["create", "update", "partial_update"]:
+            throttles.append(TrackingCreateThrottle())
+        return throttles
 
     def get_serializer_class(self):
         """Use nested serializer when child is in URL."""

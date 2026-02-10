@@ -329,6 +329,21 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    # Rate limiting: Throttle API requests to prevent abuse and ensure stability
+    # Uses user ID for authenticated users, IP address for anonymous
+    # Cache backend required (in-memory by default for development)
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        # Authenticated users: 1000 requests per hour (allows ~16 per minute)
+        # Suitable for normal app usage, aggressive automation, and testing
+        "user": "1000/hour",
+        # Accept invite: 20 per hour (strict, due to race conditions and transactions)
+        "accept_invite": "20/hour",
+        # Tracking creation: 120 per hour (strict, prevent mass-insertion abuse)
+        "tracking_create": "120/hour",
+    },
 }
 
 # =============================================================================

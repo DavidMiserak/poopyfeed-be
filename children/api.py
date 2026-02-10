@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 
+from django_project.throttles import AcceptInviteThrottle
 from .api_permissions import CanEditChild, CanManageSharing, HasChildAccess
 from .models import Child, ChildShare, ShareInvite
 
@@ -261,9 +262,14 @@ class ChildViewSet(viewsets.ModelViewSet):
 
 
 class AcceptInviteViewSet(viewsets.ViewSet):
-    """ViewSet for accepting invites."""
+    """ViewSet for accepting invites.
+
+    Stricter rate limiting (20/hour) applied due to database transactions
+    and race condition handling in the accept action.
+    """
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AcceptInviteThrottle]
 
     @action(detail=False, methods=["post"])
     def accept(self, request):
