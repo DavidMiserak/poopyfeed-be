@@ -120,6 +120,22 @@ class FeedingViewSet(TrackingViewSet):
     serializer_class = FeedingSerializer
     nested_serializer_class = NestedFeedingSerializer
 
+    def get_queryset(self):
+        """Optimize queryset to fetch only needed columns."""
+        base_queryset = super().get_queryset()
+        # Only fetch columns used by serializers (including conditional bottle/breast fields)
+        return base_queryset.only(
+            "id",
+            "child_id",
+            "feeding_type",
+            "fed_at",
+            "amount_oz",
+            "duration_minutes",
+            "side",
+            "created_at",
+            "updated_at",
+        )
+
 
 # Router for top-level /feedings/ endpoint
 router = DefaultRouter()

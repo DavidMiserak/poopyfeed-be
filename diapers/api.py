@@ -64,6 +64,14 @@ class DiaperChangeViewSet(TrackingViewSet):
     serializer_class = DiaperChangeSerializer
     nested_serializer_class = NestedDiaperChangeSerializer
 
+    def get_queryset(self):
+        """Optimize queryset to fetch only needed columns."""
+        base_queryset = super().get_queryset()
+        # Only fetch columns used by serializers
+        return base_queryset.only(
+            "id", "child_id", "change_type", "changed_at", "created_at", "updated_at"
+        )
+
 
 # Router for top-level /diapers/ endpoint
 router = DefaultRouter()
