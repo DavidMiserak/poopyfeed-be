@@ -7,7 +7,18 @@ from django.db.models import Q
 
 
 class ChildShare(models.Model):
-    """Through model for child sharing with role-based permissions."""
+    """Through model for child sharing with role-based permissions.
+
+    Grants a user access to a child's tracking records with a specific role.
+    When created or deleted, invalidates the shared user's cached accessible_children.
+
+    Attributes:
+        child (ForeignKey): The child being shared
+        user (ForeignKey): The user being granted access
+        role (CharField): One of 'CO' (co-parent) or 'CG' (caregiver)
+        created_at (DateTimeField): Timestamp when access was granted
+        created_by (ForeignKey): The user who created this share (typically the owner)
+    """
 
     class Role(models.TextChoices):
         CO_PARENT = "CO", "Co-parent"
@@ -62,7 +73,20 @@ class ChildShare(models.Model):
 
 
 class ShareInvite(models.Model):
-    """Reusable invite links for child sharing."""
+    """Reusable invite links for child sharing.
+
+    Allows owners to generate shareable tokens that grant access to their children.
+    Anyone with the token can accept the invite and automatically create a ChildShare.
+    Owners can deactivate invites without deleting them.
+
+    Attributes:
+        child (ForeignKey): The child being invited to share
+        token (CharField): Unique URL-safe token (auto-generated via secrets.token_urlsafe)
+        role (CharField): One of 'CO' (co-parent) or 'CG' (caregiver)
+        created_by (ForeignKey): The owner who created this invite
+        created_at (DateTimeField): Timestamp when invite was created
+        is_active (BooleanField): Whether this invite can still be used
+    """
 
     child = models.ForeignKey(
         "Child",
@@ -97,6 +121,30 @@ class ShareInvite(models.Model):
 
 
 class Child(models.Model):
+    """Child profile with tracking records (feedings, diapers, naps).
+
+    Owns DiaperChange, Feeding, and Nap records. Can be shared with other users
+    via ChildShare (co-parent/caregiver roles) or via ShareInvite tokens.
+
+    Access control via:
+    - `has_access(user)` - Check if user can view this child
+    - `get_user_role(user)` - Get user's role (owner/co-parent/caregiver)
+    - `can_edit(user)` - Check if user can edit child/tracking records
+    - `can_manage_sharing(user)` - Check if user is owner (can manage shares)
+
+    Cache invalidation:
+    - `for_user(user)` queries are cached for 1 hour (accessible_children_{user_id})
+    - Cache invalidates automatically when child or ChildShare objects change
+
+    Attributes:
+        parent (ForeignKey): The user who created/owns this child
+        name (CharField): Child's name (max 100 chars)
+        date_of_birth (DateField): ISO format date (YYYY-MM-DD)
+        gender (CharField): One of 'M', 'F', 'O' (optional)
+        created_at (DateTimeField): When child was created
+        updated_at (DateTimeField): When child was last modified
+    """
+
     class Gender(models.TextChoices):
         MALE = "M", "Male"
         FEMALE = "F", "Female"
@@ -144,8 +192,20 @@ class Child(models.Model):
     def for_user(cls, user):
         """Get all children the user has access to (owned or shared).
 
-        Results are cached to avoid expensive queries for users with many shares.
-        Cache is invalidated when ChildShare or Child objects are created/updated/deleted.
+        Implements efficient query caching to prevent expensive multi-user lookups.
+        Results include both owned children and shared children (via ChildShare).
+        Cache is invalidated automatically when sharing changes.
+
+        Args:
+            user: User instance to fetch children for
+
+        Returns:
+            QuerySet: Distinct children where user is owner OR has a ChildShare
+
+        Performance:
+            - First call: Database query with cache.set() for 1 hour
+            - Subsequent calls: Cache hit (O(1) lookup)
+            - Cache invalidates on: Child/ChildShare create/update/delete
         """
         cache_key = f"accessible_children_{user.id}"
         cached_ids = cache.get(cache_key)
@@ -165,16 +225,40 @@ class Child(models.Model):
 
     @classmethod
     def invalidate_user_cache(cls, user):
-        """Invalidate the cached accessible children for a user."""
+        """Invalidate the cached accessible children for a user.
+
+        Called automatically by Child/ChildShare save() and delete() methods.
+        Ensures subsequent for_user() calls fetch fresh data from database.
+
+        Args:
+            user: User whose cache should be invalidated
+        """
         cache_key = f"accessible_children_{user.id}"
         cache.delete(cache_key)
 
     def has_access(self, user):
-        """Check if user has any access to this child."""
+        """Check if user has any access to this child (view or manage).
+
+        Args:
+            user: User to check access for
+
+        Returns:
+            bool: True if user is owner or has a ChildShare for this child
+        """
         return self.parent == user or self.shares.filter(user=user).exists()
 
     def get_user_role(self, user):
-        """Get user's role: 'owner', 'co-parent', 'caregiver', or None."""
+        """Get user's role for this child.
+
+        Translates database role abbreviations (CO, CG) to frontend strings
+        (co-parent, caregiver) for API responses.
+
+        Args:
+            user: User to get role for
+
+        Returns:
+            str: One of 'owner', 'co-parent', 'caregiver', or None if no access
+        """
         if self.parent == user:
             return "owner"
         share = self.shares.filter(user=user).first()
@@ -188,10 +272,28 @@ class Child(models.Model):
         return None
 
     def can_edit(self, user):
-        """Check if user can edit child or tracking records."""
+        """Check if user can edit child profile or tracking records.
+
+        Only owners and co-parents can edit. Caregivers can only view/add.
+
+        Args:
+            user: User to check permission for
+
+        Returns:
+            bool: True if user is owner or co-parent
+        """
         role = self.get_user_role(user)
         return role in ["owner", "co-parent"]
 
     def can_manage_sharing(self, user):
-        """Only owner can manage sharing."""
+        """Check if user can manage sharing (create invites, revoke access).
+
+        Only the owner can manage sharing for a child.
+
+        Args:
+            user: User to check permission for
+
+        Returns:
+            bool: True if user is the child's owner
+        """
         return self.parent == user

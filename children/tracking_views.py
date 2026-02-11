@@ -1,8 +1,27 @@
 """Base views for tracking apps (diapers, feedings, naps).
 
-These base classes consolidate common CRUD patterns across all tracking apps.
-Each tracking app inherits from these and only needs to specify model-specific
-attributes (model, form_class, template_name, success_url_name).
+Consolidates common CRUD patterns across all tracking apps using class-based
+views with permission mixins. Eliminates duplication and enforces consistent
+permission checks (owner/co-parent can edit, caregiver can only view/add).
+
+Each tracking app (feedings, diapers, naps) inherits from these base classes:
+- TrackingListView: GET /children/{child_pk}/diapers/
+- TrackingCreateView: GET/POST /children/{child_pk}/diapers/create/
+- TrackingUpdateView: GET/POST /children/{child_pk}/diapers/{id}/edit/
+- TrackingDeleteView: GET/POST /children/{child_pk}/diapers/{id}/delete/
+
+Subclasses only need to specify:
+- model: Tracking model (DiaperChange, Feeding, Nap)
+- form_class: Form class for create/update
+- template_name: Template path (e.g., "diapers/diaperchange_list.html")
+- context_object_name: Template variable name (e.g., "diaper_changes")
+- success_url_name: URL name for redirect (e.g., "diapers:diaper_list")
+
+Permission model:
+- Owner (child.parent): Full access (view, add, edit, delete)
+- Co-parent (ChildShare.CO_PARENT): Can view, add, edit, delete
+- Caregiver (ChildShare.CAREGIVER): Can view and add only
+- Views use ChildAccessMixin/ChildEditMixin to enforce via dispatch()
 """
 
 from django.db.models import Q
@@ -20,12 +39,33 @@ ERROR_MISSING_SUCCESS_URL_NAME = "Subclass must set success_url_name"
 class TrackingEditQuerysetMixin:
     """Mixin for edit views (Update/Delete) with shared queryset filtering.
 
-    Filters queryset to allow editing/deleting by owner or co-parent only.
-    Used by both TrackingUpdateView and TrackingDeleteView.
+    Used by TrackingUpdateView and TrackingDeleteView to filter querysets.
+    Ensures only owner and co-parent can access records (caregiver cannot edit/delete).
+    Works with ChildEditMixin to enforce role-based permissions.
+
+    Filtering logic:
+    - Owner (child.parent = user): Can edit/delete their own records
+    - Co-parent (ChildShare with CO_PARENT role): Can edit/delete shared records
+    - Caregiver: Cannot edit/delete (filtered out of queryset)
     """
 
     def get_queryset(self):
-        """Allow editing/deleting by owner or co-parent."""
+        """Filter tracking records to only those owner/co-parent can edit.
+
+        Returns QuerySet of tracking records where:
+        1. User is the child's owner (parent), OR
+        2. User is a co-parent (has ChildShare with CO_PARENT role)
+
+        Returns:
+            QuerySet: Distinct tracking records filtered by permission
+
+        Example:
+            # Owner accessing their own record
+            # ChildDiaperChange where child.parent == request.user
+
+            # Co-parent accessing shared child's record
+            # DiaperChange where child has ChildShare with CO_PARENT role
+        """
         return self.model.objects.filter(
             Q(child__parent=self.request.user)
             | Q(
@@ -35,7 +75,14 @@ class TrackingEditQuerysetMixin:
         ).distinct()
 
     def get_child_for_access_check(self):
-        """Get child from the tracking record object."""
+        """Get child from the tracking record object.
+
+        Used by ChildEditMixin to verify user's permission for this specific child.
+        Extracts child from the tracking record being edited/deleted.
+
+        Returns:
+            Child: The child who owns this tracking record
+        """
         obj = self.get_object()
         return obj.child
 
@@ -43,10 +90,24 @@ class TrackingEditQuerysetMixin:
 class TrackingListView(ChildAccessMixin, ListView):
     """Base ListView for tracking records (diaper changes, feedings, naps).
 
-    Subclasses must set:
-        model: The tracking model class (e.g., DiaperChange, Feeding, Nap)
-        template_name: Path to list template (e.g., "diapers/diaperchange_list.html")
-        context_object_name: Name for queryset in template (e.g., "diaper_changes")
+    Handles GET requests to list all tracking records for a child. Permission
+    checking is enforced by ChildAccessMixin, which allows any authenticated
+    user with access to the child (owner/co-parent/caregiver).
+
+    Sorting: Records are ordered by timestamp descending (newest first) via
+    Meta.ordering on the model class.
+
+    Pagination: Uses Django's default pagination (see settings.py for PAGE_SIZE).
+
+    Template context:
+    - {context_object_name}: List of tracking records (e.g., "diaper_changes")
+    - child: The child being viewed
+    - user_role: Current user's role ('owner', 'co-parent', 'caregiver')
+
+    Required subclass attributes:
+        model (Model): Tracking model class (DiaperChange, Feeding, Nap)
+        template_name (str): Template path (e.g., "diapers/diaperchange_list.html")
+        context_object_name (str): Template variable (e.g., "diaper_changes")
 
     Example:
         class DiaperChangeListView(TrackingListView):
@@ -56,20 +117,53 @@ class TrackingListView(ChildAccessMixin, ListView):
     """
 
     def get_child_for_access_check(self):
+        """Get child from URL kwargs (child_pk).
+
+        Returns:
+            Child: Child to list records for
+
+        Raises:
+            Http404: If child_pk is missing or child not found
+        """
         return get_object_or_404(Child, pk=self.kwargs["child_pk"])
 
     def get_queryset(self):
+        """Get tracking records for the child.
+
+        Returns:
+            QuerySet: All tracking records for self.child, ordered by timestamp desc
+
+        Note:
+            Model's Meta.ordering ensures newest records appear first (e.g., -changed_at)
+        """
         return self.model.objects.filter(child=self.child)
 
 
 class TrackingCreateView(ChildAccessMixin, CreateView):
     """Base CreateView for tracking records.
 
-    Subclasses must set:
-        model: The tracking model class
-        form_class: The form class (e.g., DiaperChangeForm)
-        template_name: Path to form template (e.g., "diapers/diaperchange_form.html")
-        success_url_name: URL name for redirect (e.g., "diapers:diaper_list")
+    Handles GET (form display) and POST (form submission) for creating new
+    tracking records (feedings, diapers, naps). ChildAccessMixin allows any
+    user with access to the child to add records (owner/co-parent/caregiver).
+
+    Timezone handling: Forms using LocalDateTimeFormMixin convert local time
+    to UTC before saving. The tz_offset hidden field captures browser timezone.
+
+    Template context (GET):
+    - form: The form instance
+    - child: The child being tracked
+    - user_role: Current user's role
+
+    Success behavior:
+    - Saves record with child_id from URL
+    - Redirects to list view (success_url_name)
+    - Shows Django messages (optional, see form.html template)
+
+    Required subclass attributes:
+        model (Model): Tracking model (DiaperChange, Feeding, Nap)
+        form_class (Form): Form class for validation
+        template_name (str): Form template path
+        success_url_name (str): URL name for redirect list view
 
     Example:
         class DiaperChangeCreateView(TrackingCreateView):
@@ -82,28 +176,79 @@ class TrackingCreateView(ChildAccessMixin, CreateView):
     success_url_name = None  # Must be set by subclass
 
     def get_child_for_access_check(self):
+        """Get child from URL kwargs (child_pk).
+
+        Returns:
+            Child: Child to create tracking record for
+
+        Raises:
+            Http404: If child_pk is missing or child not found
+        """
         return get_object_or_404(Child, pk=self.kwargs["child_pk"])
 
     def form_valid(self, form):
+        """Set child before saving form.
+
+        Called when form validation passes. Associates the tracking record
+        with the correct child before saving to database.
+
+        Args:
+            form: Valid form instance
+
+        Returns:
+            HttpResponse: Redirect to success_url
+        """
         form.instance.child = self.child
         return super().form_valid(form)
 
     def get_success_url(self):
+        """Generate URL to list view after successful save.
+
+        Returns:
+            str: Reversed URL for list view with child_pk
+
+        Raises:
+            NotImplementedError: If subclass doesn't set success_url_name
+
+        Example:
+            # If success_url_name = "diapers:diaper_list"
+            # Returns: /children/123/diapers/
+        """
         if not self.success_url_name:
             raise NotImplementedError(ERROR_MISSING_SUCCESS_URL_NAME)
         return reverse(self.success_url_name, kwargs={"child_pk": self.child.pk})
 
 
 class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
-    """Base UpdateView for tracking records.
+    """Base UpdateView for tracking records (edit functionality).
 
-    Allows editing by owner or co-parent (enforced by ChildEditMixin).
+    Handles GET (form display) and POST (form submission) for editing existing
+    tracking records. Permission checking via ChildEditMixin restricts editing
+    to owner and co-parent only. Caregiver role returns Http404.
 
-    Subclasses must set:
-        model: The tracking model class
-        form_class: The form class
-        template_name: Path to form template
-        success_url_name: URL name for redirect
+    Edit capability:
+    - Owner: Can edit any of their child's records
+    - Co-parent: Can edit shared child's records
+    - Caregiver: Cannot edit (forbidden via ChildEditMixin)
+
+    Timezone handling: LocalDateTimeFormMixin converts local time to UTC.
+    The datetime field is converted back to local time for form display.
+
+    Template context (GET):
+    - form: The form instance with current values
+    - object: The tracking record being edited
+    - child: The child who owns this record
+    - user_role: Current user's role
+
+    Success behavior:
+    - Saves updated record
+    - Redirects to list view (success_url_name)
+
+    Required subclass attributes:
+        model (Model): Tracking model
+        form_class (Form): Form class for validation and display
+        template_name (str): Form template path
+        success_url_name (str): URL name for redirect
 
     Example:
         class DiaperChangeUpdateView(TrackingUpdateView):
@@ -116,25 +261,62 @@ class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
     success_url_name = None  # Must be set by subclass
 
     def get_success_url(self):
+        """Generate URL to list view after successful update.
+
+        Returns:
+            str: Reversed URL for list view with child_pk from edited record
+
+        Raises:
+            NotImplementedError: If subclass doesn't set success_url_name
+        """
         if not self.success_url_name:
             raise NotImplementedError(ERROR_MISSING_SUCCESS_URL_NAME)
         return reverse(self.success_url_name, kwargs={"child_pk": self.object.child.pk})
 
     def get_context_data(self, **kwargs):
+        """Add child to template context.
+
+        Args:
+            **kwargs: Context from superclass
+
+        Returns:
+            dict: Updated context with 'child' key
+        """
         context = super().get_context_data(**kwargs)
         context["child"] = self.object.child
         return context
 
 
 class TrackingDeleteView(TrackingEditQuerysetMixin, ChildEditMixin, DeleteView):
-    """Base DeleteView for tracking records.
+    """Base DeleteView for tracking records (delete confirmation).
 
-    Allows deleting by owner or co-parent (enforced by ChildEditMixin).
+    Handles GET (confirmation page) and POST (deletion) for removing tracking
+    records. Permission checking via ChildEditMixin restricts deletion to owner
+    and co-parent only. Caregiver role returns Http404.
 
-    Subclasses must set:
-        model: The tracking model class
-        template_name: Path to confirm delete template
-        success_url_name: URL name for redirect
+    Delete capability:
+    - Owner: Can delete any of their child's records
+    - Co-parent: Can delete shared child's records
+    - Caregiver: Cannot delete (forbidden via ChildEditMixin)
+
+    Deletion behavior:
+    - Cascading: When child is deleted, all tracking records cascade delete
+    - Timestamps: created_at/updated_at are permanent; deletion removes entire record
+    - No soft delete: Records are permanently removed from database
+
+    Template context (GET):
+    - object: The tracking record being deleted
+    - child: The child who owns this record
+
+    Success behavior:
+    - Deletes record from database
+    - Redirects to list view (success_url_name)
+    - Shows Django messages (optional, see confirm_delete.html template)
+
+    Required subclass attributes:
+        model (Model): Tracking model
+        template_name (str): Confirmation template (e.g., "diapers/diaperchange_confirm_delete.html")
+        success_url_name (str): URL name for redirect after deletion
 
     Example:
         class DiaperChangeDeleteView(TrackingDeleteView):
@@ -146,6 +328,16 @@ class TrackingDeleteView(TrackingEditQuerysetMixin, ChildEditMixin, DeleteView):
     success_url_name = None  # Must be set by subclass
 
     def get_success_url(self):
+        """Generate URL to list view after successful deletion.
+
+        Note: Must access self.object.child before delete() removes the object.
+
+        Returns:
+            str: Reversed URL for list view with child_pk
+
+        Raises:
+            NotImplementedError: If subclass doesn't set success_url_name
+        """
         if not self.success_url_name:
             raise NotImplementedError(ERROR_MISSING_SUCCESS_URL_NAME)
         return reverse(self.success_url_name, kwargs={"child_pk": self.object.child.pk})

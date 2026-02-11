@@ -15,6 +15,26 @@ from .constants import (
 
 
 class Feeding(models.Model):
+    """Feeding tracking record with conditional bottle/breast fields.
+
+    Supports two feeding types with different required fields:
+    - Bottle: Requires amount_oz (mL), no breast fields allowed
+    - Breast: Requires duration_minutes and side, no bottle amount allowed
+
+    Database constraints enforce these rules at the schema level using CheckConstraints.
+    Application-level validation should be performed by forms/serializers.
+
+    Attributes:
+        child (ForeignKey): The child being fed
+        feeding_type (CharField): 'bottle' or 'breast'
+        fed_at (DateTimeField): When feeding occurred (UTC, indexed for queries)
+        amount_oz (DecimalField): Amount in oz (0.1-50.0, bottle only)
+        duration_minutes (PositiveIntegerField): Duration in minutes (1-180, breast only)
+        side (CharField): 'left', 'right', or 'both' (breast only)
+        created_at (DateTimeField): When record was created
+        updated_at (DateTimeField): When record was last modified
+    """
+
     class FeedingType(models.TextChoices):
         BOTTLE = "bottle", "Bottle"
         BREAST = "breast", "Breast"

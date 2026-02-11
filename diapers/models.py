@@ -4,6 +4,19 @@ from children.models import Child
 
 
 class DiaperChange(models.Model):
+    """Diaper change tracking record.
+
+    Records when a diaper was changed and what type of change occurred.
+    Supports three change types: wet, dirty, or both.
+
+    Attributes:
+        child (ForeignKey): The child whose diaper was changed
+        change_type (CharField): One of 'wet', 'dirty', or 'both'
+        changed_at (DateTimeField): When the diaper change occurred (UTC, indexed for queries)
+        created_at (DateTimeField): When record was created
+        updated_at (DateTimeField): When record was last modified
+    """
+
     class ChangeType(models.TextChoices):
         WET = "wet", "Wet"
         DIRTY = "dirty", "Dirty"
