@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "rest_framework",
     "rest_framework.authtoken",
+    "celery",
     # Local apps
     "accounts",
     "children",
@@ -209,6 +210,91 @@ DATABASES = {
 # - DB_POOL_MIN_SIZE=5 (more aggressive pre-warming)
 # - DB_POOL_MAX_SIZE=20 (handle more concurrent requests)
 # - DB_CONN_MAX_AGE=300 (shorter connection lifetime for better freshness)
+
+# =============================================================================
+# Cache Configuration (Redis)
+# =============================================================================
+
+def _get_cache_config():
+    """Get cache configuration - uses Redis if available, falls back to local memory.
+
+    Redis Configuration:
+    - Default: redis://redis:6379/0 (Docker/Podman network)
+    - Override via REDIS_URL environment variable
+    - Uses django-redis for connection pooling and timeout handling
+    """
+    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    redis_port = os.environ.get("REDIS_PORT", "6379")
+    redis_url = os.environ.get("REDIS_URL", f"redis://{redis_host}:{redis_port}/0")
+
+    if os.environ.get("DJANGO_DEBUG"):
+        # Development: Try Redis, fall back to local memory if unavailable
+        return {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": redis_url,
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "CONNECTION_POOL_KWARGS": {
+                        "retry_on_timeout": True,
+                        "socket_connect_timeout": 5,
+                        "socket_timeout": 5,
+                    },
+                    "SOCKET_CONNECT_TIMEOUT": 5,
+                    "SOCKET_TIMEOUT": 5,
+                    "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+                    "IGNORE_EXCEPTIONS": True,  # Fall back to direct DB on cache miss
+                },
+            }
+        }
+    else:
+        # Production: Always use Redis (fail hard if unavailable)
+        return {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": redis_url,
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "CONNECTION_POOL_KWARGS": {
+                        "retry_on_timeout": True,
+                        "socket_connect_timeout": 10,
+                        "socket_timeout": 10,
+                        "max_connections": 50,
+                    },
+                    "SOCKET_CONNECT_TIMEOUT": 10,
+                    "SOCKET_TIMEOUT": 10,
+                    "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+                    "IGNORE_EXCEPTIONS": False,  # Fail hard in production
+                },
+            }
+        }
+
+
+CACHES = _get_cache_config()
+
+# Session backend: Store sessions in Redis instead of database
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+
+# =============================================================================
+# Celery Configuration
+# =============================================================================
+
+CELERY_BROKER_URL = os.environ.get(
+    "CELERY_BROKER_URL",
+    f"redis://{os.environ.get('REDIS_HOST', 'localhost')}:{os.environ.get('REDIS_PORT', '6379')}/0",
+)
+CELERY_RESULT_BACKEND = os.environ.get(
+    "CELERY_RESULT_BACKEND",
+    f"redis://{os.environ.get('REDIS_HOST', 'localhost')}:{os.environ.get('REDIS_PORT', '6379')}/1",
+)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"  # Will use TIME_ZONE when it's defined below
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit (raises SoftTimeLimitExceeded)
 
 # =============================================================================
 # Authentication & Authorization
