@@ -14,6 +14,11 @@ class ChildrenConfig(AppConfig):
 
         def invalidate_on_tracking_change(sender, instance, **kwargs):
             """Invalidate child activities cache when tracking records change."""
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"SIGNAL FIRED: {sender.__name__} saved/deleted - invalidating cache for child_id={instance.child_id}"
+            )
             invalidate_child_activities_cache(instance.child_id)
 
         # Register signal handlers for all tracking models

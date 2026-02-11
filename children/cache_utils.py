@@ -93,9 +93,10 @@ def get_child_last_activities(child_ids):
         missing_dict[child_id] = activities
         cache_to_set[f"child_activities_{child_id}"] = activities
 
-    # Cache the results (5 hour TTL - balance between freshness and performance)
+    # Cache the results (30 minute TTL - balance between freshness and performance)
+    # Cache invalidates automatically when tracking records change via signals
     if cache_to_set:
-        cache.set_many(cache_to_set, 18000)
+        cache.set_many(cache_to_set, 1800)
 
     # Merge cached and newly-fetched results
     result = {}
@@ -120,12 +121,22 @@ def invalidate_child_activities_cache(child_id):
     updated, or deleted for the child. Ensures the next request fetches
     fresh data from the database.
 
+    Uses transaction.on_commit() to defer cache invalidation until after
+    the database transaction commits, preventing race conditions where
+    the cache is cleared before data is persisted.
+
     Args:
         child_id: The ID of the child whose cache should be invalidated
     """
-    cache_key = f"child_activities_{child_id}"
-    cache.delete(cache_key)
-    logger.info(
-        f"Invalidated child activities cache",
-        extra={"child_id": child_id, "cache_key": cache_key}
-    )
+    from django.db import transaction
+
+    def clear_cache():
+        cache_key = f"child_activities_{child_id}"
+        cache.delete(cache_key)
+        logger.info(
+            f"Invalidated child activities cache",
+            extra={"child_id": child_id, "cache_key": cache_key}
+        )
+
+    # Schedule invalidation to run after transaction commits
+    transaction.on_commit(clear_cache)
