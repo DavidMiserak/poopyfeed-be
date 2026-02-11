@@ -953,3 +953,22 @@ class SharedChildListViewTests(TestCase):
         self.client.login(email=TEST_COPARENT_EMAIL, password=TEST_PASSWORD)
         response = self.client.get(reverse(URL_CHILD_LIST))
         self.assertNotContains(response, "fa-share-nodes")
+
+    def test_child_list_has_no_cache_headers(self):
+        """Verify child list response has cache-control headers to prevent browser caching.
+
+        Browser caching (especially BFCache - Back/Forward Cache) can cause
+        users to see stale "Last Activity" timestamps after logging tracking
+        records. These headers force browsers to always fetch fresh HTML.
+        """
+        self.client.login(email=TEST_OWNER_EMAIL, password=TEST_PASSWORD)
+        response = self.client.get(reverse(URL_CHILD_LIST))
+        self.assertEqual(response.status_code, 200)
+
+        # Verify cache-control headers prevent browser caching
+        self.assertEqual(
+            response['Cache-Control'],
+            'no-cache, no-store, must-revalidate'
+        )
+        self.assertEqual(response['Pragma'], 'no-cache')
+        self.assertEqual(response['Expires'], '0')

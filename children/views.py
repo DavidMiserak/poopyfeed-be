@@ -26,6 +26,21 @@ class ChildListView(LoginRequiredMixin, ListView):
     template_name = "children/child_list.html"
     context_object_name = "children"
 
+    def dispatch(self, request, *args, **kwargs):
+        """Prevent browser from caching this page.
+
+        Forces browsers to always fetch fresh HTML when viewing the child list,
+        ensuring users see updated last-activity timestamps after logging
+        tracking records (diapers, feedings, naps). The cache invalidation
+        signals fire when tracking records are saved, but browsers may serve
+        cached HTML without this header.
+        """
+        response = super().dispatch(request, *args, **kwargs)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
+
     def get_queryset(self):
         return (
             Child.objects.filter(

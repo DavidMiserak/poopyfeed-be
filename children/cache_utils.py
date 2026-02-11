@@ -5,8 +5,12 @@ Provides efficient caching of expensive last-activity annotations
 but expensive to compute via database aggregations.
 """
 
+import logging
+
 from django.core.cache import cache
 from django.db.models import Max
+
+logger = logging.getLogger(__name__)
 
 
 def get_child_last_activities(child_ids):
@@ -43,10 +47,19 @@ def get_child_last_activities(child_ids):
 
     # If all are cached, return immediately
     if not missing_child_ids:
+        logger.debug(
+            f"Cache HIT for all children: {child_ids}",
+            extra={"hit_count": len(child_ids)}
+        )
         return {
             child_id: cached_results[f"child_activities_{child_id}"]
             for child_id in child_ids
         }
+
+    logger.debug(
+        f"Cache MISS for children: {missing_child_ids}",
+        extra={"miss_count": len(missing_child_ids), "total": len(child_ids)}
+    )
 
     # Query database for missing children - single query for all missing
     from children.models import Child
@@ -112,3 +125,7 @@ def invalidate_child_activities_cache(child_id):
     """
     cache_key = f"child_activities_{child_id}"
     cache.delete(cache_key)
+    logger.info(
+        f"Invalidated child activities cache",
+        extra={"child_id": child_id, "cache_key": cache_key}
+    )
