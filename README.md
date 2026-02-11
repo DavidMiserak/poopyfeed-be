@@ -228,7 +228,7 @@ podman compose exec web python manage.py createsuperuser
 PoopyFeed is available as an official Docker image on Docker Hub:
 
 ```text
-docker.io/davidmiserak/poopyfeed:latest
+docker.io/davidmiserak/poopyfeed-be:latest
 ```
 
 Use this image with Docker Compose, Podman Compose, or Quadlet for easy deployment.
