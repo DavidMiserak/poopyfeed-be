@@ -246,16 +246,17 @@ def get_diaper_patterns(
         # Add to daily count
         daily_by_date[date]["count"] += count
 
-        # Add to type-specific counts
-        if change_type == "W":
+        # Add to type-specific counts (change_type values: 'wet', 'dirty', 'both')
+        if change_type == "wet":
             daily_by_date[date]["wet_count"] = count
-        elif change_type == "D":
+        elif change_type == "dirty":
             daily_by_date[date]["dirty_count"] = count
-        elif change_type == "B":
+        elif change_type == "both":
             daily_by_date[date]["both_count"] = count
 
         # Add to period breakdown
-        period_breakdown[change_type] = period_breakdown.get(change_type, 0) + count
+        if change_type in period_breakdown:
+            period_breakdown[change_type] += count
 
     # Convert to sorted list and fill date gaps
     daily_data = sorted(daily_by_date.values(), key=lambda x: x["date"])
