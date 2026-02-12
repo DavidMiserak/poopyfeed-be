@@ -5,10 +5,13 @@ Provides trend visualization and data insights for tracked activities
 """
 
 import csv
+import os
 from io import StringIO
+from pathlib import Path
 
 from celery.result import AsyncResult
 from django.core.cache import cache
+from django.core.files.storage import default_storage
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -50,6 +53,13 @@ class AnalyticsViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [IsAuthenticated, HasAnalyticsAccess]
+
+    def get_permissions(self):
+        """Override permissions for download_pdf to allow unauthenticated access."""
+        if self.action == "download_pdf":
+            # Download URLs are time-limited, no auth required
+            return []
+        return super().get_permissions()
 
     def get_child(self, child_id: int) -> Child:
         """Get child and check access permissions.
@@ -331,14 +341,22 @@ class AnalyticsViewSet(viewsets.ViewSet):
 
         Queues a Celery task to generate PDF report. Returns task ID for polling.
 
+        Request body:
+            days: Number of days to include (1-90, default 30)
+
         Returns:
             JSON with task_id and status for polling export progress
         """
         # Get and validate child
         child = self.get_child(pk)
 
-        # Queue PDF generation task
-        task = generate_pdf_report.delay(child.id, request.user.id)
+        # Parse days parameter from request body
+        serializer = DaysQuerySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        days = serializer.validated_data["days"]
+
+        # Queue PDF generation task with days parameter
+        task = generate_pdf_report.delay(child.id, request.user.id, days)
 
         # Return task ID for polling
         response_serializer = AsyncExportResponseSerializer(
@@ -365,10 +383,43 @@ class AnalyticsViewSet(viewsets.ViewSet):
         # Get task result
         task_result = AsyncResult(task_id)
 
+        # Map Celery task states to frontend-friendly status values
+        celery_status = task_result.status
+        if celery_status == 'PENDING':
+            frontend_status = 'pending'
+        elif celery_status == 'STARTED':
+            frontend_status = 'processing'
+        elif celery_status == 'SUCCESS':
+            frontend_status = 'completed'
+        elif celery_status == 'FAILURE':
+            frontend_status = 'failed'
+        else:
+            # Handle any other states as processing
+            frontend_status = 'processing'
+
         response_data = {
             "task_id": task_id,
-            "status": task_result.status,
+            "status": frontend_status,
         }
+
+        # Extract progress from task metadata if available
+        try:
+            if hasattr(task_result, 'info') and isinstance(task_result.info, dict):
+                progress = task_result.info.get('progress')
+                if progress is not None:
+                    response_data["progress"] = int(progress)
+            elif task_result.status == 'PENDING':
+                response_data["progress"] = 0
+            elif task_result.status == 'STARTED':
+                response_data["progress"] = 50  # Default progress for started tasks
+            elif task_result.status == 'SUCCESS':
+                response_data["progress"] = 100
+        except (AttributeError, ValueError, TypeError):
+            # Fallback if progress extraction fails
+            if task_result.status == 'SUCCESS':
+                response_data["progress"] = 100
+            elif task_result.status == 'PENDING':
+                response_data["progress"] = 0
 
         if task_result.successful():
             response_data["result"] = task_result.result
@@ -377,3 +428,40 @@ class AnalyticsViewSet(viewsets.ViewSet):
 
         response_serializer = ExportStatusResponseSerializer(response_data)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    def download_pdf(self, request, filename=None):
+        """Download a generated PDF export file.
+
+        Args:
+            filename: The filename to download (e.g., analytics-Child_Name-20260212_151408.pdf)
+
+        Returns:
+            PDF file as attachment or 404 if not found
+        """
+        # Validate filename format (prevent directory traversal)
+        if not filename or "/" in filename or "\\" in filename or filename.startswith("."):
+            raise NotFound("Invalid filename")
+
+        # Construct file path
+        file_path = Path("exports") / filename
+
+        # Use storage to get the full path
+        try:
+            full_path = default_storage.path(str(file_path))
+        except NotImplementedError:
+            # Fallback if storage backend doesn't implement path()
+            from django.conf import settings
+            full_path = os.path.join(settings.BASE_DIR, "exports", filename)
+
+        # Check if file exists
+        if not os.path.exists(full_path):
+            raise NotFound("File not found")
+
+        # Open and return file
+        try:
+            with open(full_path, "rb") as f:
+                response = HttpResponse(f.read(), content_type="application/pdf")
+                response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return response
+        except IOError:
+            raise NotFound("Unable to read file")

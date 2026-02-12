@@ -3,7 +3,7 @@
 All API endpoints are prefixed with /api/v1/.
 """
 
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from accounts.api import (
@@ -144,5 +144,11 @@ urlpatterns = [
         "analytics/children/<int:pk>/export-status/<str:task_id>/",
         AnalyticsViewSet.as_view({"get": "export_status"}),
         name="analytics-export-status",
+    ),
+    # Analytics PDF download endpoint
+    re_path(
+        r"^analytics/download/(?P<filename>[^/]+)/$",
+        AnalyticsViewSet.as_view({"get": "download_pdf"}),
+        name="analytics-download-pdf",
     ),
 ]

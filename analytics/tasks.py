@@ -29,26 +29,33 @@ from children.models import Child
 from .utils import get_diaper_patterns, get_feeding_trends, get_sleep_summary
 
 
-@shared_task(bind=True, time_limit=300)
-def generate_pdf_report(self, child_id: int, user_id: int):
+@shared_task(bind=True, time_limit=300, track_started=True)
+def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
     """Generate a PDF report with analytics data for a child.
 
     Args:
         child_id: The child's ID
         user_id: The user requesting the export
+        days: Number of days to include (1-90, default 30)
 
     Returns:
-        Dict with filename, url, and expiration timestamp
+        Dict with filename, download_url, created_at, and expires_at timestamp
 
     Raises:
         Exception: If child not found or user lacks access
     """
     try:
+        # Validate days parameter
+        days = max(1, min(90, days))
+
         # Verify child exists and user has access
         child = Child.objects.get(id=child_id)
         user = CustomUser.objects.get(id=user_id)
         if not child.has_access(user):
             raise PermissionError("User does not have access to this child")
+
+        # Update task status to show it's starting
+        self.update_state(state='STARTED', meta={'progress': 10})
 
         # Generate PDF
         pdf_buffer = BytesIO()
@@ -96,8 +103,8 @@ def generate_pdf_report(self, child_id: int, user_id: int):
         story.append(Spacer(1, 0.3 * inch))
 
         # Feeding Trends Section
-        story.append(Paragraph("Feeding Trends (Last 30 Days)", custom_heading_style))
-        feeding_data = get_feeding_trends(child_id, days=30)
+        story.append(Paragraph(f"Feeding Trends (Last {days} Days)", custom_heading_style))
+        feeding_data = get_feeding_trends(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
         # Build feeding table
@@ -155,9 +162,9 @@ def generate_pdf_report(self, child_id: int, user_id: int):
 
         # Diaper Patterns Section
         story.append(
-            Paragraph("Diaper Change Patterns (Last 30 Days)", custom_heading_style)
+            Paragraph(f"Diaper Change Patterns (Last {days} Days)", custom_heading_style)
         )
-        diaper_data = get_diaper_patterns(child_id, days=30)
+        diaper_data = get_diaper_patterns(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
         # Build diaper table
@@ -205,8 +212,8 @@ def generate_pdf_report(self, child_id: int, user_id: int):
         story.append(PageBreak())
 
         # Sleep Summary Section
-        story.append(Paragraph("Sleep Summary (Last 30 Days)", custom_heading_style))
-        sleep_data = get_sleep_summary(child_id, days=30)
+        story.append(Paragraph(f"Sleep Summary (Last {days} Days)", custom_heading_style))
+        sleep_data = get_sleep_summary(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
         # Build sleep table
@@ -258,21 +265,27 @@ def generate_pdf_report(self, child_id: int, user_id: int):
         story.append(Paragraph(sleep_text, styles["Normal"]))
 
         # Build PDF
+        self.update_state(state='STARTED', meta={'progress': 75})
         doc.build(story)
 
         # Save to storage
+        self.update_state(state='STARTED', meta={'progress': 90})
         filename = f"analytics-{child.name.replace(' ', '_')}-{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         pdf_buffer.seek(0)
         default_storage.save(f"exports/{filename}", pdf_buffer)
 
-        # Calculate expiration time (24 hours from now)
-        expires_at = timezone.now() + timedelta(hours=24)
+        # Generate download URL using the API endpoint (no trailing slash for consistency)
+        download_url = f"/api/v1/analytics/download/{filename}/"
+
+        # Calculate timestamps
+        now = timezone.now()
+        expires_at = now + timedelta(hours=24)
 
         return {
             "filename": filename,
-            "url": f"/api/v1/analytics/children/{child_id}/export/download/{filename}/",
+            "download_url": download_url,
+            "created_at": now.isoformat(),
             "expires_at": expires_at.isoformat(),
-            "child_id": child_id,
         }
 
     except Child.DoesNotExist:

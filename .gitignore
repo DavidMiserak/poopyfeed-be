@@ -70,3 +70,4 @@ htmlcov/
 coverage.xml
 memory/
 staticfiles/
+exports/

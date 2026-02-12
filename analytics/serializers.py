@@ -114,5 +114,6 @@ class ExportStatusResponseSerializer(serializers.Serializer):
 
     task_id = serializers.CharField()
     status = serializers.CharField()
+    progress = serializers.IntegerField(required=False, allow_null=True)
     result = serializers.DictField(required=False, allow_null=True)
     error = serializers.CharField(required=False, allow_null=True)
