@@ -971,3 +971,28 @@ class ExportPDFTests(APITestCase):
         data = response.json()
         self.assertEqual(data["task_id"], task_id)
         self.assertIn("status", data)
+
+    def test_export_status_always_includes_progress(self):
+        """Should always include progress field in export status response."""
+        # Queue task
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-pdf/"
+        )
+        task_id = response.json()["task_id"]
+
+        # Poll status immediately (task will be PENDING)
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/{task_id}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        # Progress field MUST be present for frontend display
+        self.assertIn("progress", data, "Progress field must be present in export status response")
+
+        # Progress should be a number between 0-100
+        progress = data["progress"]
+        self.assertIsInstance(progress, int, "Progress must be an integer")
+        self.assertGreaterEqual(progress, 0, "Progress cannot be negative")
+        self.assertLessEqual(progress, 100, "Progress cannot exceed 100")

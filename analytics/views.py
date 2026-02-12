@@ -408,18 +408,28 @@ class AnalyticsViewSet(viewsets.ViewSet):
                 progress = task_result.info.get('progress')
                 if progress is not None:
                     response_data["progress"] = int(progress)
-            elif task_result.status == 'PENDING':
+                else:
+                    # Info exists but no progress field - use status-based default
+                    if celery_status == 'PENDING':
+                        response_data["progress"] = 0
+                    elif celery_status == 'STARTED':
+                        response_data["progress"] = 50
+                    elif celery_status == 'SUCCESS':
+                        response_data["progress"] = 100
+            elif celery_status == 'PENDING':
                 response_data["progress"] = 0
-            elif task_result.status == 'STARTED':
+            elif celery_status == 'STARTED':
                 response_data["progress"] = 50  # Default progress for started tasks
-            elif task_result.status == 'SUCCESS':
+            elif celery_status == 'SUCCESS':
                 response_data["progress"] = 100
         except (AttributeError, ValueError, TypeError):
             # Fallback if progress extraction fails
-            if task_result.status == 'SUCCESS':
+            if celery_status == 'SUCCESS':
                 response_data["progress"] = 100
-            elif task_result.status == 'PENDING':
+            elif celery_status == 'PENDING':
                 response_data["progress"] = 0
+            else:
+                response_data["progress"] = 50
 
         if task_result.successful():
             response_data["result"] = task_result.result
