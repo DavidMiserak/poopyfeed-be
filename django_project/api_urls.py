@@ -12,6 +12,7 @@ from accounts.api import (
     UserProfileView,
     get_auth_token,
 )
+from analytics.views import AnalyticsViewSet
 from children.api import AcceptInviteViewSet, ChildViewSet
 from diapers.api import DiaperChangeViewSet
 from feedings.api import FeedingViewSet
@@ -101,5 +102,31 @@ urlpatterns = [
             }
         ),
         name="child-naps-detail",
+    ),
+    # Analytics endpoints (read-only)
+    path(
+        "analytics/children/<int:pk>/feeding-trends/",
+        AnalyticsViewSet.as_view({"get": "feeding_trends"}),
+        name="analytics-feeding-trends",
+    ),
+    path(
+        "analytics/children/<int:pk>/diaper-patterns/",
+        AnalyticsViewSet.as_view({"get": "diaper_patterns"}),
+        name="analytics-diaper-patterns",
+    ),
+    path(
+        "analytics/children/<int:pk>/sleep-summary/",
+        AnalyticsViewSet.as_view({"get": "sleep_summary"}),
+        name="analytics-sleep-summary",
+    ),
+    path(
+        "analytics/children/<int:pk>/today-summary/",
+        AnalyticsViewSet.as_view({"get": "today_summary"}),
+        name="analytics-today-summary",
+    ),
+    path(
+        "analytics/children/<int:pk>/weekly-summary/",
+        AnalyticsViewSet.as_view({"get": "weekly_summary"}),
+        name="analytics-weekly-summary",
     ),
 ]

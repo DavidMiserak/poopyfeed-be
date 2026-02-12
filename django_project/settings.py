@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "celery",
     # Local apps
     "accounts",
+    "analytics",
     "children",
     "diapers",
     "feedings",
