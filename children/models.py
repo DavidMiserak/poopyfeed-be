@@ -61,6 +61,7 @@ class ChildShare(models.Model):
         super().save(*args, **kwargs)
         # Invalidate cache for the shared user
         from .models import Child
+
         Child.invalidate_user_cache(self.user)
 
     def delete(self, *args, **kwargs):
@@ -69,6 +70,7 @@ class ChildShare(models.Model):
         super().delete(*args, **kwargs)
         # Invalidate cache for the shared user
         from .models import Child
+
         Child.invalidate_user_cache(user)
 
 

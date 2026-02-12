@@ -3,6 +3,7 @@
 Tests permission checking, data aggregation accuracy, caching behavior,
 and error handling for all analytics endpoints.
 """
+
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
@@ -18,7 +19,6 @@ from feedings.models import Feeding
 from naps.models import Nap
 
 from .cache import invalidate_child_analytics
-
 
 User = get_user_model()
 
@@ -130,9 +130,7 @@ class AnalyticsPermissionTests(APITestCase):
         token = Token.objects.create(user=self.owner)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
-        response = self.client.get(
-            f"/api/v1/analytics/children/99999/feeding-trends/"
-        )
+        response = self.client.get(f"/api/v1/analytics/children/99999/feeding-trends/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -753,3 +751,223 @@ class EmptyDataTests(APITestCase):
         self.assertEqual(data["feedings"]["count"], 0)
         self.assertEqual(data["diapers"]["count"], 0)
         self.assertEqual(data["sleep"]["naps"], 0)
+
+
+class ExportCSVTests(APITestCase):
+    """Test CSV export endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data with tracking records."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="user@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+        # Create some test data
+        now = timezone.now()
+        for i in range(5):
+            date_offset = now - timedelta(days=i)
+            Feeding.objects.create(
+                child=cls.child,
+                fed_at=date_offset,
+                amount_oz=5.0 + i,
+                feeding_type="bottle",
+            )
+            DiaperChange.objects.create(
+                child=cls.child,
+                changed_at=date_offset,
+                change_type="wet",
+            )
+            Nap.objects.create(
+                child=cls.child,
+                napped_at=date_offset,
+            )
+
+    def setUp(self):
+        """Set up authentication."""
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def test_csv_export_success(self):
+        """Should successfully export data as CSV."""
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-csv/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("analytics-Test_Child", response["Content-Disposition"])
+
+        # Parse CSV content
+        csv_lines = response.content.decode().strip().split("\n")
+        self.assertGreater(len(csv_lines), 1)  # Should have header + data rows
+
+        # Check header
+        header = csv_lines[0]
+        self.assertIn("Date", header)
+        self.assertIn("Feedings (count)", header)
+        self.assertIn("Diaper Changes (count)", header)
+
+    def test_csv_export_with_days_parameter(self):
+        """Should respect days parameter in CSV export."""
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-csv/?days=7"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        csv_lines = response.content.decode().strip().split("\n")
+
+        # Should have 7 days of data + 1 header row
+        self.assertLessEqual(len(csv_lines), 8)
+
+    def test_csv_export_unauthorized(self):
+        """Should deny CSV export to unauthorized users."""
+        other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="password123",
+        )
+        token = Token.objects.create(user=other_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-csv/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_csv_export_coparent(self):
+        """Should allow CSV export to co-parent."""
+        coparent = User.objects.create_user(
+            username="coparent",
+            email="coparent@example.com",
+            password="password123",
+        )
+        ChildShare.objects.create(
+            child=self.child,
+            user=coparent,
+            role="CO",
+        )
+
+        token = Token.objects.create(user=coparent)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-csv/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_csv_export_invalid_days(self):
+        """Should reject invalid days parameter."""
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-csv/?days=100"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ExportPDFTests(APITestCase):
+    """Test PDF export endpoints."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data with tracking records."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="user@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+        # Create some test data
+        now = timezone.now()
+        for i in range(5):
+            date_offset = now - timedelta(days=i)
+            Feeding.objects.create(
+                child=cls.child,
+                fed_at=date_offset,
+                amount_oz=5.0 + i,
+                feeding_type="bottle",
+            )
+
+    def setUp(self):
+        """Set up authentication."""
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def test_pdf_export_queues_task(self):
+        """Should queue PDF export task and return task ID."""
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-pdf/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        data = response.json()
+
+        self.assertIn("task_id", data)
+        self.assertEqual(data["status"], "pending")
+        self.assertIn("PDF export", data["message"])
+
+    def test_pdf_export_unauthorized(self):
+        """Should deny PDF export to unauthorized users."""
+        other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="password123",
+        )
+        token = Token.objects.create(user=other_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-pdf/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_export_status_pending(self):
+        """Should return task status for pending job."""
+        # Queue task
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-pdf/"
+        )
+        task_id = response.json()["task_id"]
+
+        # Poll status
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/{task_id}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["task_id"], task_id)
+        # Status can be 'PENDING' or any other Celery status
+
+    def test_export_status_returns_task_info(self):
+        """Should return task information for valid task ID."""
+        # Queue task
+        response = self.client.post(
+            f"/api/v1/analytics/children/{self.child.id}/export-pdf/"
+        )
+        task_id = response.json()["task_id"]
+
+        # Get status multiple times
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/{task_id}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["task_id"], task_id)
+        self.assertIn("status", data)

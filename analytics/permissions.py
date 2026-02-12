@@ -3,6 +3,7 @@
 Ensures users can only access analytics if authenticated.
 Access control is handled at the view level using Child.for_user().
 """
+
 from rest_framework.permissions import IsAuthenticated
 
 

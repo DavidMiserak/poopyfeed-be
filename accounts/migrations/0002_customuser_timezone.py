@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0001_initial'),
+        ("accounts", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='timezone',
-            field=models.CharField(default='UTC', help_text='IANA timezone identifier (e.g. America/New_York)', max_length=63),
+            model_name="customuser",
+            name="timezone",
+            field=models.CharField(
+                default="UTC",
+                help_text="IANA timezone identifier (e.g. America/New_York)",
+                max_length=63,
+            ),
         ),
     ]

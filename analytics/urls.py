@@ -1,4 +1,5 @@
 """URL routing for analytics endpoints."""
+
 from django.urls import path
 
 from .views import AnalyticsViewSet
@@ -30,5 +31,21 @@ urlpatterns = [
         "children/<int:pk>/weekly-summary/",
         AnalyticsViewSet.as_view({"get": "weekly_summary"}),
         name="analytics-weekly-summary",
+    ),
+    # Export endpoints
+    path(
+        "children/<int:pk>/export-csv/",
+        AnalyticsViewSet.as_view({"post": "export_csv"}),
+        name="analytics-export-csv",
+    ),
+    path(
+        "children/<int:pk>/export-pdf/",
+        AnalyticsViewSet.as_view({"post": "export_pdf"}),
+        name="analytics-export-pdf",
+    ),
+    path(
+        "children/<int:pk>/export-status/<str:task_id>/",
+        AnalyticsViewSet.as_view({"get": "export_status"}),
+        name="analytics-export-status",
     ),
 ]

@@ -22,8 +22,8 @@ class RedisCacheConfigurationTests(TestCase):
         # Check that cache is not None and is usable
         self.assertIsNotNone(cache)
         # Test basic operations work
-        cache.set('test_config', 'value')
-        self.assertEqual(cache.get('test_config'), 'value')
+        cache.set("test_config", "value")
+        self.assertEqual(cache.get("test_config"), "value")
 
     def test_cache_operations_work(self):
         """Verify cache operations work end-to-end."""
@@ -233,7 +233,9 @@ class CacheKeyPrefixTests(TestCase):
         """Test caching with patterned keys."""
         # Set multiple related keys
         for user_id in range(1, 4):
-            cache.set(f"user:{user_id}:data", {"id": user_id, "name": f"User {user_id}"})
+            cache.set(
+                f"user:{user_id}:data", {"id": user_id, "name": f"User {user_id}"}
+            )
 
         # Verify each can be retrieved
         for user_id in range(1, 4):

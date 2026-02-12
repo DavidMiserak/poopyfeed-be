@@ -2,6 +2,7 @@
 
 Automatically invalidates analytics caches when tracking records change.
 """
+
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -18,7 +19,9 @@ def invalidate_analytics_on_feeding_save(sender, instance, **kwargs):
     invalidate_child_analytics(instance.child_id)
 
 
-@receiver(post_delete, sender=Feeding, dispatch_uid="invalidate_feeding_analytics_delete")
+@receiver(
+    post_delete, sender=Feeding, dispatch_uid="invalidate_feeding_analytics_delete"
+)
 def invalidate_analytics_on_feeding_delete(sender, instance, **kwargs):
     """Invalidate analytics when a feeding is deleted."""
     invalidate_child_analytics(instance.child_id)
@@ -30,7 +33,9 @@ def invalidate_analytics_on_diaper_save(sender, instance, **kwargs):
     invalidate_child_analytics(instance.child_id)
 
 
-@receiver(post_delete, sender=DiaperChange, dispatch_uid="invalidate_diaper_analytics_delete")
+@receiver(
+    post_delete, sender=DiaperChange, dispatch_uid="invalidate_diaper_analytics_delete"
+)
 def invalidate_analytics_on_diaper_delete(sender, instance, **kwargs):
     """Invalidate analytics when a diaper change is deleted."""
     invalidate_child_analytics(instance.child_id)

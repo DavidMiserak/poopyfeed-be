@@ -18,9 +18,9 @@ from django.test import Client, TestCase, override_settings
 
 from children.models import Child
 from diapers.models import DiaperChange
+from django_project.test_constants import TEST_PASSWORD
 from feedings.models import Feeding
 from naps.models import Nap
-from django_project.test_constants import TEST_PASSWORD
 
 User = get_user_model()
 
@@ -136,9 +136,7 @@ class RedisCachingAPIIntegrationTests(TestCase):
         self.assertIsNotNone(feeding2)
 
         # Verify cache invalidation happens (signal fires without error)
-        self.assertEqual(
-            Feeding.objects.filter(child=self.child).count(), 2
-        )
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 2)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
@@ -235,7 +233,10 @@ class RedisCacheCeleryFullIntegrationTests(TestCase):
                 changed_at="2024-01-15 10:00:00",
                 change_type=diaper_change_type,
             )
-            cache.set(f"diaper_{diaper.id}", {"id": diaper.id, "change_type": diaper_change_type})
+            cache.set(
+                f"diaper_{diaper.id}",
+                {"id": diaper.id, "change_type": diaper_change_type},
+            )
             return {"diaper_id": diaper.id, "change_type": diaper_change_type}
 
         # 1. User is logged in (session in Redis)
@@ -351,6 +352,4 @@ class RedisCacheCeleryFullIntegrationTests(TestCase):
         parent1_cache = cache.get("parent_cache")
         parent2_cache = cache.get("parent2_cache")
 
-        self.assertNotEqual(
-            parent1_cache["children"], parent2_cache["children"]
-        )
+        self.assertNotEqual(parent1_cache["children"], parent2_cache["children"])

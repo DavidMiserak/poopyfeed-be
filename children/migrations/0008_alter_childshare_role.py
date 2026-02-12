@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('children', '0007_child_children_ch_parent__595e58_idx'),
+        ("children", "0007_child_children_ch_parent__595e58_idx"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='childshare',
-            name='role',
-            field=models.CharField(choices=[('CO', 'Co-parent'), ('CG', 'Caregiver')], db_index=True, default='CG', max_length=2),
+            model_name="childshare",
+            name="role",
+            field=models.CharField(
+                choices=[("CO", "Co-parent"), ("CG", "Caregiver")],
+                db_index=True,
+                default="CG",
+                max_length=2,
+            ),
         ),
     ]

@@ -2,6 +2,7 @@
 
 Request validation and response formatting for all analytics queries.
 """
+
 from rest_framework import serializers
 
 
@@ -84,3 +85,34 @@ class WeeklySummaryFullResponseSerializer(serializers.Serializer):
     diapers = serializers.DictField()
     sleep = serializers.DictField()
     last_updated = serializers.DateTimeField()
+
+
+class ExportRequestSerializer(serializers.Serializer):
+    """Request validation for export endpoints."""
+
+    format = serializers.ChoiceField(choices=["csv", "pdf"])
+
+
+class ExportResponseSerializer(serializers.Serializer):
+    """Response for synchronous export endpoints."""
+
+    success = serializers.BooleanField()
+    filename = serializers.CharField()
+    format = serializers.CharField()
+
+
+class AsyncExportResponseSerializer(serializers.Serializer):
+    """Response for async export endpoints."""
+
+    task_id = serializers.CharField()
+    status = serializers.CharField()
+    message = serializers.CharField()
+
+
+class ExportStatusResponseSerializer(serializers.Serializer):
+    """Response for export status polling endpoint."""
+
+    task_id = serializers.CharField()
+    status = serializers.CharField()
+    result = serializers.DictField(required=False, allow_null=True)
+    error = serializers.CharField(required=False, allow_null=True)

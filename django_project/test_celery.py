@@ -249,9 +249,7 @@ class CeleryTaskTimeoutTests(TestCase):
 
     def test_task_soft_limit_less_than_hard_limit(self):
         """Verify soft limit is less than hard limit."""
-        self.assertLess(
-            app.conf.task_soft_time_limit, app.conf.task_time_limit
-        )
+        self.assertLess(app.conf.task_soft_time_limit, app.conf.task_time_limit)
 
     def test_task_time_limit_values(self):
         """Verify time limit values are reasonable."""

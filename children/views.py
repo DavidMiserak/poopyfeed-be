@@ -36,9 +36,9 @@ class ChildListView(LoginRequiredMixin, ListView):
         cached HTML without this header.
         """
         response = super().dispatch(request, *args, **kwargs)
-        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response['Pragma'] = 'no-cache'
-        response['Expires'] = '0'
+        response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response["Pragma"] = "no-cache"
+        response["Expires"] = "0"
         return response
 
     def get_queryset(self):
@@ -64,9 +64,9 @@ class ChildListView(LoginRequiredMixin, ListView):
             activities = get_child_last_activities(child_ids)
             for child in children:
                 activity = activities.get(child.id, {})
-                child.last_diaper_change = activity.get('last_diaper_change')
-                child.last_nap = activity.get('last_nap')
-                child.last_feeding = activity.get('last_feeding')
+                child.last_diaper_change = activity.get("last_diaper_change")
+                child.last_nap = activity.get("last_nap")
+                child.last_feeding = activity.get("last_feeding")
 
         # Add role info for each child
         children_with_roles = []
@@ -103,10 +103,17 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
     def get_queryset(self):
         # Allow editing by owner or co-parent
         # Prefetch shares to avoid N+1 queries if form accesses role info
-        return Child.objects.filter(
-            Q(parent=self.request.user)
-            | Q(shares__user=self.request.user, shares__role=ChildShare.Role.CO_PARENT)
-        ).prefetch_related("shares__user").distinct()
+        return (
+            Child.objects.filter(
+                Q(parent=self.request.user)
+                | Q(
+                    shares__user=self.request.user,
+                    shares__role=ChildShare.Role.CO_PARENT,
+                )
+            )
+            .prefetch_related("shares__user")
+            .distinct()
+        )
 
 
 class ChildDeleteView(ChildOwnerMixin, DeleteView):

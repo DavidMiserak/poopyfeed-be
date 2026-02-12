@@ -46,9 +46,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", get_random_secret_key())
 DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = (
-    ["*"]
-    if DEBUG
-    else env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+    ["*"] if DEBUG else env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 )
 
 ROOT_URLCONF = "django_project.urls"
@@ -154,10 +152,12 @@ def _get_database_config():
         # Add pooling options for cloud PostgreSQL
         if config.get("ENGINE") == "django.db.backends.postgresql":
             config.setdefault("CONN_MAX_AGE", conn_max_age)
-            config.setdefault("OPTIONS", {}).update({
-                "connect_timeout": 10,
-                "options": "-c statement_timeout=30000",  # 30 second statement timeout
-            })
+            config.setdefault("OPTIONS", {}).update(
+                {
+                    "connect_timeout": 10,
+                    "options": "-c statement_timeout=30000",  # 30 second statement timeout
+                }
+            )
         return config
 
     elif os.environ.get("DATABASE_HOST"):
@@ -215,6 +215,7 @@ DATABASES = {
 # =============================================================================
 # Cache Configuration (Redis)
 # =============================================================================
+
 
 def _get_cache_config():
     """Get cache configuration - uses Redis if available, falls back to local memory.
@@ -295,7 +296,9 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"  # Will use TIME_ZONE when it's defined below
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
-CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit (raises SoftTimeLimitExceeded)
+CELERY_TASK_SOFT_TIME_LIMIT = (
+    25 * 60
+)  # 25 minutes soft limit (raises SoftTimeLimitExceeded)
 
 # =============================================================================
 # Authentication & Authorization
@@ -368,23 +371,15 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Development CORS and CSRF settings
 _DEV_ORIGINS = [
-    "http://localhost:4200",      # Angular dev server
+    "http://localhost:4200",  # Angular dev server
     "http://127.0.0.1:4200",
-    "http://localhost:3000",      # Alternative frontend port
+    "http://localhost:3000",  # Alternative frontend port
     "http://127.0.0.1:3000",
 ]
 
-CSRF_TRUSTED_ORIGINS = (
-    _DEV_ORIGINS
-    if DEBUG
-    else env_list("CSRF_TRUSTED_ORIGINS")
-)
+CSRF_TRUSTED_ORIGINS = _DEV_ORIGINS if DEBUG else env_list("CSRF_TRUSTED_ORIGINS")
 
-CORS_ALLOWED_ORIGINS = (
-    _DEV_ORIGINS
-    if DEBUG
-    else env_list("CORS_ALLOWED_ORIGINS")
-)
+CORS_ALLOWED_ORIGINS = _DEV_ORIGINS if DEBUG else env_list("CORS_ALLOWED_ORIGINS")
 
 CORS_ALLOW_CREDENTIALS = True
 

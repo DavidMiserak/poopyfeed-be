@@ -10,6 +10,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from django_project.throttles import TrackingCreateThrottle
+
 from .api_permissions import CanEditChild, HasChildAccess
 from .models import Child
 
@@ -75,7 +76,9 @@ class TrackingViewSet(viewsets.ModelViewSet):
         # Top-level route: /tracking/ - return all accessible
         accessible_children = Child.for_user(self.request.user)
         model = self.queryset.model
-        return model.objects.filter(child__in=accessible_children).select_related("child")
+        return model.objects.filter(child__in=accessible_children).select_related(
+            "child"
+        )
 
     def get_permissions(self):
         """Apply edit permission for update/delete actions."""

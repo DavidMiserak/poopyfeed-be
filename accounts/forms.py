@@ -39,9 +39,7 @@ class ProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        tz_choices = [
-            (tz, tz) for tz in sorted(available_timezones())
-        ]
+        tz_choices = [(tz, tz) for tz in sorted(available_timezones())]
         self.fields["timezone"].widget = forms.Select(
             attrs={"class": "form-select"}, choices=tz_choices
         )

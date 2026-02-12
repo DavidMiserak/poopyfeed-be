@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 
 from django_project.throttles import AcceptInviteThrottle
+
 from .api_permissions import CanEditChild, CanManageSharing, HasChildAccess
 from .models import Child, ChildShare, ShareInvite
 
@@ -250,9 +251,9 @@ class ChildViewSet(viewsets.ModelViewSet):
         # Attach cached annotation values to each child
         for child in children:
             activity = activities.get(child.id, {})
-            child.last_diaper_change = activity.get('last_diaper_change')
-            child.last_nap = activity.get('last_nap')
-            child.last_feeding = activity.get('last_feeding')
+            child.last_diaper_change = activity.get("last_diaper_change")
+            child.last_nap = activity.get("last_nap")
+            child.last_feeding = activity.get("last_feeding")
 
         return children
 

@@ -4,12 +4,13 @@ Functions to compute trends, patterns, and summaries from raw tracking data.
 All aggregations are performed at the database level using Django ORM
 aggregation functions for efficiency.
 """
+
 from datetime import date, datetime, timedelta
 from typing import Any
 
 from django.db.models import (
-    Count,
     Avg,
+    Count,
     Q,
     Sum,
 )
@@ -63,12 +64,14 @@ def _fill_date_gaps(
             filled_data.append(data_dict[current_date])
         else:
             # Fill gap with zero count
-            filled_data.append({
-                "date": current_date,
-                "count": 0,
-                "average_duration": None,
-                "total_oz": None,
-            })
+            filled_data.append(
+                {
+                    "date": current_date,
+                    "count": 0,
+                    "average_duration": None,
+                    "total_oz": None,
+                }
+            )
 
         current_date += timedelta(days=1)
 

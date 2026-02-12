@@ -21,6 +21,7 @@ from django.db.backends.postgresql import base as psycopg2_base
 # Try to import psycopg2 pool (available in psycopg2 2.8+)
 try:
     from psycopg2 import pool
+
     HAS_PSYCOPG2_POOL = True
 except ImportError:
     HAS_PSYCOPG2_POOL = False

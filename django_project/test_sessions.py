@@ -200,9 +200,7 @@ class SessionSecurityTests(TestCase):
 
         # In development, SECURE is False (expected)
         # In production, it should be True (enforced at runtime)
-        self.assertIn(
-            settings.SESSION_COOKIE_SECURE, [True, False]
-        )
+        self.assertIn(settings.SESSION_COOKIE_SECURE, [True, False])
 
 
 class SessionMultipleUsersTests(TestCase):

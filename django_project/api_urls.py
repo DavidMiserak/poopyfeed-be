@@ -129,4 +129,20 @@ urlpatterns = [
         AnalyticsViewSet.as_view({"get": "weekly_summary"}),
         name="analytics-weekly-summary",
     ),
+    # Analytics export endpoints
+    path(
+        "analytics/children/<int:pk>/export-csv/",
+        AnalyticsViewSet.as_view({"post": "export_csv"}),
+        name="analytics-export-csv",
+    ),
+    path(
+        "analytics/children/<int:pk>/export-pdf/",
+        AnalyticsViewSet.as_view({"post": "export_pdf"}),
+        name="analytics-export-pdf",
+    ),
+    path(
+        "analytics/children/<int:pk>/export-status/<str:task_id>/",
+        AnalyticsViewSet.as_view({"get": "export_status"}),
+        name="analytics-export-status",
+    ),
 ]

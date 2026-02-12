@@ -7,13 +7,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('children', '0006_shareinvite_childshare'),
+        ("children", "0006_shareinvite_childshare"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='child',
-            index=models.Index(fields=['parent', '-date_of_birth'], name='children_ch_parent__595e58_idx'),
+            model_name="child",
+            index=models.Index(
+                fields=["parent", "-date_of_birth"],
+                name="children_ch_parent__595e58_idx",
+            ),
         ),
     ]

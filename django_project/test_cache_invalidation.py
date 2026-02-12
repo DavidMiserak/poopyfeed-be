@@ -44,6 +44,7 @@ class CacheInvalidationSetupTests(TestCase):
         """Verify cache invalidation signals are registered."""
         # Check that Django signals are connected
         from django.dispatch import Signal
+
         from children.apps import ChildrenConfig
 
         # If signals are registered, they should be in the apps ready method
@@ -226,8 +227,9 @@ class NapCacheInvalidationTests(TestCase):
 
     def test_cache_invalidated_on_nap_update(self):
         """Test cache is invalidated when nap is updated."""
-        from django.utils import timezone
         from datetime import datetime, timedelta
+
+        from django.utils import timezone
 
         nap = Nap.objects.create(
             child=self.child,
@@ -304,12 +306,8 @@ class MultipleChildrenCacheInvalidationTests(TestCase):
         )
 
         # Both should exist independently
-        self.assertIsNotNone(
-            Feeding.objects.get(child=self.child1, amount_oz=4.0)
-        )
-        self.assertIsNotNone(
-            Feeding.objects.get(child=self.child2, amount_oz=5.0)
-        )
+        self.assertIsNotNone(Feeding.objects.get(child=self.child1, amount_oz=4.0))
+        self.assertIsNotNone(Feeding.objects.get(child=self.child2, amount_oz=5.0))
 
     def test_invalidation_doesnt_affect_other_children(self):
         """Test invalidating one child's cache doesn't affect another's."""

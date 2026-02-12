@@ -967,8 +967,7 @@ class SharedChildListViewTests(TestCase):
 
         # Verify cache-control headers prevent browser caching
         self.assertEqual(
-            response['Cache-Control'],
-            'no-cache, no-store, must-revalidate'
+            response["Cache-Control"], "no-cache, no-store, must-revalidate"
         )
-        self.assertEqual(response['Pragma'], 'no-cache')
-        self.assertEqual(response['Expires'], '0')
+        self.assertEqual(response["Pragma"], "no-cache")
+        self.assertEqual(response["Expires"], "0")
