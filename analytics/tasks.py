@@ -23,6 +23,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from accounts.models import CustomUser
 from children.models import Child
 
 from .utils import get_diaper_patterns, get_feeding_trends, get_sleep_summary
@@ -45,9 +46,8 @@ def generate_pdf_report(self, child_id: int, user_id: int):
     try:
         # Verify child exists and user has access
         child = Child.objects.get(id=child_id)
-        if not child.has_access(
-            child.parent.user if hasattr(child.parent, "user") else None
-        ):
+        user = CustomUser.objects.get(id=user_id)
+        if not child.has_access(user):
             raise PermissionError("User does not have access to this child")
 
         # Generate PDF
@@ -168,9 +168,9 @@ def generate_pdf_report(self, child_id: int, user_id: int):
                 [
                     str(day_data.get("date", "")),
                     str(day_data.get("count", 0)),
-                    "—",  # Type breakdown per day not stored
-                    "—",
-                    "—",
+                    str(day_data.get("wet_count", 0)),
+                    str(day_data.get("dirty_count", 0)),
+                    str(day_data.get("both_count", 0)),
                 ]
             )
 
@@ -222,8 +222,8 @@ def generate_pdf_report(self, child_id: int, user_id: int):
                         else "—"
                     ),
                     (
-                        f"{day_data.get('total_oz', 0):.0f}m"
-                        if day_data.get("total_oz")
+                        f"{day_data.get('total_minutes', 0):.0f}m"
+                        if day_data.get("total_minutes")
                         else "—"
                     ),
                 ]

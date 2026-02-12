@@ -310,12 +310,12 @@ class AnalyticsViewSet(viewsets.ViewSet):
                     feeding.get("average_duration") or "",
                     feeding.get("total_oz") or "",
                     diaper.get("count", 0),
-                    diaper_data.get("breakdown", {}).get("wet", 0),
-                    diaper_data.get("breakdown", {}).get("dirty", 0),
-                    diaper_data.get("breakdown", {}).get("both", 0),
+                    diaper.get("wet_count", 0),
+                    diaper.get("dirty_count", 0),
+                    diaper.get("both_count", 0),
                     sleep.get("count", 0),
                     sleep.get("average_duration") or "",
-                    sleep.get("total_oz") or "",
+                    sleep.get("total_minutes") or "",
                 ]
             )
 

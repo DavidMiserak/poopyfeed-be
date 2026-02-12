@@ -55,6 +55,9 @@ def _fill_date_gaps(
     # Create a dict for quick lookup by date
     data_dict = {d["date"]: d for d in data}
 
+    # Get sample data to determine what fields to fill
+    sample_fields = set(data[0].keys()) if data else {"date", "count"}
+
     # Generate all dates in range
     current_date = start_date
     filled_data = []
@@ -63,15 +66,12 @@ def _fill_date_gaps(
         if current_date in data_dict:
             filled_data.append(data_dict[current_date])
         else:
-            # Fill gap with zero count
-            filled_data.append(
-                {
-                    "date": current_date,
-                    "count": 0,
-                    "average_duration": None,
-                    "total_oz": None,
-                }
-            )
+            # Fill gap with zero count and None for other fields
+            gap_entry = {"date": current_date, "count": 0}
+            for field in sample_fields:
+                if field != "date" and field != "count":
+                    gap_entry[field] = None
+            filled_data.append(gap_entry)
 
         current_date += timedelta(days=1)
 
@@ -200,7 +200,7 @@ def get_diaper_patterns(
 ) -> dict[str, Any]:
     """Get diaper change patterns for a child.
 
-    Aggregates diaper changes by date and tracks change type breakdown.
+    Aggregates diaper changes by date with per-day type breakdown.
 
     Args:
         child_id: The child's ID
@@ -211,46 +211,55 @@ def get_diaper_patterns(
     """
     start_date, end_date = _get_date_range(days)
 
-    # Fetch aggregated daily data
-    raw_data = (
+    # Single optimized query: fetch all diaper data with date and type
+    all_diaper_data = (
         DiaperChange.objects.filter(
             child_id=child_id,
             changed_at__date__gte=start_date,
             changed_at__date__lte=end_date,
         )
         .annotate(date=TruncDate("changed_at"))
-        .values("date")
+        .values("date", "change_type")
         .annotate(count=Count("id"))
-        .order_by("date")
+        .order_by("date", "change_type")
     )
 
-    daily_data = list(raw_data.values("date", "count"))
+    # Pivot data: transform (date, type) → (date, {wet, dirty, both})
+    daily_by_date = {}
+    period_breakdown = {"wet": 0, "dirty": 0, "both": 0}
 
-    # Add null fields for consistency with feeding data
-    for d in daily_data:
-        d["average_duration"] = None
-        d["total_oz"] = None
+    for row in all_diaper_data:
+        date = row["date"]
+        change_type = row["change_type"]
+        count = row["count"]
 
+        # Initialize date entry if not exists
+        if date not in daily_by_date:
+            daily_by_date[date] = {
+                "date": date,
+                "count": 0,
+                "wet_count": 0,
+                "dirty_count": 0,
+                "both_count": 0,
+            }
+
+        # Add to daily count
+        daily_by_date[date]["count"] += count
+
+        # Add to type-specific counts
+        if change_type == "W":
+            daily_by_date[date]["wet_count"] = count
+        elif change_type == "D":
+            daily_by_date[date]["dirty_count"] = count
+        elif change_type == "B":
+            daily_by_date[date]["both_count"] = count
+
+        # Add to period breakdown
+        period_breakdown[change_type] = period_breakdown.get(change_type, 0) + count
+
+    # Convert to sorted list and fill date gaps
+    daily_data = sorted(daily_by_date.values(), key=lambda x: x["date"])
     daily_data = _fill_date_gaps(daily_data, days)
-
-    # Calculate breakdown by change type
-    breakdown_data = (
-        DiaperChange.objects.filter(
-            child_id=child_id,
-            changed_at__date__gte=start_date,
-            changed_at__date__lte=end_date,
-        )
-        .values("change_type")
-        .annotate(count=Count("id"))
-    )
-
-    breakdown = {
-        "wet": 0,
-        "dirty": 0,
-        "both": 0,
-    }
-    for item in breakdown_data:
-        breakdown[item["change_type"]] = item["count"]
 
     # Calculate weekly summary
     counts = [d["count"] for d in daily_data]
@@ -267,7 +276,7 @@ def get_diaper_patterns(
             "trend": trend,
             "variance": variance,
         },
-        "breakdown": breakdown,
+        "breakdown": period_breakdown,
         "last_updated": timezone.now().isoformat(),
     }
 
@@ -307,7 +316,7 @@ def get_sleep_summary(
     # Add null fields for consistency
     for d in daily_data:
         d["average_duration"] = None
-        d["total_oz"] = None
+        d["total_minutes"] = None
 
     daily_data = _fill_date_gaps(daily_data, days)
 
