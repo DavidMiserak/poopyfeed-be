@@ -199,6 +199,7 @@ class CeleryTaskErrorHandlingTests(TestCase):
         self.assertEqual(result.get()["status"], "error")
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class CeleryTaskQueueingTests(TestCase):
     """Test queueing tasks without execution."""
 
