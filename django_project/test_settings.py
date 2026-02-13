@@ -51,11 +51,26 @@ else:
         }
     }
 
-# Use test database (SQLite in-memory by default)
-# This is already set by Django's test runner, but being explicit
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
+# Configure database for tests:
+# - If DATABASE_HOST is set (GitHub Actions/Docker), use PostgreSQL
+# - Otherwise, use SQLite in-memory for local testing
+if os.environ.get("DATABASE_HOST"):
+    # GitHub Actions or Docker environment with PostgreSQL
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DATABASE_NAME", "postgres"),
+            "USER": os.environ.get("DATABASE_USER", "postgres"),
+            "PASSWORD": os.environ.get("DATABASE_PASSWORD", ""),
+            "HOST": os.environ.get("DATABASE_HOST"),
+            "PORT": os.environ.get("DATABASE_PORT", "5432"),
+        }
     }
-}
+else:
+    # Local testing with SQLite in-memory
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
