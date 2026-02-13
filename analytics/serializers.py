@@ -24,6 +24,7 @@ class DailyDataSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     average_duration = serializers.FloatField(allow_null=True)
     total_oz = serializers.FloatField(allow_null=True)
+    total_minutes = serializers.FloatField(allow_null=True, required=False)
 
 
 class WeeklySummaryDataSerializer(serializers.Serializer):

@@ -11,6 +11,10 @@ from typing import Any
 from django.db.models import (
     Avg,
     Count,
+    ExpressionWrapper,
+    F,
+    FloatField,
+    Func,
     Q,
     Sum,
 )
@@ -299,7 +303,14 @@ def get_sleep_summary(
     """
     start_date, end_date = _get_date_range(days)
 
-    # Fetch aggregated daily data
+    # Duration expression: (ended_at - napped_at) in minutes
+    # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
+    duration_expr = ExpressionWrapper(
+        Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
+        output_field=FloatField(),
+    )
+
+    # Fetch aggregated daily data with duration stats
     raw_data = (
         Nap.objects.filter(
             child_id=child_id,
@@ -308,16 +319,21 @@ def get_sleep_summary(
         )
         .annotate(date=TruncDate("napped_at"))
         .values("date")
-        .annotate(count=Count("id"))
+        .annotate(
+            count=Count("id"),
+            average_duration=Avg(
+                duration_expr,
+                filter=Q(ended_at__isnull=False),
+            ),
+            total_minutes=Sum(
+                duration_expr,
+                filter=Q(ended_at__isnull=False),
+            ),
+        )
         .order_by("date")
     )
 
-    daily_data = list(raw_data.values("date", "count"))
-
-    # Add null fields for consistency
-    for d in daily_data:
-        d["average_duration"] = None
-        d["total_minutes"] = None
+    daily_data = list(raw_data.values("date", "count", "average_duration", "total_minutes"))
 
     daily_data = _fill_date_gaps(daily_data, days)
 
@@ -406,18 +422,29 @@ def get_today_summary(child_id: int) -> dict[str, Any]:
     for item in diaper_breakdown:
         diaper_data[item["change_type"]] = item["count"]
 
-    # Get today's naps
+    # Get today's naps with duration stats
+    # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
+    duration_expr = ExpressionWrapper(
+        Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
+        output_field=FloatField(),
+    )
     nap_stats = Nap.objects.filter(
         child_id=child_id,
         napped_at__date=today,
     ).aggregate(
         count=Count("id"),
+        total_minutes=Sum(duration_expr, filter=Q(ended_at__isnull=False)),
+        avg_duration=Avg(duration_expr, filter=Q(ended_at__isnull=False)),
     )
 
     sleep_data = {
         "naps": nap_stats["count"] or 0,
-        "total_minutes": 0,  # Not tracked by current model
-        "avg_duration": 0,  # Not tracked by current model
+        "total_minutes": int(round(nap_stats["total_minutes"]))
+        if nap_stats["total_minutes"]
+        else 0,
+        "avg_duration": int(round(nap_stats["avg_duration"]))
+        if nap_stats["avg_duration"]
+        else 0,
     }
 
     return {
@@ -499,17 +526,30 @@ def get_weekly_summary(child_id: int) -> dict[str, Any]:
     for item in diaper_breakdown:
         diaper_data[item["change_type"]] = item["count"]
 
-    # Get week's naps
+    # Get week's naps with duration stats
+    # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
+    duration_expr = ExpressionWrapper(
+        Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
+        output_field=FloatField(),
+    )
     nap_stats = Nap.objects.filter(
         child_id=child_id,
         napped_at__date__gte=week_start,
         napped_at__date__lte=today,
-    ).aggregate(count=Count("id"))
+    ).aggregate(
+        count=Count("id"),
+        total_minutes=Sum(duration_expr, filter=Q(ended_at__isnull=False)),
+        avg_duration=Avg(duration_expr, filter=Q(ended_at__isnull=False)),
+    )
 
     sleep_data = {
         "naps": nap_stats["count"] or 0,
-        "total_minutes": 0,  # Not tracked by current model
-        "avg_duration": 0,  # Not tracked by current model
+        "total_minutes": int(round(nap_stats["total_minutes"]))
+        if nap_stats["total_minutes"]
+        else 0,
+        "avg_duration": int(round(nap_stats["avg_duration"]))
+        if nap_stats["avg_duration"]
+        else 0,
     }
 
     return {

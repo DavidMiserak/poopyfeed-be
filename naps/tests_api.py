@@ -1,5 +1,8 @@
 """API tests for naps app."""
 
+from datetime import datetime
+
+from django.utils import timezone
 from rest_framework import status
 
 from children.tests_tracking_base import BaseTrackingAPITests
@@ -21,13 +24,16 @@ class NapAPITests(BaseTrackingAPITests):
         """Create and return a test nap."""
         return Nap.objects.create(
             child=self.child,
-            napped_at="2025-01-15T13:00:00Z",
+            napped_at=timezone.make_aware(datetime(2025, 1, 15, 13, 0, 0)),
         )
 
     # Naps-specific tests
     def test_list_naps(self):
         """Can list naps."""
-        Nap.objects.create(child=self.child, napped_at="2025-01-15T13:00:00Z")
+        Nap.objects.create(
+            child=self.child,
+            napped_at=timezone.make_aware(datetime(2025, 1, 15, 13, 0, 0)),
+        )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.get(self.get_list_url())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -48,3 +54,55 @@ class NapAPITests(BaseTrackingAPITests):
             {"napped_at": "2025-01-15T14:00:00Z"},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_create_nap_with_ended_at(self):
+        """Can create nap with ended_at."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.post(
+            self.get_list_url(),
+            {
+                "napped_at": "2025-01-15T13:00:00Z",
+                "ended_at": "2025-01-15T14:30:00Z",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["ended_at"], "2025-01-15T14:30:00Z")
+        self.assertAlmostEqual(response.data["duration_minutes"], 90.0)
+
+    def test_create_nap_without_ended_at(self):
+        """Can create nap without ended_at (ongoing nap)."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.post(
+            self.get_list_url(),
+            {"napped_at": "2025-01-15T13:00:00Z"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["ended_at"])
+        self.assertIsNone(response.data["duration_minutes"])
+
+    def test_ended_at_before_napped_at_rejected(self):
+        """Ended_at before napped_at is rejected."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.post(
+            self.get_list_url(),
+            {
+                "napped_at": "2025-01-15T14:00:00Z",
+                "ended_at": "2025-01-15T13:00:00Z",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_includes_ended_at_and_duration(self):
+        """List response includes ended_at and duration_minutes."""
+        Nap.objects.create(
+            child=self.child,
+            napped_at=timezone.make_aware(datetime(2025, 1, 15, 13, 0, 0)),
+            ended_at=timezone.make_aware(datetime(2025, 1, 15, 14, 30, 0)),
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.get(self.get_list_url())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        nap_data = response.data["results"][0]
+        self.assertIn("ended_at", nap_data)
+        self.assertIn("duration_minutes", nap_data)
+        self.assertAlmostEqual(nap_data["duration_minutes"], 90.0)

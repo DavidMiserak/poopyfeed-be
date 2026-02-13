@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -84,6 +85,47 @@ class NapModelTests(TestCase):
         self.assertIsNotNone(nap.created_at)
         self.assertIsNotNone(nap.updated_at)
 
+    def test_nap_with_ended_at(self):
+        now = timezone.now()
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=now,
+            ended_at=now + timedelta(hours=1),
+        )
+        self.assertEqual(nap.ended_at, now + timedelta(hours=1))
+
+    def test_nap_ended_at_nullable(self):
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=timezone.now(),
+        )
+        self.assertIsNone(nap.ended_at)
+
+    def test_duration_minutes_property(self):
+        now = timezone.now()
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=now,
+            ended_at=now + timedelta(minutes=90),
+        )
+        self.assertAlmostEqual(nap.duration_minutes, 90.0)
+
+    def test_duration_none_without_ended_at(self):
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=timezone.now(),
+        )
+        self.assertIsNone(nap.duration_minutes)
+
+    def test_check_constraint_ended_before_start(self):
+        now = timezone.now()
+        with self.assertRaises(IntegrityError):
+            Nap.objects.create(
+                child=self.child,
+                napped_at=now,
+                ended_at=now - timedelta(hours=1),
+            )
+
 
 class NapAdminTests(TestCase):
     def test_nap_admin_registered(self):
@@ -119,6 +161,47 @@ class NapFormTests(TestCase):
         # 14:00 local - 330 minutes = 08:30 UTC
         self.assertEqual(form.cleaned_data["napped_at"].hour, 8)
         self.assertEqual(form.cleaned_data["napped_at"].minute, 30)
+
+    def test_valid_form_with_ended_at(self):
+        form = NapForm(
+            data={
+                "napped_at": "2026-02-01T10:00",
+                "ended_at": "2026-02-01T11:30",
+            }
+        )
+        self.assertTrue(form.is_valid())
+
+    def test_form_ended_at_optional(self):
+        form = NapForm(
+            data={
+                "napped_at": "2026-02-01T10:00",
+            }
+        )
+        self.assertTrue(form.is_valid())
+        self.assertIsNone(form.cleaned_data.get("ended_at"))
+
+    def test_form_ended_at_before_napped_at_invalid(self):
+        form = NapForm(
+            data={
+                "napped_at": "2026-02-01T12:00",
+                "ended_at": "2026-02-01T10:00",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("ended_at", form.errors)
+
+    def test_form_converts_ended_at_to_utc(self):
+        form = NapForm(
+            data={
+                "napped_at": "2026-02-01T14:00",
+                "ended_at": "2026-02-01T15:30",
+                "tz_offset": -330,  # UTC+5:30 (IST)
+            }
+        )
+        self.assertTrue(form.is_valid())
+        # 15:30 local - 330 minutes = 10:00 UTC
+        self.assertEqual(form.cleaned_data["ended_at"].hour, 10)
+        self.assertEqual(form.cleaned_data["ended_at"].minute, 0)
 
 
 class NapViewTests(TestCase):
