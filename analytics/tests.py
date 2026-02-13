@@ -4,10 +4,11 @@ Tests permission checking, data aggregation accuracy, caching behavior,
 and error handling for all analytics endpoints.
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -19,6 +20,7 @@ from feedings.models import Feeding
 from naps.models import Nap
 
 from .cache import invalidate_child_analytics
+from .tasks import generate_pdf_report
 
 User = get_user_model()
 
@@ -996,3 +998,201 @@ class ExportPDFTests(APITestCase):
         self.assertIsInstance(progress, int, "Progress must be an integer")
         self.assertGreaterEqual(progress, 0, "Progress cannot be negative")
         self.assertLessEqual(progress, 100, "Progress cannot exceed 100")
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+class GeneratePDFReportTaskTests(TestCase):
+    """Test the generate_pdf_report Celery task renders correct table data."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create user and child for PDF generation."""
+        cls.user = User.objects.create_user(
+            username="pdftestuser",
+            email="pdftest@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="PDF Baby",
+            date_of_birth="2024-06-15",
+        )
+
+    @staticmethod
+    def _make_feeding_data(num_days):
+        """Build mock feeding trend data."""
+        start = date(2024, 1, 1)
+        daily_data = [
+            {
+                "date": start + timedelta(days=i),
+                "count": i % 5,
+                "average_duration": 15.0 if i % 3 == 0 else None,
+                "total_oz": 8.0 if i % 2 == 0 else None,
+            }
+            for i in range(num_days)
+        ]
+        return {
+            "daily_data": daily_data,
+            "weekly_summary": {"avg_per_day": 3.5, "trend": "stable", "variance": 1.2},
+        }
+
+    @staticmethod
+    def _make_diaper_data(num_days):
+        """Build mock diaper data with None values on gap-filled days."""
+        start = date(2024, 1, 1)
+        daily_data = []
+        for i in range(num_days):
+            if i % 5 == 0:
+                daily_data.append(
+                    {
+                        "date": start + timedelta(days=i),
+                        "count": 3,
+                        "wet_count": 1,
+                        "dirty_count": 1,
+                        "both_count": 1,
+                    }
+                )
+            else:
+                # Mirrors _fill_date_gaps: keys exist with None values
+                daily_data.append(
+                    {
+                        "date": start + timedelta(days=i),
+                        "count": 0,
+                        "wet_count": None,
+                        "dirty_count": None,
+                        "both_count": None,
+                    }
+                )
+        return {
+            "daily_data": daily_data,
+            "breakdown": {"wet": 6, "dirty": 6, "both": 6},
+            "weekly_summary": {"avg_per_day": 2.0, "trend": "stable", "variance": 0.5},
+        }
+
+    @staticmethod
+    def _make_sleep_data(num_days):
+        """Build mock sleep summary data."""
+        start = date(2024, 1, 1)
+        daily_data = [
+            {
+                "date": start + timedelta(days=i),
+                "count": i % 3,
+                "average_duration": 45.0 if i % 4 == 0 else None,
+                "total_minutes": 90.0 if i % 4 == 0 else None,
+            }
+            for i in range(num_days)
+        ]
+        return {
+            "daily_data": daily_data,
+            "weekly_summary": {"avg_per_day": 2.0, "trend": "increasing"},
+        }
+
+    def _run_task_with_mocks(self, num_days):
+        """Run generate_pdf_report with mocked analytics utils and ReportLab.
+
+        Returns the list of calls to the Table constructor so tests can
+        inspect the row data passed for each section.
+        """
+        with (
+            patch("analytics.tasks.get_feeding_trends") as mock_feed,
+            patch("analytics.tasks.get_diaper_patterns") as mock_diaper,
+            patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            patch("analytics.tasks.Table") as MockTable,
+            patch("analytics.tasks.SimpleDocTemplate") as MockDoc,
+            patch("analytics.tasks.default_storage"),
+        ):
+            mock_feed.return_value = self._make_feeding_data(num_days)
+            mock_diaper.return_value = self._make_diaper_data(num_days)
+            mock_sleep.return_value = self._make_sleep_data(num_days)
+            MockDoc.return_value = MagicMock()
+
+            generate_pdf_report.delay(self.child.id, self.user.id, num_days)
+
+            return MockTable.call_args_list
+
+    # ------------------------------------------------------------------
+    # Truncation tests ([:10] removal)
+    # ------------------------------------------------------------------
+
+    def test_feeding_table_includes_all_days(self):
+        """Feeding table must contain every day, not just the first 10."""
+        table_calls = self._run_task_with_mocks(30)
+        feeding_rows = table_calls[0][0][0]  # first Table() call, positional arg
+        # 1 header row + 30 data rows
+        self.assertEqual(len(feeding_rows), 31)
+
+    def test_diaper_table_includes_all_days(self):
+        """Diaper table must contain every day, not just the first 10."""
+        table_calls = self._run_task_with_mocks(30)
+        diaper_rows = table_calls[1][0][0]
+        self.assertEqual(len(diaper_rows), 31)
+
+    def test_sleep_table_includes_all_days(self):
+        """Sleep table must contain every day, not just the first 10."""
+        table_calls = self._run_task_with_mocks(30)
+        sleep_rows = table_calls[2][0][0]
+        self.assertEqual(len(sleep_rows), 31)
+
+    def test_tables_include_all_days_for_short_range(self):
+        """Even short ranges (< 10 days) should render every day."""
+        table_calls = self._run_task_with_mocks(7)
+        for idx, name in enumerate(["feeding", "diaper", "sleep"]):
+            rows = table_calls[idx][0][0]
+            self.assertEqual(
+                len(rows), 8, f"{name} table should have 8 rows (1 header + 7 data)"
+            )
+
+    def test_tables_include_all_days_for_max_range(self):
+        """90-day export should render all 90 data rows per table."""
+        table_calls = self._run_task_with_mocks(90)
+        for idx, name in enumerate(["feeding", "diaper", "sleep"]):
+            rows = table_calls[idx][0][0]
+            self.assertEqual(
+                len(rows), 91, f"{name} table should have 91 rows (1 header + 90 data)"
+            )
+
+    # ------------------------------------------------------------------
+    # None-coalescing tests (diaper "None" → "0")
+    # ------------------------------------------------------------------
+
+    def test_diaper_none_values_rendered_as_zero(self):
+        """Gap-filled diaper rows must show '0', never 'None'."""
+        table_calls = self._run_task_with_mocks(10)
+        diaper_rows = table_calls[1][0][0]
+
+        for row_idx, row in enumerate(diaper_rows[1:], start=1):
+            wet, dirty, both = row[2], row[3], row[4]
+            self.assertNotEqual(
+                wet, "None", f"Row {row_idx}: wet_count is literal 'None'"
+            )
+            self.assertNotEqual(
+                dirty, "None", f"Row {row_idx}: dirty_count is literal 'None'"
+            )
+            self.assertNotEqual(
+                both, "None", f"Row {row_idx}: both_count is literal 'None'"
+            )
+
+    def test_diaper_gap_filled_rows_show_zero(self):
+        """Days with no diaper data (None from _fill_date_gaps) should be '0'."""
+        table_calls = self._run_task_with_mocks(10)
+        diaper_rows = table_calls[1][0][0]
+
+        # In our mock, rows at index 1,2,3,4 (day offsets 1-4) are gap-filled
+        for gap_row_idx in [2, 3, 4, 5]:  # +1 for header offset
+            row = diaper_rows[gap_row_idx]
+            self.assertEqual(row[2], "0", f"Gap row {gap_row_idx}: wet should be '0'")
+            self.assertEqual(row[3], "0", f"Gap row {gap_row_idx}: dirty should be '0'")
+            self.assertEqual(row[4], "0", f"Gap row {gap_row_idx}: both should be '0'")
+
+    def test_diaper_rows_with_data_show_actual_counts(self):
+        """Days with actual diaper data should show real counts."""
+        table_calls = self._run_task_with_mocks(10)
+        diaper_rows = table_calls[1][0][0]
+
+        # Day offset 0 and 5 have real data (count=3, wet=1, dirty=1, both=1)
+        for data_row_idx in [1, 6]:  # +1 for header offset
+            row = diaper_rows[data_row_idx]
+            self.assertEqual(row[1], "3", f"Row {data_row_idx}: total count should be '3'")
+            self.assertEqual(row[2], "1", f"Row {data_row_idx}: wet should be '1'")
+            self.assertEqual(row[3], "1", f"Row {data_row_idx}: dirty should be '1'")
+            self.assertEqual(row[4], "1", f"Row {data_row_idx}: both should be '1'")

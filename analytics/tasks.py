@@ -109,9 +109,7 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
 
         # Build feeding table
         feeding_rows = [["Date", "Count", "Avg Duration", "Total oz"]]
-        for day_data in feeding_data.get("daily_data", [])[
-            :10
-        ]:  # Last 10 days for brevity
+        for day_data in feeding_data.get("daily_data", []):
             feeding_rows.append(
                 [
                     str(day_data.get("date", "")),
@@ -170,14 +168,14 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         # Build diaper table
         diaper_rows = [["Date", "Total Changes", "Wet", "Dirty", "Both"]]
         breakdown = diaper_data.get("breakdown", {})
-        for day_data in diaper_data.get("daily_data", [])[:10]:
+        for day_data in diaper_data.get("daily_data", []):
             diaper_rows.append(
                 [
                     str(day_data.get("date", "")),
                     str(day_data.get("count", 0)),
-                    str(day_data.get("wet_count", 0)),
-                    str(day_data.get("dirty_count", 0)),
-                    str(day_data.get("both_count", 0)),
+                    str(day_data.get("wet_count") or 0),
+                    str(day_data.get("dirty_count") or 0),
+                    str(day_data.get("both_count") or 0),
                 ]
             )
 
@@ -218,7 +216,7 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
 
         # Build sleep table
         sleep_rows = [["Date", "Naps", "Avg Duration", "Total Minutes"]]
-        for day_data in sleep_data.get("daily_data", [])[:10]:
+        for day_data in sleep_data.get("daily_data", []):
             sleep_rows.append(
                 [
                     str(day_data.get("date", "")),
