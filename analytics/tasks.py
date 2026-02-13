@@ -15,6 +15,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
+    Image as ReportLabImage,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -26,6 +27,11 @@ from reportlab.platypus import (
 from accounts.models import CustomUser
 from children.models import Child
 
+from .pdf_charts import (
+    generate_diaper_chart,
+    generate_feeding_chart,
+    generate_sleep_chart,
+)
 from .utils import get_diaper_patterns, get_feeding_trends, get_sleep_summary
 
 
@@ -107,6 +113,19 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         feeding_data = get_feeding_trends(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
+        # Add feeding chart
+        try:
+            feeding_chart_buffer = generate_feeding_chart(feeding_data)
+            feeding_chart = ReportLabImage(
+                feeding_chart_buffer, width=6 * inch, height=3 * inch
+            )
+            story.append(feeding_chart)
+            story.append(Spacer(1, 0.2 * inch))
+        except Exception as e:
+            # Log chart generation errors but continue with table
+            print(f"Warning: Failed to generate feeding chart: {e}")
+            story.append(Spacer(1, 0.2 * inch))
+
         # Build feeding table
         feeding_rows = [["Date", "Count", "Avg Duration", "Total oz"]]
         for day_data in feeding_data.get("daily_data", []):
@@ -165,6 +184,19 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         diaper_data = get_diaper_patterns(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
+        # Add diaper chart
+        try:
+            diaper_chart_buffer = generate_diaper_chart(diaper_data)
+            diaper_chart = ReportLabImage(
+                diaper_chart_buffer, width=6 * inch, height=3 * inch
+            )
+            story.append(diaper_chart)
+            story.append(Spacer(1, 0.2 * inch))
+        except Exception as e:
+            # Log chart generation errors but continue with table
+            print(f"Warning: Failed to generate diaper chart: {e}")
+            story.append(Spacer(1, 0.2 * inch))
+
         # Build diaper table
         diaper_rows = [["Date", "Total Changes", "Wet", "Dirty", "Both"]]
         breakdown = diaper_data.get("breakdown", {})
@@ -213,6 +245,17 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         story.append(Paragraph(f"Sleep Summary (Last {days} Days)", custom_heading_style))
         sleep_data = get_sleep_summary(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
+
+        # Add sleep chart
+        try:
+            sleep_chart_buffer = generate_sleep_chart(sleep_data)
+            sleep_chart = ReportLabImage(sleep_chart_buffer, width=6 * inch, height=3 * inch)
+            story.append(sleep_chart)
+            story.append(Spacer(1, 0.2 * inch))
+        except Exception as e:
+            # Log chart generation errors but continue with table
+            print(f"Warning: Failed to generate sleep chart: {e}")
+            story.append(Spacer(1, 0.2 * inch))
 
         # Build sleep table
         sleep_rows = [["Date", "Naps", "Avg Duration", "Total Minutes"]]
