@@ -1554,3 +1554,251 @@ class PDFChartGenerationTests(TestCase):
         self.assertTrue(png_data.startswith(b"\x89PNG"))
         # Large dataset should produce larger PNG
         self.assertGreater(len(png_data), 1000)
+
+
+class GeneratePDFReportPermissionTests(TestCase):
+    """Test permission checking in generate_pdf_report task."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test users and children."""
+        cls.owner = User.objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="password123",
+        )
+        cls.unauthorized = User.objects.create_user(
+            username="unauthorized",
+            email="unauthorized@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def test_generate_pdf_owner_succeeds(self):
+        """PDF generation should succeed for child owner."""
+        with patch("analytics.tasks.default_storage"):
+            # Should not raise any exception
+            result = generate_pdf_report.apply_async(
+                args=[self.child.id, self.owner.id, 30]
+            ).get()
+            self.assertIn("filename", result)
+            self.assertIn("download_url", result)
+
+    def test_generate_pdf_unauthorized_user_raises_permission_error(self):
+        """PDF generation should fail for unauthorized user."""
+        with self.assertRaises(PermissionError):
+            generate_pdf_report.apply_async(
+                args=[self.child.id, self.unauthorized.id, 30]
+            ).get()
+
+    def test_generate_pdf_nonexistent_child_raises_value_error(self):
+        """PDF generation should fail for nonexistent child."""
+        with self.assertRaises(ValueError) as context:
+            generate_pdf_report.apply_async(
+                args=[99999, self.owner.id, 30]
+            ).get()
+        self.assertIn("Child with ID", str(context.exception))
+
+    def test_generate_pdf_nonexistent_user_raises_error(self):
+        """PDF generation should fail for nonexistent user."""
+        # CustomUser.DoesNotExist will be raised
+        with self.assertRaises(Exception):
+            generate_pdf_report.apply_async(
+                args=[self.child.id, 99999, 30]
+            ).get()
+
+    def test_generate_pdf_days_parameter_bounded(self):
+        """Days parameter should be bounded between 1 and 90."""
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.get_feeding_trends") as mock_feed, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diaper, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                mock_feed.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diaper.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                # Test with 0 days (should become 1)
+                generate_pdf_report.apply_async(
+                    args=[self.child.id, self.owner.id, 0]
+                ).get()
+                calls = mock_feed.call_args_list
+                self.assertEqual(calls[-1][1]["days"], 1)
+
+                # Reset mocks
+                mock_feed.reset_mock()
+                mock_diaper.reset_mock()
+                mock_sleep.reset_mock()
+
+                # Test with 200 days (should become 90)
+                generate_pdf_report.apply_async(
+                    args=[self.child.id, self.owner.id, 200]
+                ).get()
+                calls = mock_feed.call_args_list
+                self.assertEqual(calls[-1][1]["days"], 90)
+
+
+class GeneratePDFReportChartErrorHandlingTests(TestCase):
+    """Test chart generation error handling in PDF task."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test user and child."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def test_generate_pdf_continues_on_feeding_chart_error(self):
+        """PDF generation should continue even if feeding chart fails."""
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.generate_feeding_chart") as mock_chart, \
+                 patch("analytics.tasks.get_feeding_trends") as mock_trends, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                # Chart generation fails
+                mock_chart.side_effect = Exception("Chart rendering error")
+                mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                # Should still complete successfully
+                result = generate_pdf_report.apply_async(
+                    args=[self.child.id, self.user.id, 30]
+                ).get()
+                self.assertIn("filename", result)
+
+    def test_generate_pdf_continues_on_diaper_chart_error(self):
+        """PDF generation should continue even if diaper chart fails."""
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.generate_diaper_chart") as mock_chart, \
+                 patch("analytics.tasks.get_feeding_trends") as mock_trends, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                mock_chart.side_effect = Exception("Chart rendering error")
+                mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                result = generate_pdf_report.apply_async(
+                    args=[self.child.id, self.user.id, 30]
+                ).get()
+                self.assertIn("filename", result)
+
+    def test_generate_pdf_continues_on_sleep_chart_error(self):
+        """PDF generation should continue even if sleep chart fails."""
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.generate_sleep_chart") as mock_chart, \
+                 patch("analytics.tasks.get_feeding_trends") as mock_trends, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                mock_chart.side_effect = Exception("Chart rendering error")
+                mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                result = generate_pdf_report.apply_async(
+                    args=[self.child.id, self.user.id, 30]
+                ).get()
+                self.assertIn("filename", result)
+
+
+class GeneratePDFReportEmptyDataTests(TestCase):
+    """Test PDF generation with empty or minimal data."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test user and child."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Empty Data Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def test_generate_pdf_with_empty_data(self):
+        """PDF generation should work with empty analytics data."""
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.get_feeding_trends") as mock_trends, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                # All empty data
+                mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                result = generate_pdf_report.apply_async(
+                    args=[self.child.id, self.user.id, 30]
+                ).get()
+
+                # Should still generate a valid PDF
+                self.assertIn("filename", result)
+                self.assertIn("download_url", result)
+                self.assertIn("created_at", result)
+                self.assertIn("expires_at", result)
+
+    def test_generate_pdf_special_characters_in_name(self):
+        """PDF filename should handle special characters in child name."""
+        child = Child.objects.create(
+            parent=self.user,
+            name="Baby O'Brien-Smith",
+            date_of_birth="2024-01-15",
+        )
+
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.get_feeding_trends") as mock_trends, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                result = generate_pdf_report.apply_async(
+                    args=[child.id, self.user.id, 30]
+                ).get()
+
+                # Filename should have spaces replaced with underscores
+                filename = result["filename"]
+                self.assertIn("Baby_O", filename)  # Space converted to underscore
+                self.assertFalse(filename.count(" ") > 0)  # No spaces in filename
+
+    def test_generate_pdf_returns_proper_timestamps(self):
+        """PDF task should return proper ISO format timestamps."""
+        with patch("analytics.tasks.default_storage"):
+            with patch("analytics.tasks.get_feeding_trends") as mock_trends, \
+                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
+                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+                mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
+                mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
+                mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
+
+                result = generate_pdf_report.apply_async(
+                    args=[self.child.id, self.user.id, 30]
+                ).get()
+
+                # Verify timestamps are valid ISO format
+                from django.utils.dateparse import parse_datetime
+                created = parse_datetime(result["created_at"])
+                expires = parse_datetime(result["expires_at"])
+
+                self.assertIsNotNone(created)
+                self.assertIsNotNone(expires)
+
+                # Expiration should be 24 hours after creation
+                expected_diff = timedelta(hours=24)
+                actual_diff = expires - created
+                # Allow 1 second tolerance for execution time
+                self.assertLess(abs((expected_diff - actual_diff).total_seconds()), 1)
