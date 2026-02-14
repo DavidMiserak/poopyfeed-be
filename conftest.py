@@ -21,8 +21,23 @@ def pytest_configure():
 
 
 def pytest_collection_modifyitems(config, items):
-    """Mark tests that require Redis."""
+    """Mark tests for parallel execution compatibility."""
+    # List of test IDs/patterns that conflict in parallel execution
+    # These tests have race conditions or shared state issues
+    parallel_unsafe_tests = [
+        "test_redis_integration",          # All Redis integration tests
+        "test_session",                    # Session tests
+        "test_cache",                      # Cache tests
+        "RevokeAccessViewTests",           # Invite/access tests with state
+        "ToggleInviteViewTests",           # Toggle invite tests
+    ]
+
     for item in items:
+        # Mark tests that have timing/state conflicts in parallel execution
+        test_nodeid = item.nodeid
+        if any(unsafe_pattern in test_nodeid for unsafe_pattern in parallel_unsafe_tests):
+            item.add_marker("parallel_unsafe")
+
         # Mark analytics tests as potentially requiring Redis
-        if "analytics" in item.nodeid or "cache" in item.nodeid:
+        if "analytics" in test_nodeid or "cache" in test_nodeid:
             item.add_marker("redis_dependent")
