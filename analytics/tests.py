@@ -485,7 +485,8 @@ class TodaySummaryTests(APITestCase):
 
     def test_today_summary_correct_counts(self):
         """Should return correct counts for today."""
-        now = timezone.now()
+        # Use a fixed time in the middle of the day to avoid crossing day boundaries
+        now = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
 
         # Create activity
         Feeding.objects.create(
