@@ -17,6 +17,9 @@
   <a href="https://github.com/pre-commit/pre-commit">
     <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit" alt="pre-commit" />
   </a>
+  <a href="https://www.conventionalcommits.org/">
+    <img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits" alt="Conventional Commits" />
+  </a>
 </p>
 
 A baby care tracking web application built with Django. PoopyFeed helps
