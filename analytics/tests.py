@@ -5,6 +5,7 @@ and error handling for all analytics endpoints.
 """
 
 from datetime import date, datetime, timedelta
+from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
@@ -1197,3 +1198,359 @@ class GeneratePDFReportTaskTests(TestCase):
             self.assertEqual(row[2], "1", f"Row {data_row_idx}: wet should be '1'")
             self.assertEqual(row[3], "1", f"Row {data_row_idx}: dirty should be '1'")
             self.assertEqual(row[4], "1", f"Row {data_row_idx}: both should be '1'")
+
+
+class ExportStatusProgressExtractionTests(APITestCase):
+    """Test progress extraction edge cases for export_status endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test user and child."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="user@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def setUp(self):
+        """Set up authentication for each test."""
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_missing_progress_field(self, mock_result_class):
+        """Status endpoint should use status-based defaults when progress field missing."""
+        mock_result = MagicMock()
+        mock_result.status = "STARTED"
+        mock_result.info = {"some_field": "value"}  # Dict but no 'progress' key
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["status"], "processing")
+        self.assertEqual(data["progress"], 50)  # Status-based default for STARTED
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_non_dict_task_info(self, mock_result_class):
+        """Status endpoint should handle non-dict task info gracefully."""
+        mock_result = MagicMock()
+        mock_result.status = "STARTED"
+        mock_result.info = "String info, not dict"  # Non-dict value
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["status"], "processing")
+        self.assertEqual(data["progress"], 50)  # Fallback to status-based default
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_invalid_progress_value(self, mock_result_class):
+        """Status endpoint should handle invalid progress values gracefully."""
+        mock_result = MagicMock()
+        mock_result.status = "STARTED"
+        mock_result.info = {"progress": "not a number"}  # Invalid progress type
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["status"], "processing")
+        self.assertEqual(data["progress"], 50)  # Fallback to status-based default
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_pending_with_no_info(self, mock_result_class):
+        """Pending task with no info should return 0% progress."""
+        mock_result = MagicMock()
+        mock_result.status = "PENDING"
+        mock_result.info = None  # No task info
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["status"], "pending")
+        self.assertEqual(data["progress"], 0)
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_success_with_result(self, mock_result_class):
+        """Successful task should return result and 100% progress."""
+        mock_result = MagicMock()
+        mock_result.status = "SUCCESS"
+        mock_result.info = {"progress": 100}
+        mock_result.result = {"filename": "test.pdf"}
+        mock_result.successful.return_value = True
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["status"], "completed")
+        self.assertEqual(data["progress"], 100)
+        self.assertIn("result", data)
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_failed_with_error(self, mock_result_class):
+        """Failed task should return error message."""
+        mock_result = MagicMock()
+        mock_result.status = "FAILURE"
+        mock_result.info = Exception("PDF generation failed")
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = True
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["status"], "failed")
+        self.assertIn("error", data)
+
+
+class PDFDownloadTests(APITestCase):
+    """Test PDF download endpoint security and functionality."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test user."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="user@example.com",
+            password="password123",
+        )
+
+    def test_download_pdf_invalid_filename_with_slashes(self):
+        """Download endpoint should reject filenames with slashes (directory traversal)."""
+        response = self.client.get("/api/v1/analytics/download/path/to/evil.pdf/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_download_pdf_invalid_filename_with_backslashes(self):
+        """Download endpoint should reject filenames with backslashes (Windows traversal)."""
+        response = self.client.get("/api/v1/analytics/download/..\\..\\evil.pdf/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_download_pdf_invalid_filename_starting_with_dot(self):
+        """Download endpoint should reject filenames starting with dot (hidden files)."""
+        response = self.client.get("/api/v1/analytics/download/.env/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_download_pdf_empty_filename(self):
+        """Download endpoint should reject empty filenames."""
+        response = self.client.get("/api/v1/analytics/download//")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_download_pdf_nonexistent_file(self):
+        """Download endpoint should return 404 for non-existent files."""
+        response = self.client.get("/api/v1/analytics/download/nonexistent123.pdf/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @patch("django.core.files.storage.default_storage.path")
+    def test_download_pdf_storage_path_not_implemented(self, mock_storage_path):
+        """Download endpoint should handle storage backends without path() method."""
+        from pathlib import Path
+
+        # Create test file
+        export_dir = Path("exports")
+        export_dir.mkdir(exist_ok=True)
+        test_file = export_dir / "test123.pdf"
+        test_file.write_bytes(b"PDF test content")
+
+        try:
+            # Storage raises NotImplementedError
+            mock_storage_path.side_effect = NotImplementedError()
+
+            response = self.client.get("/api/v1/analytics/download/test123.pdf/")
+            # Should fallback to filesystem and succeed
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response["Content-Type"], "application/pdf")
+        finally:
+            # Cleanup
+            if test_file.exists():
+                test_file.unlink()
+            if export_dir.exists() and not any(export_dir.iterdir()):
+                export_dir.rmdir()
+
+
+class PDFChartGenerationTests(TestCase):
+    """Test PDF chart generation functions."""
+
+    def test_feeding_chart_with_empty_data(self):
+        """Feeding chart should handle empty daily_data gracefully."""
+        from analytics.pdf_charts import generate_feeding_chart
+
+        data = {"daily_data": []}
+        result = generate_feeding_chart(data)
+
+        # Should return BytesIO object with PNG data
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))  # PNG magic bytes
+
+    def test_feeding_chart_with_data(self):
+        """Feeding chart should render correctly with data."""
+        from analytics.pdf_charts import generate_feeding_chart
+
+        data = {
+            "daily_data": [
+                {"date": date(2024, 1, 1), "count": 4},
+                {"date": date(2024, 1, 2), "count": 5},
+                {"date": date(2024, 1, 3), "count": 3},
+            ]
+        }
+        result = generate_feeding_chart(data)
+
+        # Should return valid PNG
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_diaper_chart_with_empty_data(self):
+        """Diaper chart should handle empty daily_data gracefully."""
+        from analytics.pdf_charts import generate_diaper_chart
+
+        data = {"daily_data": []}
+        result = generate_diaper_chart(data)
+
+        # Should return BytesIO object with PNG data
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_diaper_chart_with_data(self):
+        """Diaper chart should render correctly with data."""
+        from analytics.pdf_charts import generate_diaper_chart
+
+        data = {
+            "daily_data": [
+                {"date": date(2024, 1, 1), "wet_count": 2, "dirty_count": 1, "both_count": 0},
+                {"date": date(2024, 1, 2), "wet_count": 1, "dirty_count": 1, "both_count": 1},
+                {"date": date(2024, 1, 3), "wet_count": 3, "dirty_count": 0, "both_count": 0},
+            ]
+        }
+        result = generate_diaper_chart(data)
+
+        # Should return valid PNG
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_diaper_chart_with_missing_counts(self):
+        """Diaper chart should handle missing count fields gracefully."""
+        from analytics.pdf_charts import generate_diaper_chart
+
+        data = {
+            "daily_data": [
+                {"date": date(2024, 1, 1), "wet_count": None, "dirty_count": 1},
+                {"date": date(2024, 1, 2)},  # Missing all counts
+            ]
+        }
+        result = generate_diaper_chart(data)
+
+        # Should still return valid PNG (None values coerced to 0)
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_sleep_chart_with_empty_data(self):
+        """Sleep chart should handle empty daily_data gracefully."""
+        from analytics.pdf_charts import generate_sleep_chart
+
+        data = {"daily_data": []}
+        result = generate_sleep_chart(data)
+
+        # Should return BytesIO object with PNG data
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_sleep_chart_with_data(self):
+        """Sleep chart should render correctly with data."""
+        from analytics.pdf_charts import generate_sleep_chart
+
+        data = {
+            "daily_data": [
+                {"date": date(2024, 1, 1), "count": 2},
+                {"date": date(2024, 1, 2), "count": 1},
+                {"date": date(2024, 1, 3), "count": 3},
+            ]
+        }
+        result = generate_sleep_chart(data)
+
+        # Should return valid PNG
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_format_date_with_date_object(self):
+        """_format_date should handle date objects correctly."""
+        from analytics.pdf_charts import _format_date
+
+        result = _format_date(date(2024, 1, 15))
+        self.assertEqual(result, "Jan 15")
+
+    def test_format_date_with_datetime_object(self):
+        """_format_date should extract date from datetime objects."""
+        from analytics.pdf_charts import _format_date
+
+        result = _format_date(datetime(2024, 1, 15, 10, 30, 45))
+        self.assertEqual(result, "Jan 15")
+
+    def test_feeding_chart_with_large_dataset(self):
+        """Feeding chart should handle large datasets (90 days) efficiently."""
+        from analytics.pdf_charts import generate_feeding_chart
+
+        # Generate 90 days of data
+        daily_data = [
+            {"date": date(2024, 1, 1) + timedelta(days=i), "count": (i % 5) + 1}
+            for i in range(90)
+        ]
+        data = {"daily_data": daily_data}
+
+        result = generate_feeding_chart(data)
+
+        # Should still return valid PNG
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+        # Large dataset should produce larger PNG
+        self.assertGreater(len(png_data), 1000)

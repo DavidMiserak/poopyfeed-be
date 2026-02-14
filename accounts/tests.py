@@ -47,6 +47,26 @@ class CustomUserTests(TestCase):
         )
         self.assertEqual(user.timezone, "America/New_York")
 
+    def test_valid_timezones_returns_sorted_list(self):
+        """valid_timezones() should return sorted list of IANA timezone strings."""
+        user_model = get_user_model()
+        timezones = user_model.valid_timezones()
+
+        # Should be a list
+        self.assertIsInstance(timezones, list)
+
+        # Should contain many timezones
+        self.assertGreater(len(timezones), 100)
+
+        # Should contain common timezones
+        self.assertIn("UTC", timezones)
+        self.assertIn("America/New_York", timezones)
+        self.assertIn("Europe/London", timezones)
+        self.assertIn("Asia/Tokyo", timezones)
+
+        # Should be sorted
+        self.assertEqual(timezones, sorted(timezones))
+
 
 class SignUpPageTests(TestCase):
     def setUp(self):
