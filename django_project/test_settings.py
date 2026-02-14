@@ -16,6 +16,10 @@ from django_project.settings import *  # noqa: F401, F403
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
+# Disable signal handlers during tests to reduce overhead
+# (cache invalidation happens naturally from test cleanup)
+ANALYTICS_DISABLE_SIGNALS = True
+
 # Configure cache for tests:
 # - If REDIS_HOST is set (GitHub Actions), use Redis with error handling
 # - Otherwise, use in-memory cache (local testing)
