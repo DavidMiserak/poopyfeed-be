@@ -14,6 +14,7 @@ from accounts.api import (
 )
 from analytics.views import AnalyticsViewSet
 from children.api import AcceptInviteViewSet, ChildViewSet
+from children.batch_api import BatchCreateView
 from diapers.api import DiaperChangeViewSet
 from feedings.api import FeedingViewSet
 from naps.api import NapViewSet
@@ -102,6 +103,12 @@ urlpatterns = [
             }
         ),
         name="child-naps-detail",
+    ),
+    # Batch event creation endpoint (catch-up mode)
+    path(
+        "children/<int:child_pk>/batch/",
+        BatchCreateView.as_view(),
+        name="child-batch-create",
     ),
     # Analytics endpoints (read-only)
     path(

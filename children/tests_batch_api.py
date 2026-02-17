@@ -1,0 +1,589 @@
+"""Tests for batch event creation API (catch-up mode)."""
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from rest_framework.test import APIClient
+
+from diapers.models import DiaperChange
+from feedings.models import Feeding
+from naps.models import Nap
+
+from .models import Child, ChildShare
+
+User = get_user_model()
+
+
+class BatchCreateAPITest(TestCase):
+    """Test batch event creation endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Set up test users and child."""
+        # Create users
+        cls.owner = User.objects.create_user(
+            username="owner", email="owner@example.com", password="testpass123"
+        )
+        cls.co_parent = User.objects.create_user(
+            username="coparent", email="coparent@example.com", password="testpass123"
+        )
+        cls.caregiver = User.objects.create_user(
+            username="caregiver", email="caregiver@example.com", password="testpass123"
+        )
+        cls.other_user = User.objects.create_user(
+            username="other", email="other@example.com", password="testpass123"
+        )
+
+        # Create child owned by owner
+        cls.child = Child.objects.create(
+            parent=cls.owner, name="Baby Alice", date_of_birth="2024-01-15"
+        )
+
+        # Add co-parent and caregiver
+        ChildShare.objects.create(
+            child=cls.child, user=cls.co_parent, role=ChildShare.Role.CO_PARENT
+        )
+        ChildShare.objects.create(
+            child=cls.child, user=cls.caregiver, role=ChildShare.Role.CAREGIVER
+        )
+
+    def setUp(self):
+        """Set up API client for each test."""
+        self.client = APIClient()
+        self.url = f"/api/v1/children/{self.child.id}/batch/"
+
+    # --- Permission Tests ---
+
+    def test_batch_requires_authentication(self):
+        """Test that batch endpoint requires authentication."""
+        response = self.client.post(self.url, {"events": []})
+        self.assertEqual(response.status_code, 401)
+
+    def test_batch_owner_can_create(self):
+        """Test that owner can create batch events."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["count"], 1)
+
+    def test_batch_co_parent_can_create(self):
+        """Test that co-parent can create batch events."""
+        self.client.force_authenticate(self.co_parent)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_batch_caregiver_can_create(self):
+        """Test that caregiver can create batch events."""
+        self.client.force_authenticate(self.caregiver)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_batch_unauthorized_user_denied(self):
+        """Test that unauthorized user cannot create batch events."""
+        self.client.force_authenticate(self.other_user)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_batch_nonexistent_child_returns_404(self):
+        """Test batch endpoint returns 404 for nonexistent child."""
+        self.client.force_authenticate(self.owner)
+        url = f"/api/v1/children/9999/batch/"
+        response = self.client.post(url, {"events": []}, format="json")
+        self.assertEqual(response.status_code, 404)
+
+    # --- Successful Creation Tests ---
+
+    def test_batch_create_single_feeding(self):
+        """Test creating a single feeding via batch."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["created"]), 1)
+        self.assertEqual(response.data["created"][0]["type"], "feeding")
+        self.assertIn("id", response.data["created"][0])
+
+        # Verify feeding was created in database
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 1)
+        feeding = Feeding.objects.get(child=self.child)
+        self.assertEqual(feeding.feeding_type, "bottle")
+        self.assertEqual(feeding.amount_oz, 4.0)
+
+    def test_batch_create_single_diaper(self):
+        """Test creating a single diaper change via batch."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "diaper",
+                        "data": {
+                            "change_type": "wet",
+                            "changed_at": "2026-02-17T10:00:00Z",
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["created"][0]["type"], "diaper")
+
+        # Verify diaper was created
+        self.assertEqual(DiaperChange.objects.filter(child=self.child).count(), 1)
+        diaper = DiaperChange.objects.get(child=self.child)
+        self.assertEqual(diaper.change_type, "wet")
+
+    def test_batch_create_single_nap(self):
+        """Test creating a single nap via batch."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "nap",
+                        "data": {
+                            "napped_at": "2026-02-17T10:00:00Z",
+                            "ended_at": "2026-02-17T11:00:00Z",
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["created"][0]["type"], "nap")
+
+        # Verify nap was created
+        self.assertEqual(Nap.objects.filter(child=self.child).count(), 1)
+
+    def test_batch_create_mixed_events(self):
+        """Test creating mixed event types in a single batch."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    },
+                    {
+                        "type": "diaper",
+                        "data": {
+                            "change_type": "wet",
+                            "changed_at": "2026-02-17T10:25:00Z",
+                        },
+                    },
+                    {
+                        "type": "nap",
+                        "data": {
+                            "napped_at": "2026-02-17T10:30:00Z",
+                            "ended_at": "2026-02-17T11:30:00Z",
+                        },
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["count"], 3)
+        self.assertEqual(len(response.data["created"]), 3)
+
+        # Verify all events were created
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 1)
+        self.assertEqual(DiaperChange.objects.filter(child=self.child).count(), 1)
+        self.assertEqual(Nap.objects.filter(child=self.child).count(), 1)
+
+    def test_batch_create_20_events(self):
+        """Test creating maximum 20 events in a batch."""
+        self.client.force_authenticate(self.owner)
+
+        events = [
+            {
+                "type": "feeding",
+                "data": {
+                    "feeding_type": "bottle",
+                    "fed_at": f"2026-02-17T{10 + (i % 14):02d}:{(i * 5) % 60:02d}:00Z",
+                    "amount_oz": 4.0,
+                },
+            }
+            for i in range(20)
+        ]
+
+        response = self.client.post(self.url, {"events": events}, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["count"], 20)
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 20)
+
+    # --- Validation Error Tests ---
+
+    def test_batch_missing_events_field(self):
+        """Test batch request without events field."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(self.url, {}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("events", response.data)
+
+    def test_batch_empty_events_list(self):
+        """Test batch with empty events list."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(self.url, {"events": []}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_batch_exceeds_20_events(self):
+        """Test batch with more than 20 events is rejected."""
+        self.client.force_authenticate(self.owner)
+
+        events = [
+            {
+                "type": "feeding",
+                "data": {
+                    "feeding_type": "bottle",
+                    "fed_at": f"2026-02-17T{10 + i:02d}:00:00Z",
+                    "amount_oz": 4.0,
+                },
+            }
+            for i in range(21)
+        ]
+
+        response = self.client.post(self.url, {"events": events}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("events", response.data)
+
+    def test_batch_invalid_event_type(self):
+        """Test batch with invalid event type."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {"events": [{"type": "invalid", "data": {}}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("events", response.data)
+
+    def test_batch_feeding_missing_amount_oz(self):
+        """Test feeding validation: missing amount_oz for bottle feeding."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            # missing amount_oz
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+        self.assertEqual(len(response.data["errors"]), 1)
+        self.assertEqual(response.data["errors"][0]["index"], 0)
+        self.assertEqual(response.data["errors"][0]["type"], "feeding")
+        self.assertIn("amount_oz", response.data["errors"][0]["errors"])
+
+    def test_batch_feeding_missing_duration_for_breast(self):
+        """Test feeding validation: missing duration for breast feeding."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "breast",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            # missing duration_minutes and side
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+
+    def test_batch_multiple_validation_errors(self):
+        """Test batch with multiple events having validation errors."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            # missing amount_oz
+                        },
+                    },
+                    {
+                        "type": "nap",
+                        "data": {
+                            "napped_at": "2026-02-17T10:30:00Z",
+                            "ended_at": "2026-02-17T10:00:00Z",  # ended_at before napped_at
+                        },
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+        self.assertEqual(len(response.data["errors"]), 2)
+
+    def test_batch_error_prevents_any_creation(self):
+        """Test that if any event fails validation, no events are created (atomicity)."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    },
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:25:00Z",
+                            # missing amount_oz - this will cause failure
+                        },
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        # Verify no feedings were created (atomic rollback)
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 0)
+
+    # --- Diaper Change Validation Tests ---
+
+    def test_batch_diaper_missing_change_type(self):
+        """Test diaper validation: missing change_type."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "diaper",
+                        "data": {
+                            "changed_at": "2026-02-17T10:00:00Z",
+                            # missing change_type
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+
+    def test_batch_diaper_invalid_change_type(self):
+        """Test diaper validation: invalid change_type."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "diaper",
+                        "data": {
+                            "change_type": "invalid",
+                            "changed_at": "2026-02-17T10:00:00Z",
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+
+    # --- Nap Validation Tests ---
+
+    def test_batch_nap_ended_at_before_napped_at(self):
+        """Test nap validation: ended_at before napped_at."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "nap",
+                        "data": {
+                            "napped_at": "2026-02-17T11:00:00Z",
+                            "ended_at": "2026-02-17T10:00:00Z",
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+
+    def test_batch_nap_missing_napped_at(self):
+        """Test nap validation: missing napped_at."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "nap",
+                        "data": {
+                            "ended_at": "2026-02-17T11:00:00Z",
+                            # missing napped_at
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("errors", response.data)
+
+    # --- Response Format Tests ---
+
+    def test_batch_response_includes_all_fields(self):
+        """Test that batch response includes full serialized objects."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "feeding",
+                        "data": {
+                            "feeding_type": "bottle",
+                            "fed_at": "2026-02-17T10:00:00Z",
+                            "amount_oz": 4.0,
+                        },
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created = response.data["created"][0]
+
+        # Verify required fields in response
+        self.assertIn("type", created)
+        self.assertIn("id", created)
+        self.assertIn("feeding_type", created)
+        self.assertIn("fed_at", created)
+        self.assertIn("amount_oz", created)
+        self.assertIn("created_at", created)
+        self.assertIn("updated_at", created)
