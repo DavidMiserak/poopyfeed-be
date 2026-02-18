@@ -68,6 +68,7 @@ class NapViewSet(TrackingViewSet):
     queryset = Nap.objects.all()
     serializer_class = NapSerializer
     nested_serializer_class = NestedNapSerializer
+    datetime_filter_field = "napped_at"
 
     def get_queryset(self):
         """Optimize queryset to fetch only needed columns."""

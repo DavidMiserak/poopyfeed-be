@@ -1,5 +1,7 @@
 """API tests for feedings app."""
 
+from django.utils import timezone
+
 from rest_framework import status
 
 from children.tests_tracking_base import BaseTrackingAPITests
@@ -95,3 +97,58 @@ class FeedingAPITests(BaseTrackingAPITests):
         response = self.client.get(self.get_list_url())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
+
+    def test_list_feedings_filtered_by_date_range(self):
+        """Date range filters exclude feedings outside the window."""
+        now = timezone.now()
+        two_hours_ago = now - timezone.timedelta(hours=2)
+        five_hours_ago = now - timezone.timedelta(hours=5)
+        four_hours_ago = now - timezone.timedelta(hours=4)
+
+        # Create one feeding within 4h window
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=two_hours_ago,
+            amount_oz=4,
+        )
+        # Create one feeding outside 4h window
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=five_hours_ago,
+            amount_oz=3,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.get(
+            self.get_list_url(),
+            {
+                "fed_at__gte": four_hours_ago.isoformat(),
+                "fed_at__lt": now.isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["amount_oz"], "4.0")
+
+    def test_list_feedings_no_filter_returns_all(self):
+        """Without date filters, all feedings are returned."""
+        now = timezone.now()
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timezone.timedelta(hours=2),
+            amount_oz=4,
+        )
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timezone.timedelta(hours=25),
+            amount_oz=3,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.get(self.get_list_url())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 2)

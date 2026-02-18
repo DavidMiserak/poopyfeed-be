@@ -123,6 +123,7 @@ class FeedingViewSet(TrackingViewSet):
     queryset = Feeding.objects.all()
     serializer_class = FeedingSerializer
     nested_serializer_class = NestedFeedingSerializer
+    datetime_filter_field = "fed_at"
 
     def get_queryset(self):
         """Optimize queryset to fetch only needed columns."""

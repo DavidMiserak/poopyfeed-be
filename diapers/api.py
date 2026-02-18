@@ -63,6 +63,7 @@ class DiaperChangeViewSet(TrackingViewSet):
     queryset = DiaperChange.objects.all()
     serializer_class = DiaperChangeSerializer
     nested_serializer_class = NestedDiaperChangeSerializer
+    datetime_filter_field = "changed_at"
 
     def get_queryset(self):
         """Optimize queryset to fetch only needed columns."""
