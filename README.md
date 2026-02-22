@@ -60,14 +60,13 @@ Share access to children with other accounts via invite links:
 - Only the child's owner can manage sharing settings
 
 <p align="center">
-  <img src="docs/images/share-1.png" width="200" alt="Share management page" />
-  <img src="docs/images/share-2.png" width="200" alt="Share management page" />
+  <img src="docs/images/sharing.png" width="200" alt="Share management page" />
 </p>
 
 <p align="center">
-  <img src="docs/images/parent.png" width="200" alt="Child card - owner view" />
-  <img src="docs/images/coparent.png" width="200" alt="Child card - co-parent view" />
-  <img src="docs/images/caregiver.png" width="200" alt="Child card - caregiver view" />
+  <img src="docs/images/child-list-parent.png" width="200" alt="Child card - owner view" />
+  <img src="docs/images/child-list-coparent.png" width="200" alt="Child card - co-parent view" />
+  <img src="docs/images/child-list-caregiver.png" width="200" alt="Child card - caregiver view" />
 </p>
 
 ### Other Features
