@@ -138,26 +138,51 @@ class ChildSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        """Validate that custom bottle amounts follow low < mid < high ordering."""
+        """Validate custom bottle amounts: all set or all null.
+
+        Rules:
+        - All three null (use age-based defaults) ✓
+        - All three set with low < mid < high ✓
+        - Any combination of partial nulls ✗
+        - Any out-of-order values ✗
+
+        Prevents scenarios like: low=10, mid=null, high=5
+        which would become: 10 < age_default < 5 (invalid).
+        """
         low = data.get("custom_bottle_low_oz")
         mid = data.get("custom_bottle_mid_oz")
         high = data.get("custom_bottle_high_oz")
 
-        # Check ordering: low < mid < high (only for set values)
-        if low is not None and mid is not None and low >= mid:
+        # All null is valid (use age-based defaults)
+        if low is None and mid is None and high is None:
+            return data
+
+        # Count how many fields are set
+        set_count = sum(1 for v in [low, mid, high] if v is not None)
+
+        # If only some are set, require all to be set
+        if set_count > 0 and set_count < 3:
             raise serializers.ValidationError(
-                "Low amount must be less than recommended amount."
+                "If setting custom amounts, all three (low, recommended, high) "
+                "must be provided. Leave all blank to use age-based defaults."
             )
 
-        if mid is not None and high is not None and mid >= high:
-            raise serializers.ValidationError(
-                "Recommended amount must be less than high amount."
-            )
+        # All three are set - validate ordering
+        if set_count == 3:
+            if low >= mid:
+                raise serializers.ValidationError(
+                    "Low amount must be less than recommended amount."
+                )
 
-        if low is not None and high is not None and low >= high:
-            raise serializers.ValidationError(
-                "Low amount must be less than high amount."
-            )
+            if mid >= high:
+                raise serializers.ValidationError(
+                    "Recommended amount must be less than high amount."
+                )
+
+            if low >= high:
+                raise serializers.ValidationError(
+                    "Low amount must be less than high amount."
+                )
 
         return data
 
