@@ -38,6 +38,9 @@ class ChildSerializer(serializers.ModelSerializer):
             "name",
             "date_of_birth",
             "gender",
+            "custom_bottle_low_oz",
+            "custom_bottle_mid_oz",
+            "custom_bottle_high_oz",
             "created_at",
             "updated_at",
             "user_role",
@@ -109,6 +112,30 @@ class ChildSerializer(serializers.ModelSerializer):
             return False
 
         return obj.parent_id == request.user.id
+
+    def validate_custom_bottle_low_oz(self, value):
+        """Validate custom bottle low amount is in range 0.1-50 oz."""
+        if value is not None and (value < 0.1 or value > 50):
+            raise serializers.ValidationError(
+                "Custom bottle low amount must be between 0.1 and 50 oz."
+            )
+        return value
+
+    def validate_custom_bottle_mid_oz(self, value):
+        """Validate custom bottle mid amount is in range 0.1-50 oz."""
+        if value is not None and (value < 0.1 or value > 50):
+            raise serializers.ValidationError(
+                "Custom bottle mid amount must be between 0.1 and 50 oz."
+            )
+        return value
+
+    def validate_custom_bottle_high_oz(self, value):
+        """Validate custom bottle high amount is in range 0.1-50 oz."""
+        if value is not None and (value < 0.1 or value > 50):
+            raise serializers.ValidationError(
+                "Custom bottle high amount must be between 0.1 and 50 oz."
+            )
+        return value
 
 
 class ChildShareSerializer(serializers.ModelSerializer):

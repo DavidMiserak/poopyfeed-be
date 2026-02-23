@@ -2,6 +2,7 @@ import secrets
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -143,6 +144,9 @@ class Child(models.Model):
         name (CharField): Child's name (max 100 chars)
         date_of_birth (DateField): ISO format date (YYYY-MM-DD)
         gender (CharField): One of 'M', 'F', 'O' (optional)
+        custom_bottle_low_oz (DecimalField): Custom bottle amount (oz) for low preset (0.1-50)
+        custom_bottle_mid_oz (DecimalField): Custom bottle amount (oz) for mid preset (0.1-50)
+        custom_bottle_high_oz (DecimalField): Custom bottle amount (oz) for high preset (0.1-50)
         created_at (DateTimeField): When child was created
         updated_at (DateTimeField): When child was last modified
     """
@@ -163,6 +167,30 @@ class Child(models.Model):
         max_length=1,
         choices=Gender.choices,
         blank=True,
+    )
+    custom_bottle_low_oz = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.1), MaxValueValidator(50)],
+        help_text="Custom bottle feeding amount (oz) for low/recommended-1 button",
+    )
+    custom_bottle_mid_oz = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.1), MaxValueValidator(50)],
+        help_text="Custom bottle feeding amount (oz) for mid/recommended button",
+    )
+    custom_bottle_high_oz = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.1), MaxValueValidator(50)],
+        help_text="Custom bottle feeding amount (oz) for high/recommended+1 button",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
