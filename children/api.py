@@ -137,6 +137,30 @@ class ChildSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate(self, data):
+        """Validate that custom bottle amounts follow low < mid < high ordering."""
+        low = data.get("custom_bottle_low_oz")
+        mid = data.get("custom_bottle_mid_oz")
+        high = data.get("custom_bottle_high_oz")
+
+        # Check ordering: low < mid < high (only for set values)
+        if low is not None and mid is not None and low >= mid:
+            raise serializers.ValidationError(
+                "Low amount must be less than recommended amount."
+            )
+
+        if mid is not None and high is not None and mid >= high:
+            raise serializers.ValidationError(
+                "Recommended amount must be less than high amount."
+            )
+
+        if low is not None and high is not None and low >= high:
+            raise serializers.ValidationError(
+                "Low amount must be less than high amount."
+            )
+
+        return data
+
 
 class ChildShareSerializer(serializers.ModelSerializer):
     """ChildShare serializer with user email."""
