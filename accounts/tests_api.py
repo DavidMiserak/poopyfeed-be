@@ -23,6 +23,13 @@ PASSWORD_ENDPOINT = "/api/v1/account/password/"
 DELETE_ENDPOINT = "/api/v1/account/delete/"
 TOKEN_ENDPOINT = "/api/v1/browser/v1/auth/token/"
 
+# Test data constants
+TEST_EMAIL = "test@example.com"
+TEST_OTHER_EMAIL = "other@example.com"
+TEST_NEW_EMAIL = "newemail@example.com"
+TEST_TIMEZONE_NY = "America/New_York"
+TEST_TIMEZONE_LONDON = "Europe/London"
+
 
 class AuthenticatedAPITestMixin:
     """Mixin to set up authenticated API client for test classes."""
@@ -39,14 +46,14 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
             username="testuser",
-            email="test@example.com",
+            email=TEST_EMAIL,
             password=TEST_PASSWORD,
             first_name="Test",
             last_name="User",
         )
         cls.other_user = User.objects.create_user(
             username="otheruser",
-            email="other@example.com",
+            email=TEST_OTHER_EMAIL,
             password=TEST_PASSWORD,
         )
 
@@ -54,7 +61,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
         response = self.client.get(PROFILE_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.user.pk)
-        self.assertEqual(response.data["email"], "test@example.com")
+        self.assertEqual(response.data["email"], TEST_EMAIL)
         self.assertEqual(response.data["first_name"], "Test")
         self.assertEqual(response.data["last_name"], "User")
         self.assertEqual(response.data["timezone"], "UTC")
@@ -87,18 +94,18 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
     def test_update_email(self):
         response = self.client.patch(
             PROFILE_ENDPOINT,
-            {"email": "newemail@example.com"},
+            {"email": TEST_NEW_EMAIL},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["email"], "newemail@example.com")
+        self.assertEqual(response.data["email"], TEST_NEW_EMAIL)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "newemail@example.com")
+        self.assertEqual(self.user.email, TEST_NEW_EMAIL)
 
     def test_update_email_duplicate(self):
         response = self.client.patch(
             PROFILE_ENDPOINT,
-            {"email": "other@example.com"},
+            {"email": TEST_OTHER_EMAIL},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -108,7 +115,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
         """User can keep their current email."""
         response = self.client.patch(
             PROFILE_ENDPOINT,
-            {"email": "test@example.com"},
+            {"email": TEST_EMAIL},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -116,13 +123,13 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
     def test_update_timezone(self):
         response = self.client.patch(
             PROFILE_ENDPOINT,
-            {"timezone": "America/New_York"},
+            {"timezone": TEST_TIMEZONE_NY},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["timezone"], "America/New_York")
+        self.assertEqual(response.data["timezone"], TEST_TIMEZONE_NY)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.timezone, "America/New_York")
+        self.assertEqual(self.user.timezone, TEST_TIMEZONE_NY)
 
     def test_update_timezone_invalid(self):
         response = self.client.patch(
@@ -139,14 +146,14 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
             {
                 "first_name": "New",
                 "last_name": "Name",
-                "timezone": "Europe/London",
+                "timezone": TEST_TIMEZONE_LONDON,
             },
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["first_name"], "New")
         self.assertEqual(response.data["last_name"], "Name")
-        self.assertEqual(response.data["timezone"], "Europe/London")
+        self.assertEqual(response.data["timezone"], TEST_TIMEZONE_LONDON)
 
     def test_id_is_read_only(self):
         response = self.client.patch(
