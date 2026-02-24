@@ -9,11 +9,16 @@ from children.tests_tracking_base import BaseTrackingAPITests
 
 from .models import Nap
 
-# Test data constants
-TEST_NAPPED_AT = "2025-01-15T13:00:00Z"
-TEST_NAPPED_AT_ALT = "2025-01-15T14:00:00Z"
-TEST_NAPPED_AT_CREATE = "2025-01-15T17:00:00Z"
-TEST_ENDED_AT = "2025-01-15T14:30:00Z"
+# Test data constants for API calls (ISO format strings)
+TEST_NAPPED_AT_STR = "2025-01-15T13:00:00Z"
+TEST_NAPPED_AT_ALT_STR = "2025-01-15T14:00:00Z"
+TEST_NAPPED_AT_CREATE_STR = "2025-01-15T17:00:00Z"
+TEST_ENDED_AT_STR = "2025-01-15T14:30:00Z"
+
+# Test data constants for model creation (timezone-aware datetimes)
+TEST_NAPPED_AT = timezone.make_aware(datetime(2025, 1, 15, 13, 0, 0))
+TEST_NAPPED_AT_ALT = timezone.make_aware(datetime(2025, 1, 15, 14, 0, 0))
+TEST_ENDED_AT = timezone.make_aware(datetime(2025, 1, 15, 14, 30, 0))
 
 
 class NapAPITests(BaseTrackingAPITests):
@@ -24,7 +29,7 @@ class NapAPITests(BaseTrackingAPITests):
 
     def get_create_data(self):
         """Return data for creating a nap."""
-        return {"napped_at": TEST_NAPPED_AT_CREATE}
+        return {"napped_at": TEST_NAPPED_AT_CREATE_STR}
 
     def create_test_record(self):
         """Create and return a test nap."""
@@ -57,7 +62,7 @@ class NapAPITests(BaseTrackingAPITests):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.put(
             self.get_detail_url(nap.pk),
-            {"napped_at": TEST_NAPPED_AT_ALT},
+            {"napped_at": TEST_NAPPED_AT_ALT_STR},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -67,8 +72,8 @@ class NapAPITests(BaseTrackingAPITests):
         response = self.client.post(
             self.get_list_url(),
             {
-                "napped_at": TEST_NAPPED_AT,
-                "ended_at": TEST_ENDED_AT,
+                "napped_at": TEST_NAPPED_AT_STR,
+                "ended_at": TEST_ENDED_AT_STR,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -80,7 +85,7 @@ class NapAPITests(BaseTrackingAPITests):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.post(
             self.get_list_url(),
-            {"napped_at": TEST_NAPPED_AT},
+            {"napped_at": TEST_NAPPED_AT_STR},
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIsNone(response.data["ended_at"])
@@ -92,8 +97,8 @@ class NapAPITests(BaseTrackingAPITests):
         response = self.client.post(
             self.get_list_url(),
             {
-                "napped_at": TEST_NAPPED_AT_ALT,
-                "ended_at": TEST_NAPPED_AT,
+                "napped_at": TEST_NAPPED_AT_ALT_STR,
+                "ended_at": TEST_NAPPED_AT_STR,
             },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
