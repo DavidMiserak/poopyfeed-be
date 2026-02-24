@@ -442,7 +442,7 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 
 HEADLESS_ONLY = False  # Allow both web UI and API
 
-HEADLESS_FRONTEND_URLS = {
+HEADLESS_FRONTEND_URLS = {  # nosec B105
     "account_confirm_email": "http://localhost:4200/auth/verify-email/{key}",
     "account_reset_password": "http://localhost:4200/auth/reset-password/{key}",
     "account_reset_password_from_key": "http://localhost:4200/auth/reset-password/{key}",

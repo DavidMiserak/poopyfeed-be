@@ -27,7 +27,9 @@ class CacheInvalidationSetupTests(TestCase):
     def setUpTestData(cls):
         """Create test users and children."""
         cls.parent = User.objects.create_user(
-            username="parent", email="parent@test.com", password="testpass123"
+            username="parent",
+            email="parent@test.com",
+            password="testpass123",  # nosec B106
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -58,7 +60,9 @@ class FeedingCacheInvalidationTests(TestCase):
     def setUpTestData(cls):
         """Create test data."""
         cls.parent = User.objects.create_user(
-            username="parent", email="parent@test.com", password="testpass123"
+            username="parent",
+            email="parent@test.com",
+            password="testpass123",  # nosec B106
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -131,7 +135,9 @@ class DiaperCacheInvalidationTests(TestCase):
     def setUpTestData(cls):
         """Create test data."""
         cls.parent = User.objects.create_user(
-            username="parent", email="parent@test.com", password="testpass123"
+            username="parent",
+            email="parent@test.com",
+            password="testpass123",  # nosec B106
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -198,7 +204,9 @@ class NapCacheInvalidationTests(TestCase):
     def setUpTestData(cls):
         """Create test data."""
         cls.parent = User.objects.create_user(
-            username="parent", email="parent@test.com", password="testpass123"
+            username="parent",
+            email="parent@test.com",
+            password="testpass123",  # nosec B106
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -268,7 +276,9 @@ class MultipleChildrenCacheInvalidationTests(TestCase):
     def setUpTestData(cls):
         """Create multiple children."""
         cls.parent = User.objects.create_user(
-            username="parent", email="parent@test.com", password="testpass123"
+            username="parent",
+            email="parent@test.com",
+            password="testpass123",  # nosec B106
         )
         cls.child1 = Child.objects.create(
             parent=cls.parent,
@@ -341,7 +351,9 @@ class CacheInvalidationBulkOperationsTests(TestCase):
     def setUpTestData(cls):
         """Create test data."""
         cls.parent = User.objects.create_user(
-            username="parent", email="parent@test.com", password="testpass123"
+            username="parent",
+            email="parent@test.com",
+            password="testpass123",  # nosec B106
         )
         cls.child = Child.objects.create(
             parent=cls.parent,

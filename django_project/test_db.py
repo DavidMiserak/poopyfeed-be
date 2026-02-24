@@ -82,7 +82,7 @@ class PostgreSQLPooledBackendDSNTests(TestCase):
         backend.settings_dict = {
             "NAME": "mydb",
             "USER": "postgres",
-            "PASSWORD": "secret",
+            "PASSWORD": "secret",  # nosec B105
             "HOST": "localhost",
             "PORT": 5432,
         }
@@ -103,7 +103,7 @@ class PostgreSQLPooledBackendDSNTests(TestCase):
         backend.settings_dict = {
             "NAME": "mydb",
             "USER": "postgres",
-            "PASSWORD": "secret",
+            "PASSWORD": "secret",  # nosec B105
             "HOST": "localhost",
         }
 
@@ -159,7 +159,7 @@ class PostgreSQLPooledBackendPoolCreationTests(TestCase):
             "PORT": 5432,
             "NAME": "test",
             "USER": "postgres",
-            "PASSWORD": "pass",
+            "PASSWORD": "pass",  # nosec B105
         }
         # Clear pools cache before test
         backend._pools.clear()
@@ -184,7 +184,9 @@ class PostgreSQLPooledBackendPoolCreationTests(TestCase):
         mock_pool_instance = MagicMock()
         mock_pool_class.return_value = mock_pool_instance
 
-        with patch.dict(os.environ, {"DB_POOL_MIN_SIZE": "3", "DB_POOL_MAX_SIZE": "20"}):
+        with patch.dict(
+            os.environ, {"DB_POOL_MIN_SIZE": "3", "DB_POOL_MAX_SIZE": "20"}
+        ):
             backend = PostgreSQLPooledBackend("default")
             backend.settings_dict = {
                 "HOST": "localhost",
@@ -212,7 +214,7 @@ class PostgreSQLPooledBackendPoolCreationTests(TestCase):
             "PORT": 5432,
             "NAME": "test",
             "USER": "postgres",
-            "PASSWORD": "pass",
+            "PASSWORD": "pass",  # nosec B105
         }
 
         # Call twice with same settings
@@ -258,10 +260,14 @@ class PostgreSQLPooledBackendConnectionTests(TestCase):
         backend.settings_dict = {"HOST": "localhost"}
 
         with patch.object(
-            PostgreSQLPooledBackend, "get_new_connection", wraps=backend.get_new_connection
+            PostgreSQLPooledBackend,
+            "get_new_connection",
+            wraps=backend.get_new_connection,
         ) as mock_method:
             # When HAS_PSYCOPG2_POOL is False, should call super()
-            with patch("django_project.db.psycopg2_base.DatabaseWrapper.get_new_connection"):
+            with patch(
+                "django_project.db.psycopg2_base.DatabaseWrapper.get_new_connection"
+            ):
                 backend.get_new_connection({})
 
     @patch("django_project.db.HAS_PSYCOPG2_POOL", True)
@@ -280,7 +286,7 @@ class PostgreSQLPooledBackendConnectionTests(TestCase):
             "HOST": "localhost",
             "NAME": "test",
             "USER": "postgres",
-            "PASSWORD": "pass",
+            "PASSWORD": "pass",  # nosec B105
         }
         # Clear pools cache before test
         backend._pools.clear()
@@ -301,7 +307,9 @@ class PostgreSQLPooledBackendConnectionTests(TestCase):
         mock_pool.getconn.side_effect = Exception("Pool error")
         mock_pool_class.return_value = mock_pool
 
-        with patch("django_project.db.psycopg2_base.DatabaseWrapper.get_new_connection"):
+        with patch(
+            "django_project.db.psycopg2_base.DatabaseWrapper.get_new_connection"
+        ):
             backend = PostgreSQLPooledBackend("default")
             backend.settings_dict = {
                 "HOST": "localhost",
@@ -331,7 +339,7 @@ class PostgreSQLPooledBackendCloseTests(TestCase):
             "HOST": "localhost",
             "NAME": "test",
             "USER": "postgres",
-            "PASSWORD": "pass",
+            "PASSWORD": "pass",  # nosec B105
         }
         # Clear pools cache and set up pool
         backend._pools.clear()
@@ -385,7 +393,7 @@ class PostgreSQLPooledBackendCloseTests(TestCase):
             "HOST": "localhost",
             "NAME": "test",
             "USER": "postgres",
-            "PASSWORD": "pass",
+            "PASSWORD": "pass",  # nosec B105
         }
         mock_conn = MagicMock()
         backend.connection = mock_conn

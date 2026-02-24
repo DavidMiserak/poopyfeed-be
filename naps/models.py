@@ -33,7 +33,8 @@ class Nap(models.Model):
         ordering = ["-napped_at"]
         constraints = [
             CheckConstraint(
-                condition=Q(ended_at__isnull=True) | Q(ended_at__gt=models.F("napped_at")),
+                condition=Q(ended_at__isnull=True)
+                | Q(ended_at__gt=models.F("napped_at")),
                 name="nap_ended_after_start",
             ),
         ]

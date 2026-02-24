@@ -25,17 +25,20 @@ make test-backend-parallel-auto      # ~15-20 seconds (depends on CPU)
 ## Test Execution Performance
 
 ### Current Baseline (Django test runner)
+
 - **Full suite (with coverage)**: ~53 seconds
 - **Fast suite (no coverage)**: ~45 seconds
 - **Quick suite (minimal output)**: ~42 seconds
 
 ### With Pytest Parallel Execution ⚡ (RECOMMENDED)
+
 - **Parallel with 4 workers**: ~15-16 seconds (3.5x faster!)
 - **Parallel with auto-detect**: ~15-20 seconds
 - **Parallel with coverage**: ~20-25 seconds
 - **Pass rate**: 99.5% (3 tests skip due to Redis timing issues)
 
 ### Test Stats
+
 - **Total tests**: 555
 - **Coverage**: 98%
 - **Passing**: 555 ✅ (with Django runner) / 432+ ✅ (with pytest parallel)
@@ -52,6 +55,7 @@ make test-backend-fast
 ```
 
 **Benefits**:
+
 - 15-20% faster than full coverage run
 - Still shows full test output
 - Perfect for TDD workflow
@@ -65,6 +69,7 @@ make test-backend-quick
 ```
 
 **Benefits**:
+
 - 20-25% faster than fast command
 - Minimal output (only failures)
 - Great for rapid iteration
@@ -130,17 +135,18 @@ pytest --lf -n 4 --dist loadscope
 
 ### Performance Comparison
 
-| Method | Time | Speedup |
-|--------|------|---------|
-| Django test runner (standard) | 45-53s | Baseline |
-| Django test runner (fast) | 42-45s | 1.15x |
-| Pytest sequential | ~40s | 1.2x |
-| **Pytest parallel (4 workers)** | **15-16s** | **3.5x** 🚀 |
-| Pytest parallel (auto) | 15-20s | 2.5-3.5x |
+| Method                          | Time      | Speedup  |
+| ------------------------------- | --------- | -------- |
+| Django test runner (standard)   | 45-53s    | Baseline |
+| Django test runner (fast)       | 42-45s    | 1.15x    |
+| Pytest sequential               | ~40s      | 1.2x     |
+| Pytest parallel (4 workers) 🚀  | 15-16s    | 3.5x     |
+| Pytest parallel (auto)          | 15-20s    | 2.5-3.5x |
 
 ### Configuration
 
 See `pytest.ini` for configuration. Key options:
+
 ```ini
 # Default distribution strategy (groups tests by class)
 --dist loadscope
@@ -158,11 +164,13 @@ See `pytest.ini` for configuration. Key options:
 ### Known Issues with Parallel Execution
 
 **3 tests fail in parallel** due to Redis timing/state conflicts:
+
 1. `django_project/test_redis_integration.py::RedisCacheCeleryFullIntegrationTests::test_cache_invalidation_propagates_correctly`
 2. `django_project/test_redis_integration.py::RedisCacheCeleryFullIntegrationTests::test_redis_survives_multiple_operations`
 3. `children/tests.py::RevokeAccessViewTests::test_revoke_access_owner`
 
 **Workaround**: These tests pass in sequential mode or can be skipped:
+
 ```bash
 # Skip known parallel-unsafe tests
 pytest -n 4 --dist loadscope -m "not parallel_unsafe"
@@ -173,10 +181,12 @@ pytest -n 4 --dist loadscope -m "not parallel_unsafe"
 ## Database Optimization
 
 ### Container (GitHub Actions / Docker Compose)
+
 - Uses PostgreSQL (slower but realistic)
 - 45-55 seconds for full suite
 
 ### Local Development
+
 - Uses SQLite in-memory (faster)
 - 25-35 seconds for full suite
 
@@ -191,7 +201,7 @@ make test-backend-fast
 
 All tests follow Django's recommended structure:
 
-```
+```text
 <app>/
 ├── tests.py          # All tests for the app
 ├── test_*.py         # Additional test modules (optional)
@@ -234,6 +244,7 @@ pytest --durations=10  # Show 10 slowest tests
 ## CI/CD Integration
 
 ### GitHub Actions
+
 The CI/CD pipeline runs:
 
 ```bash
@@ -242,7 +253,8 @@ make test-backend  # Full coverage + reporting
 
 This is slower but ensures complete coverage verification and generates reports for Codecov.
 
-### Local Development
+### Development Workflow
+
 Use fast or quick commands for quick feedback:
 
 ```bash
@@ -258,14 +270,17 @@ make test-backend
 ## Common Issues
 
 ### "database is locked" errors
+
 - Usually indicates parallel test issues
 - Solution: Run tests sequentially with `pytest` or `make test-backend`
 
 ### Flaky tests (inconsistent failures)
+
 - Often caused by test ordering or timing issues
 - Solution: Run tests with `--shuffle` to randomize order
 
 ### Memory issues with parallel tests
+
 - Solution: Reduce worker count with `-n 2` instead of `-n auto`
 
 ## Coverage Goals

@@ -137,6 +137,6 @@ class PostgreSQLPooledBackend(psycopg2_base.DatabaseWrapper):
             for pool_obj in cls._pools.values():
                 try:
                     pool_obj.closeall()
-                except Exception:
-                    pass
+                except Exception:  # nosec B110
+                    pass  # Ignore errors during cleanup
             cls._pools.clear()

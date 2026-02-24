@@ -6,7 +6,6 @@ and top-level routes (/tracking/).
 """
 
 from django.utils.dateparse import parse_datetime
-
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -88,9 +87,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
         # Top-level route: /tracking/ - return all accessible
         accessible_children = Child.for_user(self.request.user)
         model = self.queryset.model
-        qs = model.objects.filter(child__in=accessible_children).select_related(
-            "child"
-        )
+        qs = model.objects.filter(child__in=accessible_children).select_related("child")
         return self._apply_datetime_filters(qs)
 
     def _apply_datetime_filters(self, queryset):

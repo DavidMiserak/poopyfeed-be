@@ -377,25 +377,23 @@ class AnalyticsViewSet(viewsets.ViewSet):
         Returns:
             JSON with task status and result (if complete)
         """
-        # Get and validate child (this will raise NotFound if unauthorized)
-        child = self.get_child(pk)
 
         # Get task result
         task_result = AsyncResult(task_id)
 
         # Map Celery task states to frontend-friendly status values
         celery_status = task_result.status
-        if celery_status == 'PENDING':
-            frontend_status = 'pending'
-        elif celery_status == 'STARTED':
-            frontend_status = 'processing'
-        elif celery_status == 'SUCCESS':
-            frontend_status = 'completed'
-        elif celery_status == 'FAILURE':
-            frontend_status = 'failed'
+        if celery_status == "PENDING":
+            frontend_status = "pending"
+        elif celery_status == "STARTED":
+            frontend_status = "processing"
+        elif celery_status == "SUCCESS":
+            frontend_status = "completed"
+        elif celery_status == "FAILURE":
+            frontend_status = "failed"
         else:
             # Handle any other states as processing
-            frontend_status = 'processing'
+            frontend_status = "processing"
 
         response_data = {
             "task_id": task_id,
@@ -404,29 +402,29 @@ class AnalyticsViewSet(viewsets.ViewSet):
 
         # Extract progress from task metadata if available
         try:
-            if hasattr(task_result, 'info') and isinstance(task_result.info, dict):
-                progress = task_result.info.get('progress')
+            if hasattr(task_result, "info") and isinstance(task_result.info, dict):
+                progress = task_result.info.get("progress")
                 if progress is not None:
                     response_data["progress"] = int(progress)
                 else:
                     # Info exists but no progress field - use status-based default
-                    if celery_status == 'PENDING':
+                    if celery_status == "PENDING":
                         response_data["progress"] = 0
-                    elif celery_status == 'STARTED':
+                    elif celery_status == "STARTED":
                         response_data["progress"] = 50
-                    elif celery_status == 'SUCCESS':
+                    elif celery_status == "SUCCESS":
                         response_data["progress"] = 100
-            elif celery_status == 'PENDING':
+            elif celery_status == "PENDING":
                 response_data["progress"] = 0
-            elif celery_status == 'STARTED':
+            elif celery_status == "STARTED":
                 response_data["progress"] = 50  # Default progress for started tasks
-            elif celery_status == 'SUCCESS':
+            elif celery_status == "SUCCESS":
                 response_data["progress"] = 100
         except (AttributeError, ValueError, TypeError):
             # Fallback if progress extraction fails
-            if celery_status == 'SUCCESS':
+            if celery_status == "SUCCESS":
                 response_data["progress"] = 100
-            elif celery_status == 'PENDING':
+            elif celery_status == "PENDING":
                 response_data["progress"] = 0
             else:
                 response_data["progress"] = 50
@@ -449,7 +447,12 @@ class AnalyticsViewSet(viewsets.ViewSet):
             PDF file as attachment or 404 if not found
         """
         # Validate filename format (prevent directory traversal)
-        if not filename or "/" in filename or "\\" in filename or filename.startswith("."):
+        if (
+            not filename
+            or "/" in filename
+            or "\\" in filename
+            or filename.startswith(".")
+        ):
             raise NotFound("Invalid filename")
 
         # Construct file path
@@ -461,6 +464,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
         except NotImplementedError:
             # Fallback if storage backend doesn't implement path()
             from django.conf import settings
+
             full_path = os.path.join(settings.BASE_DIR, "exports", filename)
 
         # Check if file exists

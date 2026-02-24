@@ -29,7 +29,12 @@ from naps.models import Nap
 # Duration expression for nap calculations: (ended_at - napped_at) in minutes
 # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
 _DURATION_EXPR = ExpressionWrapper(
-    Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
+    Func(
+        F("ended_at") - F("napped_at"),
+        function="",
+        template="EXTRACT(EPOCH FROM %(expressions)s)",
+    )
+    / 60,
     output_field=FloatField(),
 )
 
@@ -336,7 +341,9 @@ def get_sleep_summary(
         .order_by("date")
     )
 
-    daily_data = list(raw_data.values("date", "count", "average_duration", "total_minutes"))
+    daily_data = list(
+        raw_data.values("date", "count", "average_duration", "total_minutes")
+    )
 
     daily_data = _fill_date_gaps(daily_data, days)
 
@@ -436,12 +443,12 @@ def get_today_summary(child_id: int) -> dict[str, Any]:
 
     sleep_data = {
         "naps": nap_stats["count"] or 0,
-        "total_minutes": int(round(nap_stats["total_minutes"]))
-        if nap_stats["total_minutes"]
-        else 0,
-        "avg_duration": int(round(nap_stats["avg_duration"]))
-        if nap_stats["avg_duration"]
-        else 0,
+        "total_minutes": (
+            int(round(nap_stats["total_minutes"])) if nap_stats["total_minutes"] else 0
+        ),
+        "avg_duration": (
+            int(round(nap_stats["avg_duration"])) if nap_stats["avg_duration"] else 0
+        ),
     }
 
     return {
@@ -537,12 +544,12 @@ def get_weekly_summary(child_id: int) -> dict[str, Any]:
 
     sleep_data = {
         "naps": nap_stats["count"] or 0,
-        "total_minutes": int(round(nap_stats["total_minutes"]))
-        if nap_stats["total_minutes"]
-        else 0,
-        "avg_duration": int(round(nap_stats["avg_duration"]))
-        if nap_stats["avg_duration"]
-        else 0,
+        "total_minutes": (
+            int(round(nap_stats["total_minutes"])) if nap_stats["total_minutes"] else 0
+        ),
+        "avg_duration": (
+            int(round(nap_stats["avg_duration"])) if nap_stats["avg_duration"] else 0
+        ),
     }
 
     return {

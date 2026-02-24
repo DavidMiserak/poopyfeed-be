@@ -993,7 +993,9 @@ class ExportPDFTests(APITestCase):
         data = response.json()
 
         # Progress field MUST be present for frontend display
-        self.assertIn("progress", data, "Progress field must be present in export status response")
+        self.assertIn(
+            "progress", data, "Progress field must be present in export status response"
+        )
 
         # Progress should be a number between 0-100
         progress = data["progress"]
@@ -1194,7 +1196,9 @@ class GeneratePDFReportTaskTests(TestCase):
         # Day offset 0 and 5 have real data (count=3, wet=1, dirty=1, both=1)
         for data_row_idx in [1, 6]:  # +1 for header offset
             row = diaper_rows[data_row_idx]
-            self.assertEqual(row[1], "3", f"Row {data_row_idx}: total count should be '3'")
+            self.assertEqual(
+                row[1], "3", f"Row {data_row_idx}: total count should be '3'"
+            )
             self.assertEqual(row[2], "1", f"Row {data_row_idx}: wet should be '1'")
             self.assertEqual(row[3], "1", f"Row {data_row_idx}: dirty should be '1'")
             self.assertEqual(row[4], "1", f"Row {data_row_idx}: both should be '1'")
@@ -1482,7 +1486,9 @@ class ExportStatusUnknownStateTests(APITestCase):
         mock_result.successful.return_value = True
         mock_result.failed.return_value = False
         # Make .info raise AttributeError on isinstance check
-        type(mock_result).info = property(lambda self: (_ for _ in ()).throw(AttributeError))
+        type(mock_result).info = property(
+            lambda self: (_ for _ in ()).throw(AttributeError)
+        )
         mock_result_class.return_value = mock_result
 
         response = self.client.get(
@@ -1591,7 +1597,6 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
     def test_weekly_summary_with_diaper_breakdown(self):
         """Weekly summary includes diaper type breakdown from DB."""
         from analytics.utils import get_weekly_summary
-
         from children.models import Child
         from diapers.models import DiaperChange
 
@@ -1608,15 +1613,9 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
 
         now = timezone.now()
         # Create diapers of each type today
-        DiaperChange.objects.create(
-            child=child, change_type="wet", changed_at=now
-        )
-        DiaperChange.objects.create(
-            child=child, change_type="dirty", changed_at=now
-        )
-        DiaperChange.objects.create(
-            child=child, change_type="both", changed_at=now
-        )
+        DiaperChange.objects.create(child=child, change_type="wet", changed_at=now)
+        DiaperChange.objects.create(child=child, change_type="dirty", changed_at=now)
+        DiaperChange.objects.create(child=child, change_type="both", changed_at=now)
 
         result = get_weekly_summary(child.id)
         diaper = result["diapers"]
@@ -1680,9 +1679,24 @@ class PDFChartGenerationTests(TestCase):
 
         data = {
             "daily_data": [
-                {"date": date(2024, 1, 1), "wet_count": 2, "dirty_count": 1, "both_count": 0},
-                {"date": date(2024, 1, 2), "wet_count": 1, "dirty_count": 1, "both_count": 1},
-                {"date": date(2024, 1, 3), "wet_count": 3, "dirty_count": 0, "both_count": 0},
+                {
+                    "date": date(2024, 1, 1),
+                    "wet_count": 2,
+                    "dirty_count": 1,
+                    "both_count": 0,
+                },
+                {
+                    "date": date(2024, 1, 2),
+                    "wet_count": 1,
+                    "dirty_count": 1,
+                    "both_count": 1,
+                },
+                {
+                    "date": date(2024, 1, 3),
+                    "wet_count": 3,
+                    "dirty_count": 0,
+                    "both_count": 0,
+                },
             ]
         }
         result = generate_diaper_chart(data)
@@ -1821,25 +1835,23 @@ class GeneratePDFReportPermissionTests(TestCase):
     def test_generate_pdf_nonexistent_child_raises_value_error(self):
         """PDF generation should fail for nonexistent child."""
         with self.assertRaises(ValueError) as context:
-            generate_pdf_report.apply_async(
-                args=[99999, self.owner.id, 30]
-            ).get()
+            generate_pdf_report.apply_async(args=[99999, self.owner.id, 30]).get()
         self.assertIn("Child with ID", str(context.exception))
 
     def test_generate_pdf_nonexistent_user_raises_error(self):
         """PDF generation should fail for nonexistent user."""
         # CustomUser.DoesNotExist will be raised
         with self.assertRaises(Exception):
-            generate_pdf_report.apply_async(
-                args=[self.child.id, 99999, 30]
-            ).get()
+            generate_pdf_report.apply_async(args=[self.child.id, 99999, 30]).get()
 
     def test_generate_pdf_days_parameter_bounded(self):
         """Days parameter should be bounded between 1 and 90."""
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.get_feeding_trends") as mock_feed, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diaper, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.get_feeding_trends") as mock_feed,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diaper,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 mock_feed.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diaper.return_value = {"daily_data": [], "breakdown": {}}
                 mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
@@ -1884,10 +1896,12 @@ class GeneratePDFReportChartErrorHandlingTests(TestCase):
     def test_generate_pdf_continues_on_feeding_chart_error(self):
         """PDF generation should continue even if feeding chart fails."""
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.generate_feeding_chart") as mock_chart, \
-                 patch("analytics.tasks.get_feeding_trends") as mock_trends, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.generate_feeding_chart") as mock_chart,
+                patch("analytics.tasks.get_feeding_trends") as mock_trends,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 # Chart generation fails
                 mock_chart.side_effect = Exception("Chart rendering error")
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
@@ -1903,10 +1917,12 @@ class GeneratePDFReportChartErrorHandlingTests(TestCase):
     def test_generate_pdf_continues_on_diaper_chart_error(self):
         """PDF generation should continue even if diaper chart fails."""
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.generate_diaper_chart") as mock_chart, \
-                 patch("analytics.tasks.get_feeding_trends") as mock_trends, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.generate_diaper_chart") as mock_chart,
+                patch("analytics.tasks.get_feeding_trends") as mock_trends,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 mock_chart.side_effect = Exception("Chart rendering error")
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
@@ -1920,10 +1936,12 @@ class GeneratePDFReportChartErrorHandlingTests(TestCase):
     def test_generate_pdf_continues_on_sleep_chart_error(self):
         """PDF generation should continue even if sleep chart fails."""
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.generate_sleep_chart") as mock_chart, \
-                 patch("analytics.tasks.get_feeding_trends") as mock_trends, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.generate_sleep_chart") as mock_chart,
+                patch("analytics.tasks.get_feeding_trends") as mock_trends,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 mock_chart.side_effect = Exception("Chart rendering error")
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
@@ -1955,9 +1973,11 @@ class GeneratePDFReportEmptyDataTests(TestCase):
     def test_generate_pdf_with_empty_data(self):
         """PDF generation should work with empty analytics data."""
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.get_feeding_trends") as mock_trends, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.get_feeding_trends") as mock_trends,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 # All empty data
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
@@ -1982,9 +2002,11 @@ class GeneratePDFReportEmptyDataTests(TestCase):
         )
 
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.get_feeding_trends") as mock_trends, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.get_feeding_trends") as mock_trends,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
                 mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
@@ -2001,9 +2023,11 @@ class GeneratePDFReportEmptyDataTests(TestCase):
     def test_generate_pdf_returns_proper_timestamps(self):
         """PDF task should return proper ISO format timestamps."""
         with patch("analytics.tasks.default_storage"):
-            with patch("analytics.tasks.get_feeding_trends") as mock_trends, \
-                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers, \
-                 patch("analytics.tasks.get_sleep_summary") as mock_sleep:
+            with (
+                patch("analytics.tasks.get_feeding_trends") as mock_trends,
+                patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
+                patch("analytics.tasks.get_sleep_summary") as mock_sleep,
+            ):
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
                 mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}
@@ -2014,6 +2038,7 @@ class GeneratePDFReportEmptyDataTests(TestCase):
 
                 # Verify timestamps are valid ISO format
                 from django.utils.dateparse import parse_datetime
+
                 created = parse_datetime(result["created_at"])
                 expires = parse_datetime(result["expires_at"])
 

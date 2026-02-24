@@ -6,18 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('children', '0008_alter_childshare_role'),
-        ('naps', '0002_alter_nap_napped_at'),
+        ("children", "0008_alter_childshare_role"),
+        ("naps", "0002_alter_nap_napped_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='nap',
-            name='ended_at',
+            model_name="nap",
+            name="ended_at",
             field=models.DateTimeField(blank=True, db_index=True, null=True),
         ),
         migrations.AddConstraint(
-            model_name='nap',
-            constraint=models.CheckConstraint(condition=models.Q(('ended_at__isnull', True), ('ended_at__gt', models.F('napped_at')), _connector='OR'), name='nap_ended_after_start'),
+            model_name="nap",
+            constraint=models.CheckConstraint(
+                condition=models.Q(
+                    ("ended_at__isnull", True),
+                    ("ended_at__gt", models.F("napped_at")),
+                    _connector="OR",
+                ),
+                name="nap_ended_after_start",
+            ),
         ),
     ]

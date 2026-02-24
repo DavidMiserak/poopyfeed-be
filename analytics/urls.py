@@ -1,6 +1,6 @@
 """URL routing for analytics endpoints."""
 
-from django.urls import path, re_path
+from django.urls import path
 
 from .views import AnalyticsViewSet
 
@@ -49,8 +49,8 @@ urlpatterns = [
         name="analytics-export-status",
     ),
     # PDF download endpoint
-    re_path(
-        r"^download/(?P<filename>[^/]+)/$",
+    path(
+        "download/<str:filename>/",
         AnalyticsViewSet.as_view({"get": "download_pdf"}),
         name="analytics-download-pdf",
     ),

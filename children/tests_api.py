@@ -613,12 +613,10 @@ class AcceptInviteRaceConditionTests(APITestCase):
 
     def test_accept_invite_race_condition_integrity_error(self):
         """IntegrityError during accept is handled gracefully."""
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f"Token {self.acceptor_token.key}"
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.acceptor_token.key}")
 
         # Create the share manually first (simulating the race condition)
-        existing_share = ChildShare.objects.create(
+        ChildShare.objects.create(
             child=self.child,
             user=self.acceptor,
             role=ChildShare.Role.CAREGIVER,
@@ -626,7 +624,7 @@ class AcceptInviteRaceConditionTests(APITestCase):
         )
 
         # Mock get_or_create to raise IntegrityError then have get succeed
-        original_get_or_create = ChildShare.objects.get_or_create
+        ChildShare.objects.get_or_create
 
         def mock_get_or_create(**kwargs):
             raise IntegrityError("duplicate key")
@@ -643,9 +641,7 @@ class AcceptInviteRaceConditionTests(APITestCase):
 
     def test_accept_invite_create_invalid_role(self):
         """Accept invite with invalid role in serializer."""
-        self.client.credentials(
-            HTTP_AUTHORIZATION=f"Token {self.acceptor_token.key}"
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.acceptor_token.key}")
         response = self.client.post(
             API_ACCEPT_INVITE_URL, {"token": "nonexistent-token-value"}
         )
@@ -680,8 +676,9 @@ class SerializerContextEdgeCaseTests(APITestCase):
 
     def test_user_role_for_user_with_no_share(self):
         """User with no share and not owner returns None for user_role."""
-        from .api import ChildSerializer
         from rest_framework.test import APIRequestFactory
+
+        from .api import ChildSerializer
 
         user_model = get_user_model()
         stranger = user_model.objects.create_user(
@@ -786,8 +783,9 @@ class TrackingViewSetUnitTests(APITestCase):
 
     def test_date_range_filtering_gte(self):
         """Tracking list supports date range filtering with __gte."""
-        from diapers.models import DiaperChange
         from django.utils import timezone
+
+        from diapers.models import DiaperChange
 
         DiaperChange.objects.create(
             child=self.child,
@@ -801,8 +799,9 @@ class TrackingViewSetUnitTests(APITestCase):
 
     def test_date_range_filtering_lt(self):
         """Tracking list supports date range filtering with __lt."""
-        from diapers.models import DiaperChange
         from django.utils import timezone
+
+        from diapers.models import DiaperChange
 
         DiaperChange.objects.create(
             child=self.child,

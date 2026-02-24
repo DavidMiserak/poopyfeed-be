@@ -85,13 +85,17 @@ def generate_feeding_chart(feeding_data: dict[str, Any]) -> BytesIO:
     # Add value labels on points
     for i, (date, count) in enumerate(zip(dates, counts)):
         if i % max(1, len(dates) // 6) == 0:  # Show every ~6th label to avoid crowding
-            ax.text(i, count + 0.1, str(int(count)), ha="center", va="bottom", fontsize=9)
+            ax.text(
+                i, count + 0.1, str(int(count)), ha="center", va="bottom", fontsize=9
+            )
 
     plt.tight_layout()
 
     # Save to bytes
     img_buffer = BytesIO()
-    fig.savefig(img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"])
+    fig.savefig(
+        img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"]
+    )
     img_buffer.seek(0)
     plt.close(fig)
 
@@ -126,7 +130,15 @@ def generate_diaper_chart(diaper_data: dict[str, Any]) -> BytesIO:
     width = 0.6
 
     ax.bar(x, wet, width, label="Wet", color=COLORS["diaper_wet"], alpha=0.8)
-    ax.bar(x, dirty, width, bottom=wet, label="Dirty", color=COLORS["diaper_dirty"], alpha=0.8)
+    ax.bar(
+        x,
+        dirty,
+        width,
+        bottom=wet,
+        label="Dirty",
+        color=COLORS["diaper_dirty"],
+        alpha=0.8,
+    )
 
     both_bottom = [w + d for w, d in zip(wet, dirty)]
     ax.bar(
@@ -140,7 +152,9 @@ def generate_diaper_chart(diaper_data: dict[str, Any]) -> BytesIO:
     )
 
     # Styling
-    ax.set_title("Diaper Change Patterns", fontsize=14, fontweight="bold", color=COLORS["text"])
+    ax.set_title(
+        "Diaper Change Patterns", fontsize=14, fontweight="bold", color=COLORS["text"]
+    )
     ax.set_xlabel("Date", fontsize=11, color=COLORS["text"])
     ax.set_ylabel("Count", fontsize=11, color=COLORS["text"])
     ax.set_xticks(x)
@@ -153,7 +167,9 @@ def generate_diaper_chart(diaper_data: dict[str, Any]) -> BytesIO:
 
     # Save to bytes
     img_buffer = BytesIO()
-    fig.savefig(img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"])
+    fig.savefig(
+        img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"]
+    )
     img_buffer.seek(0)
     plt.close(fig)
 
@@ -193,7 +209,9 @@ def generate_sleep_chart(sleep_data: dict[str, Any]) -> BytesIO:
     )
 
     # Styling
-    ax.set_title("Sleep Summary (Naps)", fontsize=14, fontweight="bold", color=COLORS["text"])
+    ax.set_title(
+        "Sleep Summary (Naps)", fontsize=14, fontweight="bold", color=COLORS["text"]
+    )
     ax.set_xlabel("Date", fontsize=11, color=COLORS["text"])
     ax.set_ylabel("Count", fontsize=11, color=COLORS["text"])
     ax.grid(True, alpha=0.3, color=COLORS["grid"])
@@ -205,13 +223,17 @@ def generate_sleep_chart(sleep_data: dict[str, Any]) -> BytesIO:
     # Add value labels on points
     for i, (date, count) in enumerate(zip(dates, counts)):
         if i % max(1, len(dates) // 6) == 0:
-            ax.text(i, count + 0.1, str(int(count)), ha="center", va="bottom", fontsize=9)
+            ax.text(
+                i, count + 0.1, str(int(count)), ha="center", va="bottom", fontsize=9
+            )
 
     plt.tight_layout()
 
     # Save to bytes
     img_buffer = BytesIO()
-    fig.savefig(img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"])
+    fig.savefig(
+        img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"]
+    )
     img_buffer.seek(0)
     plt.close(fig)
 
@@ -246,7 +268,9 @@ def _create_empty_chart(message: str) -> BytesIO:
     plt.tight_layout()
 
     img_buffer = BytesIO()
-    fig.savefig(img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"])
+    fig.savefig(
+        img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"]
+    )
     img_buffer.seek(0)
     plt.close(fig)
 

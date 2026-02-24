@@ -7,23 +7,53 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('children', '0008_alter_childshare_role'),
+        ("children", "0008_alter_childshare_role"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='child',
-            name='custom_bottle_high_oz',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Custom bottle feeding amount (oz) for high/recommended+1 button', max_digits=3, null=True, validators=[django.core.validators.MinValueValidator(0.1), django.core.validators.MaxValueValidator(50)]),
+            model_name="child",
+            name="custom_bottle_high_oz",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Custom bottle feeding amount (oz) for high/recommended+1 button",
+                max_digits=3,
+                null=True,
+                validators=[
+                    django.core.validators.MinValueValidator(0.1),
+                    django.core.validators.MaxValueValidator(50),
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='child',
-            name='custom_bottle_low_oz',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Custom bottle feeding amount (oz) for low/recommended-1 button', max_digits=3, null=True, validators=[django.core.validators.MinValueValidator(0.1), django.core.validators.MaxValueValidator(50)]),
+            model_name="child",
+            name="custom_bottle_low_oz",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Custom bottle feeding amount (oz) for low/recommended-1 button",
+                max_digits=3,
+                null=True,
+                validators=[
+                    django.core.validators.MinValueValidator(0.1),
+                    django.core.validators.MaxValueValidator(50),
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='child',
-            name='custom_bottle_mid_oz',
-            field=models.DecimalField(blank=True, decimal_places=1, help_text='Custom bottle feeding amount (oz) for mid/recommended button', max_digits=3, null=True, validators=[django.core.validators.MinValueValidator(0.1), django.core.validators.MaxValueValidator(50)]),
+            model_name="child",
+            name="custom_bottle_mid_oz",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=1,
+                help_text="Custom bottle feeding amount (oz) for mid/recommended button",
+                max_digits=3,
+                null=True,
+                validators=[
+                    django.core.validators.MinValueValidator(0.1),
+                    django.core.validators.MaxValueValidator(50),
+                ],
+            ),
         ),
     ]

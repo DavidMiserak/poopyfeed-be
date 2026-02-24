@@ -11,10 +11,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from django_project.throttles import TrackingCreateThrottle
-
 from diapers.api import NestedDiaperChangeSerializer
 from diapers.models import DiaperChange
+from django_project.throttles import TrackingCreateThrottle
 from feedings.api import NestedFeedingSerializer
 from feedings.models import Feeding
 from naps.api import NestedNapSerializer
@@ -151,9 +150,7 @@ class BatchCreateView(APIView):
             event_data = event.get("data", {})
 
             # Get appropriate serializer for this event type
-            serializer = self._get_event_serializer(
-                event_type, event_data, child
-            )
+            serializer = self._get_event_serializer(event_type, event_data, child)
 
             if serializer.is_valid():
                 validated_events.append(
@@ -209,7 +206,7 @@ class BatchCreateView(APIView):
 
             return Response(response_data, status=status.HTTP_201_CREATED)
 
-        except Exception as e:
+        except Exception:
             # Transaction rolled back automatically
             # Return generic error to avoid leaking internal details
             return Response(
@@ -222,13 +219,17 @@ class BatchCreateView(APIView):
     def _get_event_serializer(self, event_type, event_data, child):
         """Get the appropriate serializer for the event type."""
         if event_type == "feeding":
-            return NestedFeedingSerializer(data=event_data, context={"request": self.request})
+            return NestedFeedingSerializer(
+                data=event_data, context={"request": self.request}
+            )
         elif event_type == "diaper":
             return NestedDiaperChangeSerializer(
                 data=event_data, context={"request": self.request}
             )
         elif event_type == "nap":
-            return NestedNapSerializer(data=event_data, context={"request": self.request})
+            return NestedNapSerializer(
+                data=event_data, context={"request": self.request}
+            )
         else:
             raise ValueError(f"Unknown event type: {event_type}")
 

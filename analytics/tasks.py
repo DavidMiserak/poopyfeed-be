@@ -14,8 +14,8 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.platypus import Image as ReportLabImage
 from reportlab.platypus import (
-    Image as ReportLabImage,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -61,7 +61,7 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
             raise PermissionError("User does not have access to this child")
 
         # Update task status to show it's starting
-        self.update_state(state='STARTED', meta={'progress': 10})
+        self.update_state(state="STARTED", meta={"progress": 10})
 
         # Generate PDF
         pdf_buffer = BytesIO()
@@ -109,7 +109,9 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         story.append(Spacer(1, 0.3 * inch))
 
         # Feeding Trends Section
-        story.append(Paragraph(f"Feeding Trends (Last {days} Days)", custom_heading_style))
+        story.append(
+            Paragraph(f"Feeding Trends (Last {days} Days)", custom_heading_style)
+        )
         feeding_data = get_feeding_trends(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
@@ -179,7 +181,9 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
 
         # Diaper Patterns Section
         story.append(
-            Paragraph(f"Diaper Change Patterns (Last {days} Days)", custom_heading_style)
+            Paragraph(
+                f"Diaper Change Patterns (Last {days} Days)", custom_heading_style
+            )
         )
         diaper_data = get_diaper_patterns(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
@@ -242,14 +246,18 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         story.append(PageBreak())
 
         # Sleep Summary Section
-        story.append(Paragraph(f"Sleep Summary (Last {days} Days)", custom_heading_style))
+        story.append(
+            Paragraph(f"Sleep Summary (Last {days} Days)", custom_heading_style)
+        )
         sleep_data = get_sleep_summary(child_id, days=days)
         story.append(Spacer(1, 0.1 * inch))
 
         # Add sleep chart
         try:
             sleep_chart_buffer = generate_sleep_chart(sleep_data)
-            sleep_chart = ReportLabImage(sleep_chart_buffer, width=6 * inch, height=3 * inch)
+            sleep_chart = ReportLabImage(
+                sleep_chart_buffer, width=6 * inch, height=3 * inch
+            )
             story.append(sleep_chart)
             story.append(Spacer(1, 0.2 * inch))
         except Exception as e:
@@ -306,11 +314,11 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
         story.append(Paragraph(sleep_text, styles["Normal"]))
 
         # Build PDF
-        self.update_state(state='STARTED', meta={'progress': 75})
+        self.update_state(state="STARTED", meta={"progress": 75})
         doc.build(story)
 
         # Save to storage
-        self.update_state(state='STARTED', meta={'progress': 90})
+        self.update_state(state="STARTED", meta={"progress": 90})
         filename = f"analytics-{child.name.replace(' ', '_')}-{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         pdf_buffer.seek(0)
         default_storage.save(f"exports/{filename}", pdf_buffer)
