@@ -13,12 +13,19 @@ from .models import Child, ChildShare
 
 User = get_user_model()
 
+# Test timestamp constants
+TEST_TIME_1000 = "2026-02-17T10:00:00Z"
+TEST_TIME_1025 = "2026-02-17T10:25:00Z"
+TEST_TIME_1030 = "2026-02-17T10:30:00Z"
+TEST_TIME_1100 = "2026-02-17T11:00:00Z"
+TEST_TIME_1130 = "2026-02-17T11:30:00Z"
+
 # Test event payloads
 FEEDING_BOTTLE_EVENT = {
     "type": "feeding",
     "data": {
         "feeding_type": "bottle",
-        "fed_at": "2026-02-17T10:00:00Z",
+        "fed_at": TEST_TIME_1000,
         "amount_oz": 4.0,
     },
 }
@@ -27,7 +34,7 @@ FEEDING_BOTTLE_EVENT_1025 = {
     "type": "feeding",
     "data": {
         "feeding_type": "bottle",
-        "fed_at": "2026-02-17T10:25:00Z",
+        "fed_at": TEST_TIME_1025,
         "amount_oz": 4.0,
     },
 }
@@ -36,7 +43,7 @@ FEEDING_BREAST_EVENT = {
     "type": "feeding",
     "data": {
         "feeding_type": "breast",
-        "fed_at": "2026-02-17T10:00:00Z",
+        "fed_at": TEST_TIME_1000,
     },
 }
 
@@ -44,7 +51,7 @@ DIAPER_WET_EVENT = {
     "type": "diaper",
     "data": {
         "change_type": "wet",
-        "changed_at": "2026-02-17T10:00:00Z",
+        "changed_at": TEST_TIME_1000,
     },
 }
 
@@ -52,23 +59,23 @@ DIAPER_WET_EVENT_1025 = {
     "type": "diaper",
     "data": {
         "change_type": "wet",
-        "changed_at": "2026-02-17T10:25:00Z",
+        "changed_at": TEST_TIME_1025,
     },
 }
 
 NAP_EVENT = {
     "type": "nap",
     "data": {
-        "napped_at": "2026-02-17T10:00:00Z",
-        "ended_at": "2026-02-17T11:00:00Z",
+        "napped_at": TEST_TIME_1000,
+        "ended_at": TEST_TIME_1100,
     },
 }
 
 NAP_EVENT_1030 = {
     "type": "nap",
     "data": {
-        "napped_at": "2026-02-17T10:30:00Z",
-        "ended_at": "2026-02-17T11:30:00Z",
+        "napped_at": TEST_TIME_1030,
+        "ended_at": TEST_TIME_1130,
     },
 }
 
