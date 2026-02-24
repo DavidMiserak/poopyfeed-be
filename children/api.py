@@ -179,11 +179,6 @@ class ChildSerializer(serializers.ModelSerializer):
                     "Recommended amount must be less than high amount."
                 )
 
-            if low >= high:
-                raise serializers.ValidationError(
-                    "Low amount must be less than high amount."
-                )
-
         return data
 
 
