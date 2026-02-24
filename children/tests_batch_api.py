@@ -334,7 +334,7 @@ class BatchCreateAPITest(TestCase):
                         "type": "feeding",
                         "data": {
                             "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
+                            "fed_at": TEST_TIME_1000,
                         },
                     }
                 ]
@@ -372,14 +372,14 @@ class BatchCreateAPITest(TestCase):
                         "type": "feeding",
                         "data": {
                             "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
+                            "fed_at": TEST_TIME_1000,
                         },
                     },
                     {
                         "type": "nap",
                         "data": {
                             "napped_at": "2026-02-17T10:30:00Z",
-                            "ended_at": "2026-02-17T10:00:00Z",
+                            "ended_at": TEST_TIME_1000,
                         },
                     },
                 ]
@@ -427,7 +427,7 @@ class BatchCreateAPITest(TestCase):
                     {
                         "type": "diaper",
                         "data": {
-                            "changed_at": "2026-02-17T10:00:00Z",
+                            "changed_at": TEST_TIME_1000,
                         },
                     }
                 ]
@@ -449,7 +449,7 @@ class BatchCreateAPITest(TestCase):
                         "type": "diaper",
                         "data": {
                             "change_type": "invalid",
-                            "changed_at": "2026-02-17T10:00:00Z",
+                            "changed_at": TEST_TIME_1000,
                         },
                     }
                 ]
