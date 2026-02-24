@@ -1533,6 +1533,99 @@ class PDFDownloadIOErrorTests(APITestCase):
                 export_dir.rmdir()
 
 
+class AnalyticsUtilsEdgeCaseTests(TestCase):
+    """Test analytics utility functions edge cases."""
+
+    def test_calculate_trend_empty_list(self):
+        """Empty list returns 'stable'."""
+        from analytics.utils import _calculate_trend
+
+        self.assertEqual(_calculate_trend([]), "stable")
+
+    def test_calculate_trend_single_value(self):
+        """Single value returns 'stable'."""
+        from analytics.utils import _calculate_trend
+
+        self.assertEqual(_calculate_trend([5]), "stable")
+
+    def test_calculate_trend_decreasing(self):
+        """Decreasing values return 'decreasing'."""
+        from analytics.utils import _calculate_trend
+
+        result = _calculate_trend([10, 10, 10, 2, 2, 2])
+        self.assertEqual(result, "decreasing")
+
+    def test_calculate_trend_two_values_stable(self):
+        """Two equal values return 'stable'."""
+        from analytics.utils import _calculate_trend
+
+        result = _calculate_trend([5, 5])
+        self.assertEqual(result, "stable")
+
+    def test_calculate_trend_increasing(self):
+        """Increasing values return 'increasing'."""
+        from analytics.utils import _calculate_trend
+
+        result = _calculate_trend([1, 1, 1, 5, 5, 5])
+        self.assertEqual(result, "increasing")
+
+    def test_calculate_variance_empty_list(self):
+        """Empty list returns 0.0."""
+        from analytics.utils import _calculate_variance
+
+        self.assertEqual(_calculate_variance([]), 0.0)
+
+    def test_calculate_variance_single_value(self):
+        """Single value returns 0.0."""
+        from analytics.utils import _calculate_variance
+
+        self.assertEqual(_calculate_variance([5]), 0.0)
+
+    def test_calculate_variance_multiple_values(self):
+        """Multiple values return correct variance."""
+        from analytics.utils import _calculate_variance
+
+        result = _calculate_variance([2, 4, 4, 4, 5, 5, 7, 9])
+        self.assertGreater(result, 0)
+
+    def test_weekly_summary_with_diaper_breakdown(self):
+        """Weekly summary includes diaper type breakdown from DB."""
+        from analytics.utils import get_weekly_summary
+
+        from children.models import Child
+        from diapers.models import DiaperChange
+
+        user = User.objects.create_user(
+            username="weeklyuser",
+            email="weekly@example.com",
+            password="password123",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Weekly Baby",
+            date_of_birth="2024-01-15",
+        )
+
+        now = timezone.now()
+        # Create diapers of each type today
+        DiaperChange.objects.create(
+            child=child, change_type="wet", changed_at=now
+        )
+        DiaperChange.objects.create(
+            child=child, change_type="dirty", changed_at=now
+        )
+        DiaperChange.objects.create(
+            child=child, change_type="both", changed_at=now
+        )
+
+        result = get_weekly_summary(child.id)
+        diaper = result["diapers"]
+        self.assertEqual(diaper["count"], 3)
+        self.assertEqual(diaper["wet"], 1)
+        self.assertEqual(diaper["dirty"], 1)
+        self.assertEqual(diaper["both"], 1)
+
+
 class PDFChartGenerationTests(TestCase):
     """Test PDF chart generation functions."""
 

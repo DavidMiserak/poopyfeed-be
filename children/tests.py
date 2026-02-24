@@ -1,13 +1,16 @@
-from datetime import date
+from datetime import date, datetime, timedelta
+from unittest.mock import patch
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from django_project.test_constants import TEST_PASSWORD
 
-from .forms import ChildForm
+from .forms import ChildForm, LocalDateTimeFormMixin
 from .models import Child, ChildShare, ShareInvite
 
 TEST_PARENT_EMAIL = "parent@example.com"
@@ -971,3 +974,95 @@ class SharedChildListViewTests(TestCase):
         )
         self.assertEqual(response["Pragma"], "no-cache")
         self.assertEqual(response["Expires"], "0")
+
+
+class ChildFormFutureDateTests(TestCase):
+    """Test ChildForm future date of birth validation."""
+
+    def test_future_date_of_birth_rejected(self):
+        """Date of birth in the future is rejected."""
+        future_date = (timezone.now() + timedelta(days=30)).date()
+        form = ChildForm(
+            data={
+                "name": "Future Baby",
+                "date_of_birth": future_date.isoformat(),
+                "gender": "F",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("date_of_birth", form.errors)
+
+
+class LocalDateTimeFormMixinTests(TestCase):
+    """Test LocalDateTimeFormMixin timezone conversion and future validation."""
+
+    def test_future_utc_datetime_rejected(self):
+        """Datetime that becomes future after UTC conversion is rejected."""
+        from django import forms as django_forms
+
+        class TestForm(LocalDateTimeFormMixin, django_forms.Form):
+            datetime_field_name = "test_dt"
+            test_dt = django_forms.DateTimeField()
+
+        # A datetime far in the future + offset that keeps it in the future
+        future_local = timezone.now() + timedelta(hours=2)
+        form = TestForm(
+            data={
+                "test_dt": future_local.strftime("%Y-%m-%d %H:%M:%S"),
+                "tz_offset": "0",  # UTC, so it stays in the future
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("test_dt", form.errors)
+
+
+class AcceptInviteViewRaceConditionTests(TestCase):
+    """Test AcceptInviteView IntegrityError handling in web UI."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = get_user_model().objects.create_user(
+            username="raceowner2",
+            email="raceowner2@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.acceptor = get_user_model().objects.create_user(
+            username="raceacceptor2",
+            email="raceacceptor2@example.com",
+            password=TEST_PASSWORD,
+        )
+
+    def test_accept_invite_integrity_error_handled(self):
+        """IntegrityError during web accept invite is handled gracefully."""
+        child = Child.objects.create(
+            parent=self.owner,
+            name="Race Baby 2",
+            date_of_birth=date(2025, 1, 1),
+        )
+        invite = ShareInvite.objects.create(
+            child=child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+        # Pre-create the share (simulating race condition)
+        ChildShare.objects.create(
+            child=child,
+            user=self.acceptor,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+
+        self.client.login(email="raceacceptor2@example.com", password=TEST_PASSWORD)
+
+        # Mock get_or_create to raise IntegrityError
+        with patch.object(
+            ChildShare.objects,
+            "get_or_create",
+            side_effect=IntegrityError("duplicate key"),
+        ):
+            response = self.client.get(
+                reverse("children:accept_invite", kwargs={"token": invite.token})
+            )
+
+        # Should redirect (302) without crashing
+        self.assertEqual(response.status_code, 302)

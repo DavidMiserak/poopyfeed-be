@@ -352,3 +352,33 @@ class DeleteAccountAPITests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.content, b"")
+
+
+class GetAuthTokenTests(TestCase):
+    """Tests for get_auth_token endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="tokenuser",
+            email="token@example.com",
+            password=TEST_PASSWORD,
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+
+    def test_get_auth_token_returns_token(self):
+        """Authenticated user gets their auth token."""
+        response = self.client.get("/api/v1/browser/v1/auth/token/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("auth_token", response.data)
+        self.assertEqual(response.data["auth_token"], self.token.key)
+
+    def test_get_auth_token_requires_auth(self):
+        """Unauthenticated request is denied."""
+        client = APIClient()
+        response = client.get("/api/v1/browser/v1/auth/token/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
