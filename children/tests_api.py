@@ -1,6 +1,10 @@
 """API tests for children app."""
 
+from decimal import Decimal
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -451,3 +455,243 @@ class PermissionEdgeCaseTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {other_token.key}")
         response = self.client.post(API_ACCEPT_INVITE_URL, {"token": invite.token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class CustomBottleValidationTests(APITestCase):
+    """Tests for custom bottle amount validation in ChildSerializer."""
+
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.user = user_model.objects.create_user(
+            username="bottleuser",
+            email="bottle@example.com",
+            password=TEST_PASSWORD,
+        )
+
+    def setUp(self):
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+
+    def _create_child_data(self, **overrides):
+        data = {
+            "name": "Bottle Baby",
+            "date_of_birth": "2025-06-01",
+            "gender": "F",
+        }
+        data.update(overrides)
+        return data
+
+    def test_create_child_with_valid_custom_bottles(self):
+        """Valid custom bottle amounts (low < mid < high) succeed."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="2.0",
+            custom_bottle_mid_oz="4.0",
+            custom_bottle_high_oz="6.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Decimal(response.data["custom_bottle_low_oz"]), Decimal("2.0"))
+
+    def test_create_child_with_null_custom_bottles(self):
+        """All null custom bottle amounts succeed (use age-based defaults)."""
+        data = self._create_child_data()
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["custom_bottle_low_oz"])
+
+    def test_custom_bottle_low_out_of_range(self):
+        """Low amount below 0.1 oz is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="0.05",
+            custom_bottle_mid_oz="4.0",
+            custom_bottle_high_oz="6.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_low_above_range(self):
+        """Low amount above 50 oz is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="51.0",
+            custom_bottle_mid_oz="52.0",
+            custom_bottle_high_oz="53.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_mid_out_of_range(self):
+        """Mid amount above 50 oz is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="2.0",
+            custom_bottle_mid_oz="55.0",
+            custom_bottle_high_oz="60.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_high_out_of_range(self):
+        """High amount above 50 oz is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="2.0",
+            custom_bottle_mid_oz="4.0",
+            custom_bottle_high_oz="55.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_partial_set_rejected(self):
+        """Setting only some custom bottle amounts is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="2.0",
+            custom_bottle_mid_oz="4.0",
+            # high not set
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_low_greater_than_mid(self):
+        """Low >= mid is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="5.0",
+            custom_bottle_mid_oz="4.0",
+            custom_bottle_high_oz="6.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_mid_greater_than_high(self):
+        """Mid >= high is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="2.0",
+            custom_bottle_mid_oz="7.0",
+            custom_bottle_high_oz="6.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_bottle_low_equal_mid(self):
+        """Low == mid is rejected."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="4.0",
+            custom_bottle_mid_oz="4.0",
+            custom_bottle_high_oz="6.0",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class AcceptInviteRaceConditionTests(APITestCase):
+    """Tests for IntegrityError handling in accept invite."""
+
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
+            username="raceowner",
+            email="raceowner@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.acceptor = user_model.objects.create_user(
+            username="raceacceptor",
+            email="raceacceptor@example.com",
+            password=TEST_PASSWORD,
+        )
+
+    def setUp(self):
+        self.acceptor_token = Token.objects.create(user=self.acceptor)
+        self.child = Child.objects.create(
+            parent=self.owner,
+            name="Race Baby",
+            date_of_birth="2025-01-01",
+        )
+        self.invite = ShareInvite.objects.create(
+            child=self.child,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+
+    def test_accept_invite_race_condition_integrity_error(self):
+        """IntegrityError during accept is handled gracefully."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {self.acceptor_token.key}"
+        )
+
+        # Create the share manually first (simulating the race condition)
+        existing_share = ChildShare.objects.create(
+            child=self.child,
+            user=self.acceptor,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=self.owner,
+        )
+
+        # Mock get_or_create to raise IntegrityError then have get succeed
+        original_get_or_create = ChildShare.objects.get_or_create
+
+        def mock_get_or_create(**kwargs):
+            raise IntegrityError("duplicate key")
+
+        with patch.object(
+            ChildShare.objects, "get_or_create", side_effect=mock_get_or_create
+        ):
+            response = self.client.post(
+                API_ACCEPT_INVITE_URL, {"token": self.invite.token}
+            )
+
+        # Should return 200 OK (existing share found)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_accept_invite_create_invalid_role(self):
+        """Accept invite with invalid role in serializer."""
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {self.acceptor_token.key}"
+        )
+        response = self.client.post(
+            API_ACCEPT_INVITE_URL, {"token": "nonexistent-token-value"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class SerializerContextEdgeCaseTests(APITestCase):
+    """Tests for serializer methods with missing request context."""
+
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.user = user_model.objects.create_user(
+            username="ctxuser",
+            email="ctx@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Context Baby",
+            date_of_birth="2025-01-01",
+        )
+
+    def test_serializer_without_request_context(self):
+        """Serializer methods return defaults without request context."""
+        from .api import ChildSerializer
+
+        serializer = ChildSerializer(self.child, context={})
+        self.assertIsNone(serializer.get_user_role(self.child))
+        self.assertFalse(serializer.get_can_edit(self.child))
+        self.assertFalse(serializer.get_can_manage_sharing(self.child))
+
+    def test_user_role_for_user_with_no_share(self):
+        """User with no share and not owner returns None for user_role."""
+        from .api import ChildSerializer
+        from rest_framework.test import APIRequestFactory
+
+        user_model = get_user_model()
+        stranger = user_model.objects.create_user(
+            username="ctx_stranger",
+            email="ctx_stranger@example.com",
+            password=TEST_PASSWORD,
+        )
+        factory = APIRequestFactory()
+        request = factory.get("/")
+        request.user = stranger
+
+        serializer = ChildSerializer(self.child, context={"request": request})
+        self.assertIsNone(serializer.get_user_role(self.child))

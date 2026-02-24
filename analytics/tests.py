@@ -1403,6 +1403,136 @@ class PDFDownloadTests(APITestCase):
                 export_dir.rmdir()
 
 
+class ExportStatusUnknownStateTests(APITestCase):
+    """Test export_status with unknown Celery states and progress extraction failures."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="unknownstate",
+            email="unknownstate@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Unknown State Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def setUp(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_unknown_celery_state(self, mock_result_class):
+        """Unknown Celery state maps to 'processing'."""
+        mock_result = MagicMock()
+        mock_result.status = "RETRY"  # Not in the explicit state map
+        mock_result.info = {"progress": 25}
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+        data = response.json()
+        self.assertEqual(data["status"], "processing")
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_pending_info_dict_no_progress(self, mock_result_class):
+        """PENDING with dict info but no progress key uses status-based default."""
+        mock_result = MagicMock()
+        mock_result.status = "PENDING"
+        mock_result.info = {"step": "initializing"}  # Dict but no 'progress' key
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+        data = response.json()
+        self.assertEqual(data["status"], "pending")
+        self.assertEqual(data["progress"], 0)
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_success_info_dict_no_progress(self, mock_result_class):
+        """SUCCESS with dict info but no progress key defaults to 100."""
+        mock_result = MagicMock()
+        mock_result.status = "SUCCESS"
+        mock_result.info = {"step": "done"}  # Dict but no 'progress' key
+        mock_result.result = {"filename": "report.pdf"}
+        mock_result.successful.return_value = True
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+        data = response.json()
+        self.assertEqual(data["progress"], 100)
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_progress_extraction_exception(self, mock_result_class):
+        """AttributeError during progress extraction uses fallback."""
+        mock_result = MagicMock()
+        mock_result.status = "SUCCESS"
+        mock_result.result = {"filename": "report.pdf"}
+        mock_result.successful.return_value = True
+        mock_result.failed.return_value = False
+        # Make .info raise AttributeError on isinstance check
+        type(mock_result).info = property(lambda self: (_ for _ in ()).throw(AttributeError))
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+        data = response.json()
+        self.assertEqual(data["progress"], 100)  # Fallback for SUCCESS
+
+    @patch("analytics.views.AsyncResult")
+    def test_export_status_started_info_dict_no_progress(self, mock_result_class):
+        """STARTED with dict info but no progress key defaults to 50."""
+        mock_result = MagicMock()
+        mock_result.status = "STARTED"
+        mock_result.info = {"step": "processing"}  # Dict but no 'progress' key
+        mock_result.successful.return_value = False
+        mock_result.failed.return_value = False
+        mock_result_class.return_value = mock_result
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/export-status/test-task-id/"
+        )
+        data = response.json()
+        self.assertEqual(data["progress"], 50)
+
+
+class PDFDownloadIOErrorTests(APITestCase):
+    """Test PDF download IOError handling."""
+
+    def test_download_pdf_io_error(self):
+        """Download endpoint returns 404 on IOError when reading file."""
+        from pathlib import Path
+
+        export_dir = Path("exports")
+        export_dir.mkdir(exist_ok=True)
+        test_file = export_dir / "ioerror_test.pdf"
+        test_file.write_bytes(b"test")
+
+        try:
+            with patch("builtins.open", side_effect=IOError("Permission denied")):
+                response = self.client.get(
+                    "/api/v1/analytics/download/ioerror_test.pdf/"
+                )
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        finally:
+            if test_file.exists():
+                test_file.unlink()
+            if export_dir.exists() and not any(export_dir.iterdir()):
+                export_dir.rmdir()
+
+
 class PDFChartGenerationTests(TestCase):
     """Test PDF chart generation functions."""
 
