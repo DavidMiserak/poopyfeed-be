@@ -13,6 +13,65 @@ from .models import Child, ChildShare
 
 User = get_user_model()
 
+# Test event payloads
+FEEDING_BOTTLE_EVENT = {
+    "type": "feeding",
+    "data": {
+        "feeding_type": "bottle",
+        "fed_at": "2026-02-17T10:00:00Z",
+        "amount_oz": 4.0,
+    },
+}
+
+FEEDING_BOTTLE_EVENT_1025 = {
+    "type": "feeding",
+    "data": {
+        "feeding_type": "bottle",
+        "fed_at": "2026-02-17T10:25:00Z",
+        "amount_oz": 4.0,
+    },
+}
+
+FEEDING_BREAST_EVENT = {
+    "type": "feeding",
+    "data": {
+        "feeding_type": "breast",
+        "fed_at": "2026-02-17T10:00:00Z",
+    },
+}
+
+DIAPER_WET_EVENT = {
+    "type": "diaper",
+    "data": {
+        "change_type": "wet",
+        "changed_at": "2026-02-17T10:00:00Z",
+    },
+}
+
+DIAPER_WET_EVENT_1025 = {
+    "type": "diaper",
+    "data": {
+        "change_type": "wet",
+        "changed_at": "2026-02-17T10:25:00Z",
+    },
+}
+
+NAP_EVENT = {
+    "type": "nap",
+    "data": {
+        "napped_at": "2026-02-17T10:00:00Z",
+        "ended_at": "2026-02-17T11:00:00Z",
+    },
+}
+
+NAP_EVENT_1030 = {
+    "type": "nap",
+    "data": {
+        "napped_at": "2026-02-17T10:30:00Z",
+        "ended_at": "2026-02-17T11:30:00Z",
+    },
+}
+
 
 class BatchCreateAPITest(TestCase):
     """Test batch event creation endpoint."""
@@ -64,18 +123,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
         self.assertEqual(response.status_code, 201)
@@ -86,18 +134,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.co_parent)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
         self.assertEqual(response.status_code, 201)
@@ -107,18 +144,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.caregiver)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
         self.assertEqual(response.status_code, 201)
@@ -128,18 +154,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.other_user)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
         self.assertEqual(response.status_code, 403)
@@ -158,18 +173,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
 
@@ -190,17 +194,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "diaper",
-                        "data": {
-                            "change_type": "wet",
-                            "changed_at": "2026-02-17T10:00:00Z",
-                        },
-                    }
-                ]
-            },
+            {"events": [DIAPER_WET_EVENT]},
             format="json",
         )
 
@@ -218,17 +212,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "nap",
-                        "data": {
-                            "napped_at": "2026-02-17T10:00:00Z",
-                            "ended_at": "2026-02-17T11:00:00Z",
-                        },
-                    }
-                ]
-            },
+            {"events": [NAP_EVENT]},
             format="json",
         )
 
@@ -246,28 +230,9 @@ class BatchCreateAPITest(TestCase):
             self.url,
             {
                 "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    },
-                    {
-                        "type": "diaper",
-                        "data": {
-                            "change_type": "wet",
-                            "changed_at": "2026-02-17T10:25:00Z",
-                        },
-                    },
-                    {
-                        "type": "nap",
-                        "data": {
-                            "napped_at": "2026-02-17T10:30:00Z",
-                            "ended_at": "2026-02-17T11:30:00Z",
-                        },
-                    },
+                    FEEDING_BOTTLE_EVENT,
+                    DIAPER_WET_EVENT_1025,
+                    NAP_EVENT_1030,
                 ]
             },
             format="json",
@@ -362,7 +327,6 @@ class BatchCreateAPITest(TestCase):
                         "data": {
                             "feeding_type": "bottle",
                             "fed_at": "2026-02-17T10:00:00Z",
-                            # missing amount_oz
                         },
                     }
                 ]
@@ -382,18 +346,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "breast",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            # missing duration_minutes and side
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BREAST_EVENT]},
             format="json",
         )
 
@@ -412,14 +365,13 @@ class BatchCreateAPITest(TestCase):
                         "data": {
                             "feeding_type": "bottle",
                             "fed_at": "2026-02-17T10:00:00Z",
-                            # missing amount_oz
                         },
                     },
                     {
                         "type": "nap",
                         "data": {
                             "napped_at": "2026-02-17T10:30:00Z",
-                            "ended_at": "2026-02-17T10:00:00Z",  # ended_at before napped_at
+                            "ended_at": "2026-02-17T10:00:00Z",
                         },
                     },
                 ]
@@ -438,20 +390,12 @@ class BatchCreateAPITest(TestCase):
             self.url,
             {
                 "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    },
+                    FEEDING_BOTTLE_EVENT,
                     {
                         "type": "feeding",
                         "data": {
                             "feeding_type": "bottle",
                             "fed_at": "2026-02-17T10:25:00Z",
-                            # missing amount_oz - this will cause failure
                         },
                     },
                 ]
@@ -476,7 +420,6 @@ class BatchCreateAPITest(TestCase):
                         "type": "diaper",
                         "data": {
                             "changed_at": "2026-02-17T10:00:00Z",
-                            # missing change_type
                         },
                     }
                 ]
@@ -544,7 +487,6 @@ class BatchCreateAPITest(TestCase):
                         "type": "nap",
                         "data": {
                             "ended_at": "2026-02-17T11:00:00Z",
-                            # missing napped_at
                         },
                     }
                 ]
@@ -562,18 +504,7 @@ class BatchCreateAPITest(TestCase):
         self.client.force_authenticate(self.owner)
         response = self.client.post(
             self.url,
-            {
-                "events": [
-                    {
-                        "type": "feeding",
-                        "data": {
-                            "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:00:00Z",
-                            "amount_oz": 4.0,
-                        },
-                    }
-                ]
-            },
+            {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
 
