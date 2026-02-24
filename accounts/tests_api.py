@@ -18,7 +18,17 @@ from django_project.test_constants import (
 User = get_user_model()
 
 
-class UserProfileAPITests(TestCase):
+class AuthenticatedAPITestMixin:
+    """Mixin to set up authenticated API client for test classes."""
+
+    def setUp(self):
+        """Set up API client with authentication token."""
+        self.client = APIClient()
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+
+
+class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
@@ -33,11 +43,6 @@ class UserProfileAPITests(TestCase):
             email="other@example.com",
             password=TEST_PASSWORD,
         )
-
-    def setUp(self):
-        self.client = APIClient()
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 
     def test_get_profile(self):
         response = self.client.get("/api/v1/account/profile/")
@@ -147,7 +152,7 @@ class UserProfileAPITests(TestCase):
         self.assertEqual(response.data["id"], self.user.pk)
 
 
-class ChangePasswordAPITests(TestCase):
+class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
@@ -155,11 +160,6 @@ class ChangePasswordAPITests(TestCase):
             email="pass@example.com",
             password=TEST_PASSWORD,
         )
-
-    def setUp(self):
-        self.client = APIClient()
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 
     def test_change_password_success(self):
         new_password = TEST_NEW_SECURE_PASSWORD
@@ -284,16 +284,14 @@ class ChangePasswordAPITests(TestCase):
         self.assertIn("new_password", response.data)
 
 
-class DeleteAccountAPITests(TestCase):
+class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="deleteuser",
             email="delete@example.com",
             password=TEST_PASSWORD,
         )
-        self.client = APIClient()
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        super().setUp()
 
     def test_delete_account_success(self):
         user_pk = self.user.pk
@@ -361,7 +359,7 @@ class DeleteAccountAPITests(TestCase):
         self.assertEqual(response.content, b"")
 
 
-class GetAuthTokenTests(TestCase):
+class GetAuthTokenTests(AuthenticatedAPITestMixin, TestCase):
     """Tests for get_auth_token endpoint."""
 
     @classmethod
@@ -371,11 +369,6 @@ class GetAuthTokenTests(TestCase):
             email="token@example.com",
             password=TEST_PASSWORD,
         )
-
-    def setUp(self):
-        self.client = APIClient()
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 
     def test_get_auth_token_returns_token(self):
         """Authenticated user gets their auth token via POST."""
