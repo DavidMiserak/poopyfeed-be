@@ -6,7 +6,14 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from django_project.test_constants import TEST_PASSWORD
+from django_project.test_constants import (
+    TEST_COMMON_PASSWORD,
+    TEST_DIFFERENT_PASSWORD,
+    TEST_NEW_SECURE_PASSWORD,
+    TEST_PASSWORD,
+    TEST_WEAK_PASSWORD,
+    TEST_WRONG_PASSWORD,
+)
 
 User = get_user_model()
 
@@ -155,7 +162,7 @@ class ChangePasswordAPITests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 
     def test_change_password_success(self):
-        new_password = "NewSecurePass123!"  # noqa: S105
+        new_password = TEST_NEW_SECURE_PASSWORD
         response = self.client.post(
             "/api/v1/account/password/",
             {
@@ -184,9 +191,9 @@ class ChangePasswordAPITests(TestCase):
         response = self.client.post(
             "/api/v1/account/password/",
             {
-                "current_password": "wrongpassword",
-                "new_password": "NewSecurePass123!",
-                "new_password_confirm": "NewSecurePass123!",
+                "current_password": TEST_WRONG_PASSWORD,
+                "new_password": TEST_NEW_SECURE_PASSWORD,
+                "new_password_confirm": TEST_NEW_SECURE_PASSWORD,
             },
             format="json",
         )
@@ -198,8 +205,8 @@ class ChangePasswordAPITests(TestCase):
             "/api/v1/account/password/",
             {
                 "current_password": TEST_PASSWORD,
-                "new_password": "NewSecurePass123!",
-                "new_password_confirm": "DifferentPass123!",
+                "new_password": TEST_NEW_SECURE_PASSWORD,
+                "new_password_confirm": TEST_DIFFERENT_PASSWORD,
             },
             format="json",
         )
@@ -211,8 +218,8 @@ class ChangePasswordAPITests(TestCase):
             "/api/v1/account/password/",
             {
                 "current_password": TEST_PASSWORD,
-                "new_password": "123",
-                "new_password_confirm": "123",
+                "new_password": TEST_WEAK_PASSWORD,
+                "new_password_confirm": TEST_WEAK_PASSWORD,
             },
             format="json",
         )
@@ -222,7 +229,7 @@ class ChangePasswordAPITests(TestCase):
     def test_change_password_token_rotation(self):
         """After password change, only the new token is valid."""
         old_token_key = self.token.key
-        new_password = "NewSecurePass123!"  # noqa: S105
+        new_password = TEST_NEW_SECURE_PASSWORD
         response = self.client.post(
             "/api/v1/account/password/",
             {
@@ -248,8 +255,8 @@ class ChangePasswordAPITests(TestCase):
             "/api/v1/account/password/",
             {
                 "current_password": TEST_PASSWORD,
-                "new_password": "NewSecurePass123!",
-                "new_password_confirm": "NewSecurePass123!",
+                "new_password": TEST_NEW_SECURE_PASSWORD,
+                "new_password_confirm": TEST_NEW_SECURE_PASSWORD,
             },
             format="json",
         )
@@ -268,8 +275,8 @@ class ChangePasswordAPITests(TestCase):
             "/api/v1/account/password/",
             {
                 "current_password": TEST_PASSWORD,
-                "new_password": "password123",
-                "new_password_confirm": "password123",
+                "new_password": TEST_COMMON_PASSWORD,
+                "new_password_confirm": TEST_COMMON_PASSWORD,
             },
             format="json",
         )
@@ -301,7 +308,7 @@ class DeleteAccountAPITests(TestCase):
     def test_delete_account_wrong_password(self):
         response = self.client.post(
             "/api/v1/account/delete/",
-            {"current_password": "wrongpassword"},
+            {"current_password": TEST_WRONG_PASSWORD},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

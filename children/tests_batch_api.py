@@ -5,6 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from diapers.models import DiaperChange
+from django_project.test_constants import TEST_PASSWORD
 from feedings.models import Feeding
 from naps.models import Nap
 
@@ -21,16 +22,16 @@ class BatchCreateAPITest(TestCase):
         """Set up test users and child."""
         # Create users
         cls.owner = User.objects.create_user(
-            username="owner", email="owner@example.com", password="testpass123"
+            username="owner", email="owner@example.com", password=TEST_PASSWORD
         )
         cls.co_parent = User.objects.create_user(
-            username="coparent", email="coparent@example.com", password="testpass123"
+            username="coparent", email="coparent@example.com", password=TEST_PASSWORD
         )
         cls.caregiver = User.objects.create_user(
-            username="caregiver", email="caregiver@example.com", password="testpass123"
+            username="caregiver", email="caregiver@example.com", password=TEST_PASSWORD
         )
         cls.other_user = User.objects.create_user(
-            username="other", email="other@example.com", password="testpass123"
+            username="other", email="other@example.com", password=TEST_PASSWORD
         )
 
         # Create child owned by owner
