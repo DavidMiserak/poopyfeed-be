@@ -168,16 +168,15 @@ class ChildSerializer(serializers.ModelSerializer):
             )
 
         # All three are set - validate ordering
-        if set_count == 3:
-            if low >= mid:
-                raise serializers.ValidationError(
-                    "Low amount must be less than recommended amount."
-                )
+        if low >= mid:
+            raise serializers.ValidationError(
+                "Low amount must be less than recommended amount."
+            )
 
-            if mid >= high:
-                raise serializers.ValidationError(
-                    "Recommended amount must be less than high amount."
-                )
+        if mid >= high:
+            raise serializers.ValidationError(
+                "Recommended amount must be less than high amount."
+            )
 
         return data
 
