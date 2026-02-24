@@ -44,6 +44,21 @@ from .utils import (
     get_weekly_summary,
 )
 
+# Celery status to frontend status mapping
+CELERY_STATUS_MAP = {
+    "PENDING": "pending",
+    "STARTED": "processing",
+    "SUCCESS": "completed",
+    "FAILURE": "failed",
+}
+
+# Progress values for different task states
+PROGRESS_BY_STATUS = {
+    "pending": 0,
+    "processing": 50,
+    "completed": 100,
+}
+
 
 class AnalyticsViewSet(viewsets.ViewSet):
     """ViewSet for analytics endpoints.
@@ -114,6 +129,38 @@ class AnalyticsViewSet(viewsets.ViewSet):
         cache.set(cache_key, data, cache_ttl)
 
         return data
+
+    def _map_celery_status(self, celery_status: str) -> str:
+        """Map Celery task status to frontend-friendly status.
+
+        Args:
+            celery_status: Celery task status (PENDING, STARTED, SUCCESS, FAILURE)
+
+        Returns:
+            Frontend status (pending, processing, completed, failed)
+        """
+        return CELERY_STATUS_MAP.get(celery_status, "processing")
+
+    def _get_progress_from_task(self, task_result, frontend_status: str) -> int:
+        """Extract or compute progress value from task result.
+
+        Args:
+            task_result: AsyncResult from Celery
+            frontend_status: Mapped frontend status
+
+        Returns:
+            Progress value (0-100)
+        """
+        try:
+            if hasattr(task_result, "info") and isinstance(task_result.info, dict):
+                progress = task_result.info.get("progress")
+                if progress is not None:
+                    return int(progress)
+        except (AttributeError, ValueError, TypeError):
+            pass
+
+        # Use default progress for status
+        return PROGRESS_BY_STATUS.get(frontend_status, 50)
 
     @action(detail=True, methods=["get"], url_path="feeding-trends")
     def feeding_trends(self, request, pk=None):
@@ -377,58 +424,22 @@ class AnalyticsViewSet(viewsets.ViewSet):
         Returns:
             JSON with task status and result (if complete)
         """
-
         # Get task result
         task_result = AsyncResult(task_id)
-
-        # Map Celery task states to frontend-friendly status values
         celery_status = task_result.status
-        if celery_status == "PENDING":
-            frontend_status = "pending"
-        elif celery_status == "STARTED":
-            frontend_status = "processing"
-        elif celery_status == "SUCCESS":
-            frontend_status = "completed"
-        elif celery_status == "FAILURE":
-            frontend_status = "failed"
-        else:
-            # Handle any other states as processing
-            frontend_status = "processing"
 
+        # Map to frontend status and build response
+        frontend_status = self._map_celery_status(celery_status)
         response_data = {
             "task_id": task_id,
             "status": frontend_status,
         }
 
-        # Extract progress from task metadata if available
-        try:
-            if hasattr(task_result, "info") and isinstance(task_result.info, dict):
-                progress = task_result.info.get("progress")
-                if progress is not None:
-                    response_data["progress"] = int(progress)
-                else:
-                    # Info exists but no progress field - use status-based default
-                    if celery_status == "PENDING":
-                        response_data["progress"] = 0
-                    elif celery_status == "STARTED":
-                        response_data["progress"] = 50
-                    elif celery_status == "SUCCESS":
-                        response_data["progress"] = 100
-            elif celery_status == "PENDING":
-                response_data["progress"] = 0
-            elif celery_status == "STARTED":
-                response_data["progress"] = 50  # Default progress for started tasks
-            elif celery_status == "SUCCESS":
-                response_data["progress"] = 100
-        except (AttributeError, ValueError, TypeError):
-            # Fallback if progress extraction fails
-            if celery_status == "SUCCESS":
-                response_data["progress"] = 100
-            elif celery_status == "PENDING":
-                response_data["progress"] = 0
-            else:
-                response_data["progress"] = 50
+        # Extract or compute progress value
+        progress = self._get_progress_from_task(task_result, frontend_status)
+        response_data["progress"] = progress
 
+        # Add result or error if available
         if task_result.successful():
             response_data["result"] = task_result.result
         elif task_result.failed():
