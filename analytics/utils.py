@@ -26,6 +26,13 @@ from diapers.models import DiaperChange
 from feedings.models import Feeding
 from naps.models import Nap
 
+# Duration expression for nap calculations: (ended_at - napped_at) in minutes
+# EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
+_DURATION_EXPR = ExpressionWrapper(
+    Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
+    output_field=FloatField(),
+)
+
 
 def _get_date_range(days: int = 30) -> tuple[date, date]:
     """Get start and end dates for a trend query.
@@ -303,12 +310,8 @@ def get_sleep_summary(
     """
     start_date, end_date = _get_date_range(days)
 
-    # Duration expression: (ended_at - napped_at) in minutes
-    # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
-    duration_expr = ExpressionWrapper(
-        Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
-        output_field=FloatField(),
-    )
+    # Use pre-calculated duration expression
+    duration_expr = _DURATION_EXPR
 
     # Fetch aggregated daily data with duration stats
     raw_data = (
@@ -368,8 +371,6 @@ def get_today_summary(child_id: int) -> dict[str, Any]:
         Dict with feedings, diapers, sleep counts and totals
     """
     today = timezone.now().date()
-    today_start = datetime.combine(today, datetime.min.time())
-    today_end = datetime.combine(today, datetime.max.time())
 
     # Get today's feedings
     feeding_stats = Feeding.objects.filter(
@@ -423,11 +424,7 @@ def get_today_summary(child_id: int) -> dict[str, Any]:
         diaper_data[item["change_type"]] = item["count"]
 
     # Get today's naps with duration stats
-    # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
-    duration_expr = ExpressionWrapper(
-        Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
-        output_field=FloatField(),
-    )
+    duration_expr = _DURATION_EXPR
     nap_stats = Nap.objects.filter(
         child_id=child_id,
         napped_at__date=today,
@@ -527,11 +524,7 @@ def get_weekly_summary(child_id: int) -> dict[str, Any]:
         diaper_data[item["change_type"]] = item["count"]
 
     # Get week's naps with duration stats
-    # EXTRACT(EPOCH FROM interval) returns seconds; divide by 60 for minutes
-    duration_expr = ExpressionWrapper(
-        Func(F("ended_at") - F("napped_at"), function="", template="EXTRACT(EPOCH FROM %(expressions)s)") / 60,
-        output_field=FloatField(),
-    )
+    duration_expr = _DURATION_EXPR
     nap_stats = Nap.objects.filter(
         child_id=child_id,
         napped_at__date__gte=week_start,
