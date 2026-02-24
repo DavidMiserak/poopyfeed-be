@@ -3,6 +3,7 @@ from zoneinfo import available_timezones
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers, status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -13,10 +14,15 @@ from rest_framework.views import APIView
 User = get_user_model()
 
 
-@api_view(["GET"])
+@csrf_protect
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def get_auth_token(request):
-    """Get or create auth token for the current user."""
+    """Get or create auth token for the current user.
+
+    Security: Uses POST to prevent CSRF and token leakage via browser cache/referrers.
+    CSRF protection explicitly enabled (not via middleware exemption).
+    """
     token, created = Token.objects.get_or_create(user=request.user)
     return Response({"auth_token": token.key}, status=status.HTTP_200_OK)
 
