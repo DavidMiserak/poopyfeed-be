@@ -8,9 +8,12 @@ Verifies:
 - Multiple children caches are isolated
 """
 
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
+from django.utils import timezone
 
 from children.models import Child
 from diapers.models import DiaperChange
@@ -85,7 +88,7 @@ class FeedingCacheInvalidationTests(TestCase):
         # Create feeding
         feeding = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -98,7 +101,7 @@ class FeedingCacheInvalidationTests(TestCase):
         """Test cache is invalidated when feeding is updated."""
         feeding = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -114,7 +117,7 @@ class FeedingCacheInvalidationTests(TestCase):
         """Test cache is invalidated when feeding is deleted."""
         feeding = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -158,7 +161,7 @@ class DiaperCacheInvalidationTests(TestCase):
         # Create diaper change
         diaper = DiaperChange.objects.create(
             child=self.child,
-            changed_at="2024-01-15 10:00:00",
+            changed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             change_type="wet",
         )
 
@@ -169,7 +172,7 @@ class DiaperCacheInvalidationTests(TestCase):
         """Test cache is invalidated when diaper change is updated."""
         diaper = DiaperChange.objects.create(
             child=self.child,
-            changed_at="2024-01-15 10:00:00",
+            changed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             change_type="wet",
         )
 
@@ -184,7 +187,7 @@ class DiaperCacheInvalidationTests(TestCase):
         """Test cache is invalidated when diaper change is deleted."""
         diaper = DiaperChange.objects.create(
             child=self.child,
-            changed_at="2024-01-15 10:00:00",
+            changed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             change_type="wet",
         )
         diaper_id = diaper.id
@@ -227,7 +230,7 @@ class NapCacheInvalidationTests(TestCase):
         # Create nap
         nap = Nap.objects.create(
             child=self.child,
-            napped_at="2024-01-15 10:00:00",
+            napped_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
         )
 
         # Cache should be invalidated
@@ -241,7 +244,7 @@ class NapCacheInvalidationTests(TestCase):
 
         nap = Nap.objects.create(
             child=self.child,
-            napped_at="2024-01-15 10:00:00",
+            napped_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
         )
 
         # Update nap timestamp
@@ -257,7 +260,7 @@ class NapCacheInvalidationTests(TestCase):
         """Test cache is invalidated when nap is deleted."""
         nap = Nap.objects.create(
             child=self.child,
-            napped_at="2024-01-15 10:00:00",
+            napped_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
         )
         nap_id = nap.id
 
@@ -302,7 +305,7 @@ class MultipleChildrenCacheInvalidationTests(TestCase):
         # Create feeding for child1
         feeding1 = Feeding.objects.create(
             child=self.child1,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -310,7 +313,7 @@ class MultipleChildrenCacheInvalidationTests(TestCase):
         # Create feeding for child2
         feeding2 = Feeding.objects.create(
             child=self.child2,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=5.0,
             feeding_type="bottle",
         )
@@ -324,13 +327,13 @@ class MultipleChildrenCacheInvalidationTests(TestCase):
         # Create feedings for both children
         feeding1 = Feeding.objects.create(
             child=self.child1,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
         feeding2 = Feeding.objects.create(
             child=self.child2,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=5.0,
             feeding_type="bottle",
         )
@@ -371,19 +374,19 @@ class CacheInvalidationBulkOperationsTests(TestCase):
         feedings = [
             Feeding(
                 child=self.child,
-                fed_at="2024-01-15 10:00:00",
+                fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
                 amount_oz=4.0,
                 feeding_type="bottle",
             ),
             Feeding(
                 child=self.child,
-                fed_at="2024-01-15 11:00:00",
+                fed_at=timezone.make_aware(datetime(2024, 1, 15, 11, 0, 0)),
                 amount_oz=4.5,
                 feeding_type="bottle",
             ),
             Feeding(
                 child=self.child,
-                fed_at="2024-01-15 12:00:00",
+                fed_at=timezone.make_aware(datetime(2024, 1, 15, 12, 0, 0)),
                 amount_oz=4.0,
                 feeding_type="bottle",
             ),
@@ -401,13 +404,13 @@ class CacheInvalidationBulkOperationsTests(TestCase):
             [
                 Feeding(
                     child=self.child,
-                    fed_at="2024-01-15 10:00:00",
+                    fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
                     amount_oz=4.0,
                     feeding_type="bottle",
                 ),
                 Feeding(
                     child=self.child,
-                    fed_at="2024-01-15 11:00:00",
+                    fed_at=timezone.make_aware(datetime(2024, 1, 15, 11, 0, 0)),
                     amount_oz=4.5,
                     feeding_type="bottle",
                 ),
@@ -429,13 +432,13 @@ class CacheInvalidationBulkOperationsTests(TestCase):
             [
                 Feeding(
                     child=self.child,
-                    fed_at="2024-01-15 10:00:00",
+                    fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
                     amount_oz=4.0,
                     feeding_type="bottle",
                 ),
                 Feeding(
                     child=self.child,
-                    fed_at="2024-01-15 11:00:00",
+                    fed_at=timezone.make_aware(datetime(2024, 1, 15, 11, 0, 0)),
                     amount_oz=4.5,
                     feeding_type="bottle",
                 ),

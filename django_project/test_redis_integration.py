@@ -9,12 +9,14 @@ Verifies that all three Redis features work together correctly:
 - Cache invalidation happens on data changes
 """
 
+from datetime import datetime
 from unittest.mock import patch
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
+from django.utils import timezone
 
 from children.models import Child
 from diapers.models import DiaperChange
@@ -105,7 +107,7 @@ class RedisCachingAPIIntegrationTests(TestCase):
         # Create feeding (mutation)
         feeding = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -118,7 +120,7 @@ class RedisCachingAPIIntegrationTests(TestCase):
         # Create initial feeding
         feeding1 = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -126,7 +128,7 @@ class RedisCachingAPIIntegrationTests(TestCase):
         # Create another feeding (should trigger cache invalidation)
         feeding2 = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 11:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 11, 0, 0)),
             amount_oz=4.5,
             feeding_type="bottle",
         )
@@ -230,7 +232,7 @@ class RedisCacheCeleryFullIntegrationTests(TestCase):
             child = Child.objects.get(id=child_id)
             diaper = DiaperChange.objects.create(
                 child=child,
-                changed_at="2024-01-15 10:00:00",
+                changed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
                 change_type=diaper_change_type,
             )
             cache.set(
@@ -307,7 +309,7 @@ class RedisCacheCeleryFullIntegrationTests(TestCase):
         # Create feeding (should invalidate cache via signal)
         feeding = Feeding.objects.create(
             child=self.child,
-            fed_at="2024-01-15 10:00:00",
+            fed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 0, 0)),
             amount_oz=4.0,
             feeding_type="bottle",
         )
@@ -321,14 +323,14 @@ class RedisCacheCeleryFullIntegrationTests(TestCase):
         # Create diaper (should invalidate via signal)
         diaper = DiaperChange.objects.create(
             child=self.child,
-            changed_at="2024-01-15 10:30:00",
+            changed_at=timezone.make_aware(datetime(2024, 1, 15, 10, 30, 0)),
             change_type="wet",
         )
 
         # Create nap (should invalidate via signal)
         nap = Nap.objects.create(
             child=self.child,
-            napped_at="2024-01-15 11:00:00",
+            napped_at=timezone.make_aware(datetime(2024, 1, 15, 11, 0, 0)),
         )
 
         # Verify all were created
