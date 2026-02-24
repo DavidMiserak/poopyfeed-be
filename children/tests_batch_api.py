@@ -14,11 +14,12 @@ from .models import Child, ChildShare
 User = get_user_model()
 
 # Test timestamp constants
-TEST_TIME_1000 = "2026-02-17T10:00:00Z"
-TEST_TIME_1025 = "2026-02-17T10:25:00Z"
-TEST_TIME_1030 = "2026-02-17T10:30:00Z"
-TEST_TIME_1100 = "2026-02-17T11:00:00Z"
-TEST_TIME_1130 = "2026-02-17T11:30:00Z"
+TEST_DATE = "2026-02-17"
+TEST_TIME_1000 = f"{TEST_DATE}T10:00:00Z"
+TEST_TIME_1025 = f"{TEST_DATE}T10:25:00Z"
+TEST_TIME_1030 = f"{TEST_DATE}T10:30:00Z"
+TEST_TIME_1100 = f"{TEST_DATE}T11:00:00Z"
+TEST_TIME_1130 = f"{TEST_DATE}T11:30:00Z"
 
 # Test event payloads
 FEEDING_BOTTLE_EVENT = {
@@ -471,8 +472,8 @@ class BatchCreateAPITest(TestCase):
                     {
                         "type": "nap",
                         "data": {
-                            "napped_at": "2026-02-17T11:00:00Z",
-                            "ended_at": "2026-02-17T10:00:00Z",
+                            "napped_at": TEST_TIME_1100,
+                            "ended_at": TEST_TIME_1000,
                         },
                     }
                 ]
@@ -493,7 +494,7 @@ class BatchCreateAPITest(TestCase):
                     {
                         "type": "nap",
                         "data": {
-                            "ended_at": "2026-02-17T11:00:00Z",
+                            "ended_at": TEST_TIME_1100,
                         },
                     }
                 ]
