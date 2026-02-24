@@ -345,6 +345,6 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
 
     except Child.DoesNotExist:
         raise ValueError(f"Child with ID {child_id} not found")
-    except Exception as e:
+    except Exception:
         # Task will retry on failure
         raise

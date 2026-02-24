@@ -93,7 +93,7 @@ class DiaperChangeAPITests(BaseTrackingAPITests):
     def test_pagination_applied(self):
         """Verify pagination is applied to list endpoints (PAGE_SIZE=50)."""
         # Create 60 diapers to exceed PAGE_SIZE (50)
-        for i in range(60):
+        for _ in range(60):
             DiaperChange.objects.create(
                 child=self.child,
                 change_type=DiaperChange.ChangeType.WET,
