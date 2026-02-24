@@ -153,30 +153,23 @@ class ChildSerializer(serializers.ModelSerializer):
         mid = data.get("custom_bottle_mid_oz")
         high = data.get("custom_bottle_high_oz")
 
-        # All null is valid (use age-based defaults)
-        if low is None and mid is None and high is None:
-            return data
-
-        # Count how many fields are set
         set_count = sum(1 for v in [low, mid, high] if v is not None)
 
-        # If only some are set, require all to be set
-        if set_count > 0 and set_count < 3:
+        if 0 < set_count < 3:
             raise serializers.ValidationError(
                 "If setting custom amounts, all three (low, recommended, high) "
                 "must be provided. Leave all blank to use age-based defaults."
             )
 
-        # All three are set - validate ordering
-        if low >= mid:
-            raise serializers.ValidationError(
-                "Low amount must be less than recommended amount."
-            )
-
-        if mid >= high:
-            raise serializers.ValidationError(
-                "Recommended amount must be less than high amount."
-            )
+        if set_count == 3:
+            if low >= mid:
+                raise serializers.ValidationError(
+                    "Low amount must be less than recommended amount."
+                )
+            if mid >= high:
+                raise serializers.ValidationError(
+                    "Recommended amount must be less than high amount."
+                )
 
         return data
 
