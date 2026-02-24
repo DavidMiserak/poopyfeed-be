@@ -17,6 +17,12 @@ from django_project.test_constants import (
 
 User = get_user_model()
 
+# API endpoint constants
+PROFILE_ENDPOINT = "/api/v1/account/profile/"
+PASSWORD_ENDPOINT = "/api/v1/account/password/"
+DELETE_ENDPOINT = "/api/v1/account/delete/"
+TOKEN_ENDPOINT = "/api/v1/browser/v1/auth/token/"
+
 
 class AuthenticatedAPITestMixin:
     """Mixin to set up authenticated API client for test classes."""
@@ -45,7 +51,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
         )
 
     def test_get_profile(self):
-        response = self.client.get("/api/v1/account/profile/")
+        response = self.client.get(PROFILE_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.user.pk)
         self.assertEqual(response.data["email"], "test@example.com")
@@ -55,12 +61,12 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_get_profile_unauthenticated(self):
         self.client.credentials()
-        response = self.client.get("/api/v1/account/profile/")
+        response = self.client.get(PROFILE_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_update_first_name(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"first_name": "Updated"},
             format="json",
         )
@@ -71,7 +77,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_update_last_name(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"last_name": "NewLast"},
             format="json",
         )
@@ -80,7 +86,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_update_email(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"email": "newemail@example.com"},
             format="json",
         )
@@ -91,7 +97,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_update_email_duplicate(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"email": "other@example.com"},
             format="json",
         )
@@ -101,7 +107,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
     def test_update_email_same_as_current(self):
         """User can keep their current email."""
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"email": "test@example.com"},
             format="json",
         )
@@ -109,7 +115,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_update_timezone(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"timezone": "America/New_York"},
             format="json",
         )
@@ -120,7 +126,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_update_timezone_invalid(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"timezone": "Invalid/Timezone"},
             format="json",
         )
@@ -129,7 +135,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_update_multiple_fields(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {
                 "first_name": "New",
                 "last_name": "Name",
@@ -144,7 +150,7 @@ class UserProfileAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_id_is_read_only(self):
         response = self.client.patch(
-            "/api/v1/account/profile/",
+            PROFILE_ENDPOINT,
             {"id": 999},
             format="json",
         )
@@ -164,7 +170,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
     def test_change_password_success(self):
         new_password = TEST_NEW_SECURE_PASSWORD
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_PASSWORD,
                 "new_password": new_password,
@@ -189,7 +195,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_change_password_wrong_current(self):
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_WRONG_PASSWORD,
                 "new_password": TEST_NEW_SECURE_PASSWORD,
@@ -202,7 +208,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_change_password_mismatch(self):
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_PASSWORD,
                 "new_password": TEST_NEW_SECURE_PASSWORD,
@@ -215,7 +221,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_change_password_too_weak(self):
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_PASSWORD,
                 "new_password": TEST_WEAK_PASSWORD,
@@ -231,7 +237,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
         old_token_key = self.token.key
         new_password = TEST_NEW_SECURE_PASSWORD
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_PASSWORD,
                 "new_password": new_password,
@@ -246,13 +252,13 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
 
         # Trying with old token should fail
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {old_token_key}")
-        response = self.client.get("/api/v1/account/profile/")
+        response = self.client.get(PROFILE_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_change_password_unauthenticated(self):
         self.client.credentials()
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_PASSWORD,
                 "new_password": TEST_NEW_SECURE_PASSWORD,
@@ -264,7 +270,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_change_password_missing_fields(self):
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {"current_password": TEST_PASSWORD},
             format="json",
         )
@@ -272,7 +278,7 @@ class ChangePasswordAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_change_password_common_password(self):
         response = self.client.post(
-            "/api/v1/account/password/",
+            PASSWORD_ENDPOINT,
             {
                 "current_password": TEST_PASSWORD,
                 "new_password": TEST_COMMON_PASSWORD,
@@ -296,7 +302,7 @@ class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
     def test_delete_account_success(self):
         user_pk = self.user.pk
         response = self.client.post(
-            "/api/v1/account/delete/",
+            DELETE_ENDPOINT,
             {"current_password": TEST_PASSWORD},
             format="json",
         )
@@ -305,7 +311,7 @@ class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_delete_account_wrong_password(self):
         response = self.client.post(
-            "/api/v1/account/delete/",
+            DELETE_ENDPOINT,
             {"current_password": TEST_WRONG_PASSWORD},
             format="json",
         )
@@ -317,7 +323,7 @@ class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
     def test_delete_account_unauthenticated(self):
         self.client.credentials()
         response = self.client.post(
-            "/api/v1/account/delete/",
+            DELETE_ENDPOINT,
             {"current_password": TEST_PASSWORD},
             format="json",
         )
@@ -332,7 +338,7 @@ class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
         )
         user_pk = self.user.pk
         response = self.client.post(
-            "/api/v1/account/delete/",
+            DELETE_ENDPOINT,
             {"current_password": TEST_PASSWORD},
             format="json",
         )
@@ -343,7 +349,7 @@ class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_delete_account_missing_password(self):
         response = self.client.post(
-            "/api/v1/account/delete/",
+            DELETE_ENDPOINT,
             {},
             format="json",
         )
@@ -351,7 +357,7 @@ class DeleteAccountAPITests(AuthenticatedAPITestMixin, TestCase):
 
     def test_delete_account_returns_no_content(self):
         response = self.client.post(
-            "/api/v1/account/delete/",
+            DELETE_ENDPOINT,
             {"current_password": TEST_PASSWORD},
             format="json",
         )
@@ -372,7 +378,7 @@ class GetAuthTokenTests(AuthenticatedAPITestMixin, TestCase):
 
     def test_get_auth_token_returns_token(self):
         """Authenticated user gets their auth token via POST."""
-        response = self.client.post("/api/v1/browser/v1/auth/token/")
+        response = self.client.post(TOKEN_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("auth_token", response.data)
         self.assertEqual(response.data["auth_token"], self.token.key)
@@ -380,10 +386,10 @@ class GetAuthTokenTests(AuthenticatedAPITestMixin, TestCase):
     def test_get_auth_token_requires_auth(self):
         """Unauthenticated request is denied."""
         client = APIClient()
-        response = client.post("/api/v1/browser/v1/auth/token/")
+        response = client.post(TOKEN_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_get_auth_token_get_method_not_allowed(self):
         """GET method is not allowed (only POST)."""
-        response = self.client.get("/api/v1/browser/v1/auth/token/")
+        response = self.client.get(TOKEN_ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
