@@ -184,6 +184,11 @@ class ChildDashboardView(ChildAccessMixin, DetailView):
             .order_by("-napped_at")[:n_per_type]
             .values("id", "napped_at", "ended_at")
         )
+        for n in naps:
+            if n["ended_at"] and n["napped_at"]:
+                total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
+                h, m = divmod(total, 60)
+                n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
         merged = []
         for f in feedings:
             merged.append(
@@ -257,6 +262,11 @@ class ChildTimelineView(ChildAccessMixin, View):
             .order_by("-napped_at")[:TIMELINE_FETCH_PER_TYPE]
             .values("id", "napped_at", "ended_at")
         )
+        for n in naps:
+            if n["ended_at"] and n["napped_at"]:
+                total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
+                h, m = divmod(total, 60)
+                n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
         merged = []
         for f in feedings:
             merged.append({"type": "feeding", "at": f["fed_at"], "obj": f})
@@ -500,6 +510,11 @@ class ChildCatchUpView(ChildAccessMixin, View):
             .order_by("-napped_at")
             .values("id", "napped_at", "ended_at")
         )
+        for n in naps:
+            if n["ended_at"] and n["napped_at"]:
+                total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
+                h, m = divmod(total, 60)
+                n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
         for f in feedings:
             events.append({"type": "feeding", "at": f["fed_at"], "obj": f})
         for d in diapers:

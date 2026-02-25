@@ -5,30 +5,45 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6 col-lg-5">
-    <div class="card">
-      <div class="card-header">
-        <h1 class="h5 mb-0">
-          {% if object %}
-            <i class="fa-solid fa-pen me-2"></i>Edit Child
-          {% else %}
-            <i class="fa-solid fa-plus me-2"></i>Add Child
-          {% endif %}
-        </h1>
+  <div class="col-md-5 col-lg-4">
+    <div class="text-center mb-4">
+      <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+        {% if object %}
+          <i class="fa-solid fa-pen fa-xl text-primary"></i>
+        {% else %}
+          <i class="fa-solid fa-baby fa-xl text-primary"></i>
+        {% endif %}
       </div>
-      <div class="card-body">
+      <h1 class="h4 fw-bold mb-1">
+        {% if object %}Edit {{ object.name }}{% else %}Add a Child{% endif %}
+      </h1>
+      <p class="text-body-secondary small">
+        {% if object %}Update your child's information{% else %}Enter your child's details to get started{% endif %}
+      </p>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4">
         <form method="post">
           {% csrf_token %}
           {{ form|crispy }}
-          <div class="d-grid gap-2 d-sm-flex">
-            <button type="submit" class="btn btn-primary btn-lg py-3 flex-sm-grow-1 fs-5 fw-semibold">
+          <div class="d-grid gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">
               <i class="fa-solid fa-check me-2"></i>Save
             </button>
-            <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary btn-lg py-3">Cancel</a>
+            <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>
       </div>
     </div>
+
+    {% if object and user_role == "owner" %}
+    <div class="text-center mt-4 pt-4 border-top">
+      <a href="{% url 'children:child_delete' object.pk %}" class="btn btn-sm btn-link text-danger text-decoration-none">
+        <i class="fa-solid fa-trash me-1"></i>Delete {{ object.name }}
+      </a>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock content %}

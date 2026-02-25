@@ -4,38 +4,52 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-6">
+  <div class="col-md-6 col-lg-5">
     <nav aria-label="Breadcrumb" class="mb-3">
-      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <a href="{% url 'children:child_export' pk=child.pk %}" class="text-body-secondary text-decoration-none">Export</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <span aria-current="page">Status</span>
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none">{{ child.name }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_export' pk=child.pk %}" class="text-decoration-none">Export</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Status</li>
+      </ol>
     </nav>
 
-    <h1 class="h3 mb-4"><i class="fa-solid fa-file-pdf me-2 text-primary"></i>PDF export</h1>
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4 text-center">
+        {% if status == "completed" and download_url %}
+          <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="fa-solid fa-check fa-xl text-success"></i>
+          </div>
+          <h1 class="h5 fw-bold mb-2">PDF Ready</h1>
+          <p class="text-body-secondary small mb-4">Your export has been generated.</p>
+          <a href="{{ download_url }}" class="btn btn-primary btn-lg rounded-pill px-5" download>
+            <i class="fa-solid fa-download me-2"></i>Download PDF
+          </a>
+        {% elif status == "failed" or error %}
+          <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="fa-solid fa-xmark fa-xl text-danger"></i>
+          </div>
+          <h1 class="h5 fw-bold mb-2">Export Failed</h1>
+          <p class="text-body-secondary small mb-4">{% if error %}{{ error }}{% else %}Something went wrong. Please try again.{% endif %}</p>
+          <a href="{% url 'children:child_export' pk=child.pk %}" class="btn btn-outline-primary">Try Again</a>
+        {% else %}
+          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <div class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem;">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <h1 class="h5 fw-bold mb-2">Generating PDF</h1>
+          <p class="text-body-secondary small mb-0">This may take a moment. The page will refresh automatically.</p>
+          <meta http-equiv="refresh" content="{{ poll_interval_sec }}">
+        {% endif %}
+      </div>
+    </div>
 
-    {% if status == "completed" and download_url %}
-      <div class="alert alert-success">
-        <p class="mb-2">Your PDF is ready.</p>
-        <a href="{{ download_url }}" class="btn btn-primary" download>Download PDF</a>
-      </div>
-    {% elif status == "failed" or error %}
-      <div class="alert alert-danger">
-        <p class="mb-0">Export failed. {% if error %}{{ error }}{% else %}Please try again.{% endif %}</p>
-      </div>
-      <a href="{% url 'children:child_export' pk=child.pk %}" class="btn btn-outline-secondary">Try again</a>
-    {% else %}
-      <div class="alert alert-info">
-        <p class="mb-0">Generating your PDF… This may take a moment.</p>
-      </div>
-      <meta http-equiv="refresh" content="{{ poll_interval_sec }}">
-      <p class="text-body-secondary small">This page will refresh automatically. If it doesn’t, <a href="?">refresh</a>.</p>
-    {% endif %}
-
-    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-link text-secondary mt-3">Back to dashboard</a>
+    <div class="text-center mt-3">
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-link text-body-secondary text-decoration-none small">
+        <i class="fa-solid fa-arrow-left me-1"></i>Back to dashboard
+      </a>
+    </div>
   </div>
 </div>
 {% endblock content %}

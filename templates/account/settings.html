@@ -6,20 +6,19 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
-    <div class="text-center mb-4">
-      <i class="fa-solid fa-gear fa-2x text-primary mb-3"></i>
-      <h2 class="h4 fw-bold">Account Settings</h2>
-      <p class="text-body-secondary">Manage your profile, timezone, and security</p>
+    <div class="mb-4">
+      <h1 class="h3 fw-bold mb-1">Account Settings</h1>
+      <p class="text-body-secondary small mb-0">Manage your profile, timezone, and security</p>
     </div>
 
-    <!-- Profile & Timezone Card -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header">
-        <h3 class="h6 mb-0"><i class="fa-solid fa-user me-2"></i>Profile & Timezone</h3>
+    <!-- Profile & Timezone -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-user me-2 text-primary"></i>Profile & Timezone</h2>
       </div>
       <div class="card-body p-4">
         {% if profile_success %}
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
             <i class="fa-solid fa-check-circle me-1"></i>
             Profile updated successfully.
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -31,7 +30,7 @@
           <input type="hidden" name="action" value="profile">
           {% crispy profile_form %}
           <div class="d-grid">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary fw-semibold">
               <i class="fa-solid fa-check me-1"></i>Save Profile
             </button>
           </div>
@@ -39,42 +38,44 @@
       </div>
     </div>
 
-    <!-- Password Card -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header">
-        <h3 class="h6 mb-0"><i class="fa-solid fa-key me-2"></i>Password</h3>
+    <!-- Password -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-key me-2 text-primary"></i>Password</h2>
       </div>
       <div class="card-body p-4">
-        <p class="text-body-secondary mb-3">Update your password to keep your account secure.</p>
+        <p class="text-body-secondary small mb-3">Update your password to keep your account secure.</p>
         <a href="{% url 'account_change_password' %}" class="btn btn-outline-primary">
           <i class="fa-solid fa-key me-1"></i>Change Password
         </a>
       </div>
     </div>
 
-    <!-- Danger Zone Card -->
-    <div class="card shadow-sm border-danger">
-      <div class="card-header bg-danger bg-opacity-10">
-        <h3 class="h6 mb-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Danger Zone</h3>
+    <!-- Danger Zone -->
+    <div class="card border-0 shadow-sm rounded-4 border-start border-danger border-3">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>Danger Zone</h2>
       </div>
       <div class="card-body p-4">
-        <p class="text-body-secondary mb-3">
-          Permanently delete your account and all associated data. This action cannot be undone.
+        <p class="text-body-secondary small mb-3">
+          Permanently delete your account and all associated data. This cannot be undone.
         </p>
 
-        <button class="btn btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#deleteSection" aria-expanded="false" aria-controls="deleteSection">
+        <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#deleteSection" aria-expanded="false" aria-controls="deleteSection">
           <i class="fa-solid fa-trash me-1"></i>Delete Account
         </button>
 
         <div class="collapse mt-3" id="deleteSection">
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="delete">
-            {{ delete_form|crispy }}
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
-              <i class="fa-solid fa-trash me-1"></i>Permanently Delete Account
-            </button>
-          </form>
+          <div class="bg-danger bg-opacity-10 rounded-3 p-3">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete">
+              {{ delete_form|crispy }}
+              <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
+                <i class="fa-solid fa-trash me-1"></i>Permanently Delete Account
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

@@ -4,13 +4,14 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-4">
-      <h1 class="h3 mb-0">
-        <i class="fa-solid fa-children me-2 text-primary"></i>My Children
-      </h1>
-      <a href="{% url 'children:child_add' %}" class="btn btn-primary btn-lg">
-        <i class="fa-solid fa-plus me-1"></i>Add Child
+  <div class="col-lg-10">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
+      <div>
+        <h1 class="h3 fw-bold mb-1">My Children</h1>
+        <p class="text-body-secondary mb-0 small">Manage and track your little ones</p>
+      </div>
+      <a href="{% url 'children:child_add' %}" class="btn btn-primary btn-lg rounded-pill px-4">
+        <i class="fa-solid fa-plus me-2"></i>Add Child
       </a>
     </div>
 
@@ -19,109 +20,92 @@
         {% for item in children_with_roles %}
           {% with child=item.child role=item.role can_edit=item.can_edit is_owner=item.is_owner %}
           <div class="col-12 col-md-6">
-            <div class="card h-100 shadow-sm border-0 rounded-4">
-              <div class="card-body pb-2">
-                <div class="d-flex justify-content-between align-items-start">
-                  <h2 class="h4 fw-bold mb-1"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-dark text-decoration-none">{{ child.name }}</a></h2>
-                  {% if role == "co-parent" %}
-                    <span class="badge bg-primary">Co-parent</span>
-                  {% elif role == "caregiver" %}
-                    <span class="badge bg-secondary">Caregiver</span>
-                  {% endif %}
-                </div>
-                <p class="text-body-secondary mb-0">
-                  <i class="fa-solid fa-cake-candles me-1"></i>
-                  {{ child.date_of_birth|date:"M j, Y" }}
-                  <span class="child-age" data-dob="{{ child.date_of_birth|date:'c' }}"></span>
-                  {% if child.gender %}
-                    <span class="ms-2">
-                      {% if child.gender == "M" %}
-                        <i class="fa-solid fa-mars text-info"></i>
-                      {% elif child.gender == "F" %}
-                        <i class="fa-solid fa-venus text-danger"></i>
-                      {% else %}
-                        <i class="fa-solid fa-genderless text-secondary"></i>
+            <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+              <!-- Child header -->
+              <div class="card-body pb-0">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <div>
+                    <h2 class="h5 fw-bold mb-1">
+                      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none text-dark stretched-link">
+                        {{ child.name }}
+                      </a>
+                    </h2>
+                    <div class="d-flex align-items-center gap-2 text-body-secondary small">
+                      <span>
+                        <i class="fa-solid fa-cake-candles me-1"></i>{{ child.date_of_birth|date:"M j, Y" }}
+                      </span>
+                      <span class="child-age" data-dob="{{ child.date_of_birth|date:'c' }}"></span>
+                      {% if child.gender %}
+                        {% if child.gender == "M" %}
+                          <i class="fa-solid fa-mars text-info"></i>
+                        {% elif child.gender == "F" %}
+                          <i class="fa-solid fa-venus text-danger"></i>
+                        {% else %}
+                          <i class="fa-solid fa-genderless text-secondary"></i>
+                        {% endif %}
                       {% endif %}
-                    </span>
+                    </div>
+                  </div>
+                  {% if role == "co-parent" %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 small">Co-parent</span>
+                  {% elif role == "caregiver" %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2 small">Caregiver</span>
                   {% endif %}
-                </p>
+                </div>
               </div>
 
-              <!-- Last Activity Section -->
-              <div class="bg-body-secondary border-top border-bottom px-3 py-3">
-                <h6 class="text-uppercase text-body-secondary fw-semibold small mb-3">
-                  <i class="fa-solid fa-clock-rotate-left me-1"></i>Last Activity
+              <!-- Last Activity -->
+              <div class="bg-body-secondary px-3 py-3 position-relative">
+                <h6 class="text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                  Last Activity
                 </h6>
-                <div class="d-flex align-items-center py-2">
-                  <span class="badge bg-success-subtle text-success rounded-3 p-2 me-3">
-                    <i class="fa-solid fa-poo fa-lg"></i>
-                  </span>
-                  <span class="fw-medium flex-grow-1">Diaper</span>
-                  {% if child.last_diaper_change %}
-                    <time datetime="{{ child.last_diaper_change|date:'c' }}" class="text-body-secondary relative-time">
-                      {{ child.last_diaper_change|date:"M j, g:i A" }}
-                    </time>
-                  {% else %}
-                    <span class="text-body-tertiary fst-italic">None yet</span>
-                  {% endif %}
-                </div>
-                <div class="d-flex align-items-center py-2 border-top">
-                  <span class="badge bg-primary-subtle text-primary rounded-3 p-2 me-3">
-                    <i class="fa-solid fa-moon fa-lg"></i>
-                  </span>
-                  <span class="fw-medium flex-grow-1">Nap</span>
-                  {% if child.last_nap %}
-                    <time datetime="{{ child.last_nap|date:'c' }}" class="text-body-secondary relative-time">
-                      {{ child.last_nap|date:"M j, g:i A" }}
-                    </time>
-                  {% else %}
-                    <span class="text-body-tertiary fst-italic">None yet</span>
-                  {% endif %}
-                </div>
-                <div class="d-flex align-items-center py-2 border-top">
-                  <span class="badge bg-warning-subtle text-warning rounded-3 p-2 me-3">
-                    <i class="fa-solid fa-bottle-water fa-lg"></i>
-                  </span>
-                  <span class="fw-medium flex-grow-1">Feeding</span>
-                  {% if child.last_feeding %}
-                    <time datetime="{{ child.last_feeding|date:'c' }}" class="text-body-secondary relative-time">
-                      {{ child.last_feeding|date:"M j, g:i A" }}
-                    </time>
-                  {% else %}
-                    <span class="text-body-tertiary fst-italic">None yet</span>
-                  {% endif %}
+                <div class="d-flex flex-column gap-2">
+                  <div class="d-flex align-items-center">
+                    <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
+                      <i class="fa-solid fa-poo small"></i>
+                    </span>
+                    <span class="fw-medium small flex-grow-1">Diaper</span>
+                    {% if child.last_diaper_change %}
+                      <time datetime="{{ child.last_diaper_change|date:'c' }}" class="text-body-secondary small relative-time">
+                        {{ child.last_diaper_change|date:"M j, g:i A" }}
+                      </time>
+                    {% else %}
+                      <span class="text-body-tertiary fst-italic small">None yet</span>
+                    {% endif %}
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
+                      <i class="fa-solid fa-moon small"></i>
+                    </span>
+                    <span class="fw-medium small flex-grow-1">Nap</span>
+                    {% if child.last_nap %}
+                      <time datetime="{{ child.last_nap|date:'c' }}" class="text-body-secondary small relative-time">
+                        {{ child.last_nap|date:"M j, g:i A" }}
+                      </time>
+                    {% else %}
+                      <span class="text-body-tertiary fst-italic small">None yet</span>
+                    {% endif %}
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
+                      <i class="fa-solid fa-bottle-water small"></i>
+                    </span>
+                    <span class="fw-medium small flex-grow-1">Feeding</span>
+                    {% if child.last_feeding %}
+                      <time datetime="{{ child.last_feeding|date:'c' }}" class="text-body-secondary small relative-time">
+                        {{ child.last_feeding|date:"M j, g:i A" }}
+                      </time>
+                    {% else %}
+                      <span class="text-body-tertiary fst-italic small">None yet</span>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
 
-              <!-- Big Action Buttons -->
-              <div class="card-body d-flex flex-column gap-3">
-                <a href="{% url 'diapers:diaper_list' child.pk %}" class="btn btn-success btn-lg py-3 fs-5 fw-semibold">
-                  <i class="fa-solid fa-poo me-2"></i>Diapers
-                </a>
-                <a href="{% url 'naps:nap_list' child.pk %}" class="btn btn-primary btn-lg py-3 fs-5 fw-semibold">
-                  <i class="fa-solid fa-moon me-2"></i>Naps
-                </a>
-                <a href="{% url 'feedings:feeding_list' child.pk %}" class="btn btn-warning btn-lg py-3 fs-5 fw-semibold">
-                  <i class="fa-solid fa-bottle-water me-2"></i>Feedings
-                </a>
-              </div>
-
-              <div class="card-footer bg-transparent border-top d-flex justify-content-between py-3">
-                {% if can_edit %}
-                  <a href="{% url 'children:child_edit' child.pk %}" class="btn btn-link text-secondary text-decoration-none">
-                    <i class="fa-solid fa-pen me-1"></i>Edit
-                  </a>
-                {% else %}
-                  <span></span>
-                {% endif %}
-                {% if is_owner %}
-                  <a href="{% url 'children:child_sharing' child.pk %}" class="btn btn-link text-primary text-decoration-none">
-                    <i class="fa-solid fa-share-nodes me-1"></i>Share
-                  </a>
-                  <a href="{% url 'children:child_delete' child.pk %}" class="btn btn-link text-danger text-decoration-none">
-                    <i class="fa-solid fa-trash me-1"></i>Delete
-                  </a>
-                {% endif %}
+              <div class="card-footer bg-transparent border-top text-center py-2">
+                <span class="text-body-tertiary small">
+                  <i class="fa-solid fa-arrow-right me-1"></i>Open dashboard
+                </span>
               </div>
             </div>
           </div>
@@ -129,12 +113,14 @@
         {% endfor %}
       </div>
     {% else %}
-      <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body text-center py-5">
-          <i class="fa-solid fa-baby fa-4x text-body-secondary mb-4 d-block opacity-50"></i>
-          <h5 class="text-body-secondary mb-2">No children added yet</h5>
-          <p class="text-body-secondary mb-4">Add your first child to start tracking.</p>
-          <a href="{% url 'children:child_add' %}" class="btn btn-primary btn-lg px-5 py-3 fs-5">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body text-center py-5 px-4">
+          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+            <i class="fa-solid fa-baby fa-2x text-primary"></i>
+          </div>
+          <h5 class="fw-bold mb-2">No children added yet</h5>
+          <p class="text-body-secondary mb-4">Add your first child to start tracking feedings, diapers, and naps.</p>
+          <a href="{% url 'children:child_add' %}" class="btn btn-primary btn-lg rounded-pill px-5 py-3">
             <i class="fa-solid fa-plus me-2"></i>Add Your First Child
           </a>
         </div>

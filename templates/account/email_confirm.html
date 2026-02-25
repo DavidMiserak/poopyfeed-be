@@ -6,16 +6,16 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6 col-lg-5">
-    <div class="card border-0 shadow-sm">
+  <div class="col-md-5 col-lg-4">
+    <div class="card border-0 shadow-sm rounded-4">
       <div class="card-body p-4 p-md-5 text-center">
         {% if confirmation %}
           {% user_display confirmation.email_address.user as user_display %}
           <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-            <i class="fa-solid fa-envelope-circle-check fa-2x text-info"></i>
+            <i class="fa-solid fa-envelope-circle-check fa-xl text-info"></i>
           </div>
-          <h2 class="fw-bold mb-3">{% trans "Confirm E-mail Address" %}</h2>
-          <p class="text-body-secondary mb-4">
+          <h1 class="h4 fw-bold mb-3">{% trans "Confirm E-mail Address" %}</h1>
+          <p class="text-body-secondary small mb-4">
             {% blocktrans with confirmation.email_address.email as email %}
               Please confirm that <strong>{{ email }}</strong> is an e-mail address for user {{ user_display }}.
             {% endblocktrans %}
@@ -23,24 +23,24 @@
           <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
             {% csrf_token %}
             <div class="d-grid">
-              <button class="btn btn-primary btn-lg" type="submit">
-                <i class="fa-solid fa-check me-2"></i>{% trans "Confirm" %}
+              <button class="btn btn-primary btn-lg py-3 fw-semibold" type="submit">
+                {% trans "Confirm" %}
               </button>
             </div>
           </form>
         {% else %}
           {% url 'account_email' as email_url %}
           <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-            <i class="fa-solid fa-link-slash fa-2x text-danger"></i>
+            <i class="fa-solid fa-link-slash fa-xl text-danger"></i>
           </div>
-          <h2 class="fw-bold mb-3">{% trans "Invalid Link" %}</h2>
-          <p class="text-body-secondary mb-4">
+          <h1 class="h4 fw-bold mb-3">{% trans "Invalid Link" %}</h1>
+          <p class="text-body-secondary small mb-4">
             {% blocktrans %}
               This e-mail confirmation link expired or is invalid.
             {% endblocktrans %}
           </p>
           <a href="{{ email_url }}" class="btn btn-primary">
-            <i class="fa-solid fa-envelope me-2"></i>{% trans "Request New Confirmation" %}
+            {% trans "Request New Confirmation" %}
           </a>
         {% endif %}
       </div>

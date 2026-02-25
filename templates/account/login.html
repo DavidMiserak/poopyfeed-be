@@ -5,35 +5,33 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6 col-lg-5">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body p-4 p-md-5">
-        <div class="text-center mb-4">
-          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-            <i class="fa-solid fa-right-to-bracket fa-2x text-primary"></i>
-          </div>
-          <h2 class="fw-bold">Welcome Back</h2>
-          <p class="text-body-secondary">Log in to continue tracking</p>
-        </div>
+  <div class="col-md-5 col-lg-4">
+    <div class="text-center mb-4">
+      <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+        <i class="fa-solid fa-right-to-bracket fa-xl text-primary"></i>
+      </div>
+      <h1 class="h4 fw-bold mb-1">Welcome back</h1>
+      <p class="text-body-secondary small">Log in to continue tracking</p>
+    </div>
 
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4">
         <form method="post">
           {% csrf_token %}
           {{ form|crispy }}
           <div class="d-grid mt-4">
-            <button class="btn btn-primary btn-lg" type="submit">
-              <i class="fa-solid fa-right-to-bracket me-2"></i>Log In
+            <button class="btn btn-primary btn-lg py-3 fw-semibold" type="submit">
+              Log In
             </button>
           </div>
         </form>
-
-        <hr class="my-4">
-
-        <p class="text-center text-body-secondary mb-0">
-          Don't have an account?
-          <a href="{% url 'account_signup' %}" class="text-decoration-none">Sign up</a>
-        </p>
       </div>
     </div>
+
+    <p class="text-center text-body-secondary small mt-4 mb-0">
+      Don't have an account?
+      <a href="{% url 'account_signup' %}" class="fw-semibold text-decoration-none">Sign up</a>
+    </p>
   </div>
 </div>
 {% endblock content %}

@@ -4,66 +4,159 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-10">
     <nav aria-label="Breadcrumb" class="mb-3">
-      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <span aria-current="page">Catch-up</span>
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none">{{ child.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Catch-up</li>
+      </ol>
     </nav>
 
-    <h1 class="h3 mb-4"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Catch-up</h1>
-
-    <form method="get" class="card shadow-sm border-0 rounded-4 p-4 mb-4">
-      <div class="row g-2">
-        <div class="col-md-5">
-          <label class="form-label">Start date</label>
-          <input type="date" name="start" class="form-control" value="{{ start }}" required>
-        </div>
-        <div class="col-md-5">
-          <label class="form-label">End date</label>
-          <input type="date" name="end" class="form-control" value="{{ end }}" required>
-        </div>
-        <div class="col-md-2 d-flex align-items-end">
-          <button type="submit" class="btn btn-primary w-100">View</button>
-        </div>
-      </div>
-    </form>
-
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning">Add feeding</a>
-      <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}" class="btn btn-success">Add diaper</a>
-      <a href="{% url 'naps:nap_add' child_pk=child.pk %}" class="btn btn-primary">Add nap</a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Catch-up</h1>
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+        <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+      </a>
     </div>
 
-    <h2 class="h6 text-uppercase text-body-secondary fw-semibold mb-2">Events in range</h2>
-    {% if events %}
-      <ul class="list-group list-group-flush mb-4">
-        {% for activity in events %}
-          <li class="list-group-item d-flex align-items-center border-start-0 border-end-0 py-3">
-            {% if activity.type == "feeding" %}
-              <span class="badge bg-warning-subtle text-warning rounded-3 p-2 me-3"><i class="fa-solid fa-bottle-water"></i></span>
-              <span class="flex-grow-1">Feeding – {{ activity.obj.feeding_type }}{% if activity.obj.amount_oz %} {{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %} {{ activity.obj.duration_minutes }} min{% endif %}</span>
-              {% if can_edit %}<a href="{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
-            {% elif activity.type == "diaper" %}
-              <span class="badge bg-success-subtle text-success rounded-3 p-2 me-3"><i class="fa-solid fa-poo"></i></span>
-              <span class="flex-grow-1">Diaper – {{ activity.obj.change_type }}</span>
-              {% if can_edit %}<a href="{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
-            {% else %}
-              <span class="badge bg-primary-subtle text-primary rounded-3 p-2 me-3"><i class="fa-solid fa-moon"></i></span>
-              <span class="flex-grow-1">Nap</span>
-              {% if can_edit %}<a href="{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
-            {% endif %}
-            <time datetime="{{ activity.at|date:'c' }}" class="text-body-secondary ms-2">{{ activity.at|date:"M j, g:i A" }}</time>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-body-tertiary fst-italic">No events in this date range. Use the buttons above to add feedings, diapers, or naps.</p>
-    {% endif %}
+    <div class="row g-4">
+      <!-- Left: date picker + add buttons -->
+      <div class="col-lg-4">
+        <!-- Date range -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+            <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+              <i class="fa-solid fa-calendar me-1"></i>Date Range
+            </h2>
+          </div>
+          <div class="card-body p-4">
+            <form method="get">
+              <div class="mb-3">
+                <label class="form-label fw-semibold small">Start</label>
+                <input type="date" name="start" class="form-control rounded-3" value="{{ start }}" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold small">End</label>
+                <input type="date" name="end" class="form-control rounded-3" value="{{ end }}" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                <i class="fa-solid fa-magnifying-glass me-1"></i>View
+              </button>
+            </form>
+          </div>
+        </div>
 
-    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary">Back to dashboard</a>
+        <!-- Quick add -->
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+            <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+              <i class="fa-solid fa-plus me-1"></i>Backfill
+            </h2>
+          </div>
+          <div class="card-body p-4 d-flex flex-column gap-2">
+            <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning w-100 py-2 fw-semibold">
+              <i class="fa-solid fa-bottle-water me-2"></i>Add Feeding
+            </a>
+            <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}" class="btn btn-success w-100 py-2 fw-semibold">
+              <i class="fa-solid fa-poo me-2"></i>Add Diaper
+            </a>
+            <a href="{% url 'naps:nap_add' child_pk=child.pk %}" class="btn btn-primary w-100 py-2 fw-semibold">
+              <i class="fa-solid fa-moon me-2"></i>Add Nap
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: events list -->
+      <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+            <i class="fa-solid fa-list me-1"></i>Events in Range
+          </h2>
+          {% if events %}
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ events|length }}</span>
+          {% endif %}
+        </div>
+
+        {% if events %}
+          {% load tz %}
+          {% for activity in events %}
+            {% ifchanged activity.at|date:"Y-m-d" %}
+              {% if not forloop.first %}</div></div>{% endif %}
+              <div class="d-flex align-items-center gap-2 mb-3 {% if not forloop.first %}mt-4{% endif %}">
+                <span class="badge bg-body-secondary text-body-secondary rounded-pill px-3 py-2 fw-semibold small">
+                  <i class="fa-solid fa-calendar-day me-1"></i>{{ activity.at|date:"l, M j" }}
+                </span>
+                <hr class="flex-grow-1 m-0">
+              </div>
+              <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-0">
+            {% endifchanged %}
+
+            <div class="d-flex gap-3 px-4 py-3 border-bottom">
+              {% if activity.type == "feeding" %}
+                <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+                  <i class="fa-solid fa-bottle-water"></i>
+                </span>
+              {% elif activity.type == "diaper" %}
+                <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+                  <i class="fa-solid fa-poo"></i>
+                </span>
+              {% else %}
+                <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+                  <i class="fa-solid fa-moon"></i>
+                </span>
+              {% endif %}
+
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    {% if activity.type == "feeding" %}
+                      <div class="fw-semibold small">
+                        {% if activity.obj.feeding_type == "bottle" %}Bottle{% else %}Breast{% endif %} Feeding
+                      </div>
+                      <div class="text-body-secondary small">
+                        {% if activity.obj.amount_oz %}{{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %}{{ activity.obj.duration_minutes }} min{% endif %}
+                      </div>
+                    {% elif activity.type == "diaper" %}
+                      <div class="fw-semibold small">Diaper Change</div>
+                      <div class="text-body-secondary small">{{ activity.obj.get_change_type_display|default:activity.obj.change_type }}</div>
+                    {% else %}
+                      <div class="fw-semibold small">Nap</div>
+                      <div class="small">
+                        {% if activity.obj.ended_at %}
+                          <span class="badge bg-primary-subtle text-primary rounded-pill">{{ activity.obj.duration_display }}</span>
+                        {% else %}
+                          <span class="badge bg-info-subtle text-info rounded-pill"><i class="fa-solid fa-circle small me-1"></i>Ongoing</span>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  {% if can_edit %}
+                    <a href="{% if activity.type == 'feeding' %}{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}{% elif activity.type == 'diaper' %}{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}{% else %}{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}{% endif %}" class="btn btn-link btn-sm text-body-tertiary p-0 flex-shrink-0">
+                      <i class="fa-solid fa-pen small"></i>
+                    </a>
+                  {% endif %}
+                </div>
+                <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small">{{ activity.at|date:"g:i A" }}</time>
+              </div>
+            </div>
+
+          {% endfor %}
+          </div></div>
+        {% else %}
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center py-5">
+              <div class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                <i class="fa-solid fa-calendar-xmark fa-xl text-secondary"></i>
+              </div>
+              <h5 class="fw-bold mb-2">No events found</h5>
+              <p class="text-body-tertiary small mb-0">Nothing logged for this date range. Use the buttons on the left to backfill.</p>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 {% endblock content %}

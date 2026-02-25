@@ -22,47 +22,57 @@
     {% block extra_css %}{% endblock extra_css %}
   </head>
   <body class="d-flex flex-column min-vh-100 bg-body-tertiary">
-    <nav class="navbar navbar-expand-lg bg-body shadow-sm sticky-top">
+    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
       <div class="container">
-        <a class="navbar-brand fw-bold text-primary" href="{% url 'home' %}">
-          <i class="fa-solid fa-baby me-2"></i>PoopyFeed
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold fs-5" href="{% url 'home' %}">
+          <span class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+            <i class="fa-solid fa-baby"></i>
+          </span>
+          <span class="text-dark">Poopy<span class="text-primary">Feed</span></span>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto align-items-center gap-2">
+          <ul class="navbar-nav ms-auto align-items-center gap-1">
             {% if user.is_authenticated %}
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'children:child_list' %}">
-                  <i class="fa-solid fa-children me-1"></i>Children
+                <a class="nav-link fw-medium px-3" href="{% url 'children:child_list' %}">
+                  <i class="fa-solid fa-children me-1"></i>My Children
                 </a>
               </li>
               <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  <i class="fa-solid fa-circle-user me-1"></i>{{ user.email }}
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-3" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                    <i class="fa-solid fa-user small"></i>
+                  </span>
+                  <span class="d-none d-lg-inline">{{ user.email }}</span>
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end">
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                  <li class="px-3 py-2 d-lg-none">
+                    <span class="text-body-secondary small">{{ user.email }}</span>
+                  </li>
+                  <li class="d-lg-none"><hr class="dropdown-divider"></li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'account_settings' %}">
-                      <i class="fa-solid fa-gear me-2"></i>Account Settings
+                    <a class="dropdown-item py-2" href="{% url 'account_settings' %}">
+                      <i class="fa-solid fa-gear me-2 text-body-secondary"></i>Account Settings
                     </a>
                   </li>
                   <li><hr class="dropdown-divider"></li>
                   <li>
-                    <a class="dropdown-item" href="{% url 'account_logout' %}">
-                      <i class="fa-solid fa-right-from-bracket me-2"></i>Log Out
+                    <a class="dropdown-item py-2" href="{% url 'account_logout' %}">
+                      <i class="fa-solid fa-right-from-bracket me-2 text-body-secondary"></i>Log Out
                     </a>
                   </li>
                 </ul>
               </li>
             {% else %}
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'account_login' %}">Log In</a>
+                <a class="nav-link fw-medium px-3" href="{% url 'account_login' %}">Log In</a>
               </li>
               <li class="nav-item">
-                <a class="btn btn-primary btn-sm" href="{% url 'account_signup' %}">
-                  <i class="fa-solid fa-user-plus me-1"></i>Sign Up
+                <a class="btn btn-primary rounded-pill px-4" href="{% url 'account_signup' %}">
+                  Get Started
                 </a>
               </li>
             {% endif %}
@@ -71,18 +81,25 @@
       </div>
     </nav>
 
-    <main class="flex-grow-1 py-5">
+    <main class="flex-grow-1 py-4 py-md-5">
       <div class="container">
         {% block content %}{% endblock content %}
       </div>
     </main>
 
-    <footer class="py-4 bg-body border-top mt-auto">
-      <div class="container text-center">
-        <p class="text-body-secondary mb-0">
-          <i class="fa-solid fa-heart text-danger me-1"></i>
-          Made with love for tired parents
-        </p>
+    <footer class="py-4 bg-white border-top mt-auto">
+      <div class="container">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <span class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+              <i class="fa-solid fa-baby small"></i>
+            </span>
+            <span class="fw-semibold text-body-secondary small">PoopyFeed</span>
+          </div>
+          <p class="text-body-tertiary small mb-0">
+            Made with <i class="fa-solid fa-heart text-danger"></i> for tired parents
+          </p>
+        </div>
       </div>
     </footer>
 

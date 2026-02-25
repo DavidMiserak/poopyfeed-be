@@ -6,80 +6,144 @@
 <div class="row justify-content-center">
   <div class="col-lg-10">
     <nav aria-label="Breadcrumb" class="mb-3">
-      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <span aria-current="page">Analytics</span>
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none">{{ child.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Analytics</li>
+      </ol>
     </nav>
 
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
-      <h1 class="h3 mb-0"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Analytics</h1>
-      <form method="get" class="d-flex gap-2 align-items-center">
-        <label class="form-label mb-0">Period:</label>
-        <select name="days" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-          <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
-          <option value="14" {% if days == 14 %}selected{% endif %}>Last 14 days</option>
-          <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
-        </select>
-      </form>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+      <h1 class="h3 fw-bold mb-0"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Analytics</h1>
+      <div class="d-flex align-items-center gap-2">
+        <form method="get" class="d-flex align-items-center gap-2">
+          <select name="days" class="form-select form-select-sm rounded-pill" onchange="this.form.submit()" style="width: auto;">
+            <option value="7" {% if days == 7 %}selected{% endif %}>7 days</option>
+            <option value="14" {% if days == 14 %}selected{% endif %}>14 days</option>
+            <option value="30" {% if days == 30 %}selected{% endif %}>30 days</option>
+          </select>
+        </form>
+        <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+          <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+        </a>
+      </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-      <div class="card-header"><h2 class="h6 mb-0">Feeding trends</h2></div>
-      <div class="card-body overflow-auto">
+    <!-- Feeding Trends -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0">
+          <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+            <i class="fa-solid fa-bottle-water small"></i>
+          </span>
+          Feeding Trends
+        </h2>
+      </div>
+      <div class="card-body px-4 overflow-auto">
         {% if feeding_trends.daily_data %}
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>Count</th><th>Total oz</th><th>Avg duration (min)</th></tr></thead>
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="fw-semibold small text-body-secondary">Date</th>
+                <th class="fw-semibold small text-body-secondary text-center">Count</th>
+                <th class="fw-semibold small text-body-secondary text-end">Total oz</th>
+                <th class="fw-semibold small text-body-secondary text-end">Avg min</th>
+              </tr>
+            </thead>
             <tbody>
               {% for row in feeding_trends.daily_data %}
-                <tr><td>{{ row.date }}</td><td>{{ row.count }}</td><td>{{ row.total_oz|default:"" }}</td><td>{{ row.average_duration|default:"" }}</td></tr>
+                <tr>
+                  <td class="small">{{ row.date }}</td>
+                  <td class="small text-center fw-medium">{{ row.count }}</td>
+                  <td class="small text-end">{{ row.total_oz|default:"–" }}</td>
+                  <td class="small text-end">{{ row.average_duration|default:"–" }}</td>
+                </tr>
               {% endfor %}
             </tbody>
           </table>
         {% else %}
-          <p class="text-body-tertiary fst-italic mb-0">No feeding data for this period.</p>
+          <p class="text-body-tertiary fst-italic small mb-0">No feeding data for this period.</p>
         {% endif %}
       </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-      <div class="card-header"><h2 class="h6 mb-0">Diaper patterns</h2></div>
-      <div class="card-body overflow-auto">
+    <!-- Diaper Patterns -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0">
+          <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+            <i class="fa-solid fa-poo small"></i>
+          </span>
+          Diaper Patterns
+        </h2>
+      </div>
+      <div class="card-body px-4 overflow-auto">
         {% if diaper_patterns.daily_data %}
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>Count</th><th>Wet</th><th>Dirty</th><th>Both</th></tr></thead>
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="fw-semibold small text-body-secondary">Date</th>
+                <th class="fw-semibold small text-body-secondary text-center">Total</th>
+                <th class="fw-semibold small text-body-secondary text-center">Wet</th>
+                <th class="fw-semibold small text-body-secondary text-center">Dirty</th>
+                <th class="fw-semibold small text-body-secondary text-center">Both</th>
+              </tr>
+            </thead>
             <tbody>
               {% for row in diaper_patterns.daily_data %}
-                <tr><td>{{ row.date }}</td><td>{{ row.count }}</td><td>{{ row.wet_count|default:0 }}</td><td>{{ row.dirty_count|default:0 }}</td><td>{{ row.both_count|default:0 }}</td></tr>
+                <tr>
+                  <td class="small">{{ row.date }}</td>
+                  <td class="small text-center fw-medium">{{ row.count }}</td>
+                  <td class="small text-center">{{ row.wet_count|default:0 }}</td>
+                  <td class="small text-center">{{ row.dirty_count|default:0 }}</td>
+                  <td class="small text-center">{{ row.both_count|default:0 }}</td>
+                </tr>
               {% endfor %}
             </tbody>
           </table>
         {% else %}
-          <p class="text-body-tertiary fst-italic mb-0">No diaper data for this period.</p>
+          <p class="text-body-tertiary fst-italic small mb-0">No diaper data for this period.</p>
         {% endif %}
       </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-      <div class="card-header"><h2 class="h6 mb-0">Sleep summary</h2></div>
-      <div class="card-body overflow-auto">
+    <!-- Sleep Summary -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0">
+          <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+            <i class="fa-solid fa-moon small"></i>
+          </span>
+          Sleep Summary
+        </h2>
+      </div>
+      <div class="card-body px-4 overflow-auto">
         {% if sleep_summary.daily_data %}
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Date</th><th>Naps</th><th>Total min</th><th>Avg duration (min)</th></tr></thead>
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="fw-semibold small text-body-secondary">Date</th>
+                <th class="fw-semibold small text-body-secondary text-center">Naps</th>
+                <th class="fw-semibold small text-body-secondary text-end">Total min</th>
+                <th class="fw-semibold small text-body-secondary text-end">Avg min</th>
+              </tr>
+            </thead>
             <tbody>
               {% for row in sleep_summary.daily_data %}
-                <tr><td>{{ row.date }}</td><td>{{ row.count }}</td><td>{{ row.total_minutes|default:"" }}</td><td>{{ row.average_duration|default:"" }}</td></tr>
+                <tr>
+                  <td class="small">{{ row.date }}</td>
+                  <td class="small text-center fw-medium">{{ row.count }}</td>
+                  <td class="small text-end">{{ row.total_minutes|default:"–" }}</td>
+                  <td class="small text-end">{{ row.average_duration|default:"–" }}</td>
+                </tr>
               {% endfor %}
             </tbody>
           </table>
         {% else %}
-          <p class="text-body-tertiary fst-italic mb-0">No sleep data for this period.</p>
+          <p class="text-body-tertiary fst-italic small mb-0">No sleep data for this period.</p>
         {% endif %}
       </div>
     </div>
-
-    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary">Back to dashboard</a>
   </div>
 </div>
 {% endblock content %}

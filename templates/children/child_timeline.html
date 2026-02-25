@@ -6,57 +6,115 @@
 <div class="row justify-content-center">
   <div class="col-lg-8">
     <nav aria-label="Breadcrumb" class="mb-3">
-      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
-      <span class="text-body-secondary mx-2">/</span>
-      <span aria-current="page">Timeline</span>
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none">{{ child.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Timeline</li>
+      </ol>
     </nav>
 
-    <h1 class="h3 mb-4">
-      <i class="fa-solid fa-timeline-line me-2 text-primary"></i>Timeline
-    </h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 fw-bold mb-0">
+        <i class="fa-solid fa-timeline me-2 text-primary"></i>Timeline
+      </h1>
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+        <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+      </a>
+    </div>
 
     {% if page_obj %}
-      <ul class="list-group list-group-flush mb-4">
-        {% for activity in page_obj %}
-          <li class="list-group-item d-flex align-items-center border-start-0 border-end-0 py-3">
-            {% if activity.type == "feeding" %}
-              <span class="badge bg-warning-subtle text-warning rounded-3 p-2 me-3"><i class="fa-solid fa-bottle-water"></i></span>
-              <span class="flex-grow-1">Feeding – {{ activity.obj.feeding_type }}{% if activity.obj.amount_oz %} {{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %} {{ activity.obj.duration_minutes }} min{% endif %}</span>
-              {% if can_edit %}<a href="{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
-            {% elif activity.type == "diaper" %}
-              <span class="badge bg-success-subtle text-success rounded-3 p-2 me-3"><i class="fa-solid fa-poo"></i></span>
-              <span class="flex-grow-1">Diaper – {{ activity.obj.change_type }}</span>
-              {% if can_edit %}<a href="{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
-            {% else %}
-              <span class="badge bg-primary-subtle text-primary rounded-3 p-2 me-3"><i class="fa-solid fa-moon"></i></span>
-              <span class="flex-grow-1">Nap{% if activity.obj.ended_at %} (ended){% endif %}</span>
-              {% if can_edit %}<a href="{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
-            {% endif %}
-            <time datetime="{{ activity.at|date:'c' }}" class="text-body-secondary relative-time ms-2">{{ activity.at|date:"M j, g:i A" }}</time>
-          </li>
-        {% endfor %}
-      </ul>
+      {% load tz %}
+      {% for activity in page_obj %}
+        {% ifchanged activity.at|date:"Y-m-d" %}
+          {% if not forloop.first %}</div></div>{% endif %}
+          <!-- Date header -->
+          <div class="d-flex align-items-center gap-2 mb-3 {% if not forloop.first %}mt-4{% endif %}">
+            <span class="badge bg-body-secondary text-body-secondary rounded-pill px-3 py-2 fw-semibold small">
+              <i class="fa-solid fa-calendar-day me-1"></i>{{ activity.at|date:"l, M j" }}
+            </span>
+            <hr class="flex-grow-1 m-0">
+          </div>
+          <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-0">
+        {% endifchanged %}
+
+        <div class="d-flex gap-3 px-4 py-3 border-bottom">
+          <!-- Icon -->
+          {% if activity.type == "feeding" %}
+            <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+              <i class="fa-solid fa-bottle-water"></i>
+            </span>
+          {% elif activity.type == "diaper" %}
+            <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+              <i class="fa-solid fa-poo"></i>
+            </span>
+          {% else %}
+            <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+              <i class="fa-solid fa-moon"></i>
+            </span>
+          {% endif %}
+
+          <!-- Content -->
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                {% if activity.type == "feeding" %}
+                  <div class="fw-semibold small">
+                    {% if activity.obj.feeding_type == "bottle" %}Bottle{% else %}Breast{% endif %} Feeding
+                  </div>
+                  <div class="text-body-secondary small">
+                    {% if activity.obj.amount_oz %}{{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %}{{ activity.obj.duration_display }}{% endif %}{% if activity.obj.side %} &middot; {{ activity.obj.get_side_display }}{% endif %}
+                  </div>
+                {% elif activity.type == "diaper" %}
+                  <div class="fw-semibold small">Diaper Change</div>
+                  <div class="text-body-secondary small">{{ activity.obj.get_change_type_display }}</div>
+                {% else %}
+                  <div class="fw-semibold small">Nap</div>
+                  <div class="small">
+                    {% if activity.obj.ended_at %}
+                      <span class="badge bg-primary-subtle text-primary rounded-pill">{{ activity.obj.duration_display }}</span>
+                    {% else %}
+                      <span class="badge bg-info-subtle text-info rounded-pill"><i class="fa-solid fa-circle small me-1"></i>Ongoing</span>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </div>
+              {% if can_edit %}
+                <a href="{% if activity.type == 'feeding' %}{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}{% elif activity.type == 'diaper' %}{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}{% else %}{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}{% endif %}" class="btn btn-link btn-sm text-body-tertiary p-0 flex-shrink-0">
+                  <i class="fa-solid fa-pen small"></i>
+                </a>
+              {% endif %}
+            </div>
+            <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small relative-time">{{ activity.at|date:"g:i A" }}</time>
+          </div>
+        </div>
+
+      {% endfor %}
+      </div></div>
 
       {% if page_obj.has_other_pages %}
-        <nav aria-label="Timeline pagination" class="d-flex justify-content-center">
-          <ul class="pagination mb-0">
+        <nav aria-label="Timeline pagination" class="d-flex justify-content-center mt-4">
+          <ul class="pagination pagination-sm mb-0">
             {% if page_obj.has_previous %}
-              <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+              <li class="page-item"><a class="page-link rounded-start-pill" href="?page={{ page_obj.previous_page_number }}"><i class="fa-solid fa-chevron-left me-1"></i>Previous</a></li>
             {% endif %}
-            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+            <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
             {% if page_obj.has_next %}
-              <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+              <li class="page-item"><a class="page-link rounded-end-pill" href="?page={{ page_obj.next_page_number }}">Next<i class="fa-solid fa-chevron-right ms-1"></i></a></li>
             {% endif %}
           </ul>
         </nav>
       {% endif %}
     {% else %}
-      <p class="text-body-tertiary fst-italic">No activity yet.</p>
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body text-center py-5">
+          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="fa-solid fa-timeline fa-xl text-primary"></i>
+          </div>
+          <h5 class="fw-bold mb-2">No activity yet</h5>
+          <p class="text-body-tertiary small mb-0">Events will appear here as you log them.</p>
+        </div>
+      </div>
     {% endif %}
-
-    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary mt-3">Back to dashboard</a>
   </div>
 </div>
 {% endblock content %}

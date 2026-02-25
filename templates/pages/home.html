@@ -3,87 +3,94 @@
 {% block title %}PoopyFeed - Baby Care Tracking{% endblock title %}
 
 {% block content %}
-<div class="text-center mb-5">
-  <h1 class="display-4 fw-bold text-primary mb-3">
-    <i class="fa-solid fa-baby-carriage me-2"></i>PoopyFeed
-  </h1>
-  <p class="lead text-body-secondary mb-4">
-    Track feeding, diapers, sleep, and health metrics for your little one.
-  </p>
-
-  {% if user.is_authenticated %}
-    <a href="{% url 'children:child_list' %}" class="btn btn-primary btn-lg py-4 px-5 fs-4 fw-semibold shadow">
-      <i class="fa-solid fa-children me-2"></i>Go to My Children
-    </a>
-  {% else %}
-    <div class="d-flex justify-content-center gap-3">
-      <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg">
-        <i class="fa-solid fa-user-plus me-2"></i>Get Started
-      </a>
-      <a href="{% url 'account_login' %}" class="btn btn-outline-primary btn-lg">
-        <i class="fa-solid fa-right-to-bracket me-2"></i>Log In
-      </a>
+<!-- Hero -->
+<div class="row justify-content-center mb-5">
+  <div class="col-lg-8 text-center">
+    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 88px; height: 88px;">
+      <i class="fa-solid fa-baby-carriage fa-3x text-primary"></i>
     </div>
-  {% endif %}
+    <h1 class="display-5 fw-bold mb-3">
+      Track your baby's day,<br class="d-none d-md-inline"> one tap at a time
+    </h1>
+    <p class="lead text-body-secondary mb-4 mx-auto" style="max-width: 520px;">
+      Feedings, diapers, sleep — all in one place. Share with your co-parent or caregiver so everyone stays in the loop.
+    </p>
+
+    {% if user.is_authenticated %}
+      <a href="{% url 'children:child_list' %}" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-semibold shadow-sm">
+        <i class="fa-solid fa-children me-2"></i>Go to My Children
+      </a>
+    {% else %}
+      <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+        <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-semibold shadow-sm">
+          Get Started Free
+        </a>
+        <a href="{% url 'account_login' %}" class="btn btn-outline-secondary btn-lg px-4 py-3 rounded-pill">
+          <i class="fa-solid fa-right-to-bracket me-2"></i>Log In
+        </a>
+      </div>
+    {% endif %}
+  </div>
 </div>
 
-<h2 class="text-center fw-semibold mb-4">
-  <i class="fa-solid fa-star text-warning me-2"></i>Features
-</h2>
-
-<div class="row g-4">
-  <div class="col-md-6 col-lg-3">
-    <div class="card h-100 border-0 shadow-sm">
-      <div class="card-body text-center p-4">
-        <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-          <i class="fa-solid fa-bottle-water fa-2x text-primary"></i>
+<!-- Features -->
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="row g-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
+          <div class="card-body p-4">
+            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+              <i class="fa-solid fa-bottle-water fa-lg text-warning"></i>
+            </div>
+            <h3 class="h6 fw-bold mb-2">Feeding Tracker</h3>
+            <p class="text-body-secondary small mb-0">
+              Log bottle and breastfeeding with amounts and timing.
+            </p>
+          </div>
         </div>
-        <h5 class="card-title fw-semibold">Feeding Tracker</h5>
-        <p class="card-text text-body-secondary">
-          Log breastfeeding, bottles, and solid foods with ease.
-        </p>
       </div>
-    </div>
-  </div>
 
-  <div class="col-md-6 col-lg-3">
-    <div class="card h-100 border-0 shadow-sm">
-      <div class="card-body text-center p-4">
-        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-          <i class="fa-solid fa-poo fa-2x text-success"></i>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
+          <div class="card-body p-4">
+            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+              <i class="fa-solid fa-poo fa-lg text-success"></i>
+            </div>
+            <h3 class="h6 fw-bold mb-2">Diaper Changes</h3>
+            <p class="text-body-secondary small mb-0">
+              Track wet and dirty diapers to spot patterns early.
+            </p>
+          </div>
         </div>
-        <h5 class="card-title fw-semibold">Diaper Changes</h5>
-        <p class="card-text text-body-secondary">
-          Track wet and dirty diapers to monitor health.
-        </p>
       </div>
-    </div>
-  </div>
 
-  <div class="col-md-6 col-lg-3">
-    <div class="card h-100 border-0 shadow-sm">
-      <div class="card-body text-center p-4">
-        <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-          <i class="fa-solid fa-moon fa-2x text-info"></i>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
+          <div class="card-body p-4">
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+              <i class="fa-solid fa-moon fa-lg text-primary"></i>
+            </div>
+            <h3 class="h6 fw-bold mb-2">Sleep Patterns</h3>
+            <p class="text-body-secondary small mb-0">
+              Record naps and nighttime sleep to find routines.
+            </p>
+          </div>
         </div>
-        <h5 class="card-title fw-semibold">Sleep Patterns</h5>
-        <p class="card-text text-body-secondary">
-          Record naps and nighttime sleep schedules.
-        </p>
       </div>
-    </div>
-  </div>
 
-  <div class="col-md-6 col-lg-3">
-    <div class="card h-100 border-0 shadow-sm">
-      <div class="card-body text-center p-4">
-        <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-          <i class="fa-solid fa-heart-pulse fa-2x text-danger"></i>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
+          <div class="card-body p-4">
+            <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+              <i class="fa-solid fa-share-nodes fa-lg text-info"></i>
+            </div>
+            <h3 class="h6 fw-bold mb-2">Share Access</h3>
+            <p class="text-body-secondary small mb-0">
+              Invite co-parents and caregivers to stay in sync.
+            </p>
+          </div>
         </div>
-        <h5 class="card-title fw-semibold">Health Metrics</h5>
-        <p class="card-text text-body-secondary">
-          Track growth, medications, and milestones.
-        </p>
       </div>
     </div>
   </div>

@@ -5,56 +5,62 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-8">
-    <div class="mb-4 pb-2">
-      <div class="d-flex align-items-center gap-2 mb-1">
-        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary btn-sm">
-          <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <span class="text-body-secondary">{{ child.name }}</span>
-      </div>
-      <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-2 mt-3">
-        <h1 class="h3 mb-0">
-          <i class="fa-solid fa-poo me-2 text-success"></i>Diaper Changes
-        </h1>
-        <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success btn-lg py-3 px-4 fs-5 fw-semibold">
-          <i class="fa-solid fa-plus me-2"></i>Log Diaper
-        </a>
-      </div>
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none">{{ child.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Diapers</li>
+      </ol>
+    </nav>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
+      <h1 class="h3 fw-bold mb-0">
+        <i class="fa-solid fa-poo me-2 text-success"></i>Diaper Changes
+      </h1>
+      <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success btn-lg py-2 px-4 fw-semibold rounded-pill">
+        <i class="fa-solid fa-plus me-2"></i>Log Diaper
+      </a>
     </div>
 
     {% if diaper_changes %}
       <div class="d-flex flex-column gap-3">
         {% for change in diaper_changes %}
-          <div class="card shadow-sm border-0 rounded-3">
-            <div class="card-body py-3">
-              <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                  <div class="fw-semibold fs-5">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex align-items-start gap-3">
+                  <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
                     {% if change.change_type == "wet" %}
-                      <i class="fa-solid fa-droplet text-info me-1"></i>Wet
+                      <i class="fa-solid fa-droplet"></i>
                     {% elif change.change_type == "dirty" %}
-                      <i class="fa-solid fa-poo text-success me-1"></i>Dirty
+                      <i class="fa-solid fa-poo"></i>
                     {% else %}
-                      <i class="fa-solid fa-droplet text-info me-1"></i>
-                      <i class="fa-solid fa-poo text-success me-1"></i>Wet + Dirty
+                      <i class="fa-solid fa-droplet"></i>
                     {% endif %}
+                  </span>
+                  <div>
+                    <div class="fw-bold">
+                      {% if change.change_type == "wet" %}Wet
+                      {% elif change.change_type == "dirty" %}Dirty
+                      {% else %}Wet + Dirty{% endif %}
+                    </div>
                   </div>
                 </div>
                 <div class="text-end">
-                  <div class="fw-semibold local-time-relative" data-datetime="{{ change.changed_at|date:'c' }}">
+                  <div class="fw-semibold small local-time-relative" data-datetime="{{ change.changed_at|date:'c' }}">
                     {{ change.changed_at|timesince }} ago
                   </div>
-                  <div class="text-body-secondary small local-time-exact" data-datetime="{{ change.changed_at|date:'c' }}">
+                  <div class="text-body-tertiary small local-time-exact" data-datetime="{{ change.changed_at|date:'c' }}">
                     {{ change.changed_at|date:"M j, g:i A" }}
                   </div>
                 </div>
               </div>
               {% if user_role != "cg" %}
-              <div class="d-flex gap-2">
-                <a href="{% url 'diapers:diaper_edit' child.pk change.pk %}" class="btn btn-outline-secondary py-2 px-3 flex-grow-1">
+              <div class="d-flex gap-2 mt-3 pt-3 border-top">
+                <a href="{% url 'diapers:diaper_edit' child.pk change.pk %}" class="btn btn-outline-secondary btn-sm flex-grow-1">
                   <i class="fa-solid fa-pen me-1"></i>Edit
                 </a>
-                <a href="{% url 'diapers:diaper_delete' child.pk change.pk %}" class="btn btn-outline-danger py-2 px-3 flex-grow-1">
+                <a href="{% url 'diapers:diaper_delete' child.pk change.pk %}" class="btn btn-outline-danger btn-sm flex-grow-1">
                   <i class="fa-solid fa-trash me-1"></i>Delete
                 </a>
               </div>
@@ -64,12 +70,14 @@
         {% endfor %}
       </div>
     {% else %}
-      <div class="card shadow-sm border-0 rounded-4">
+      <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body text-center py-5">
-          <i class="fa-solid fa-poo fa-4x text-body-secondary mb-4 opacity-50"></i>
-          <h5 class="text-body-secondary mb-2">No diaper changes yet</h5>
-          <p class="text-body-secondary mb-4">Log your first diaper change.</p>
-          <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success btn-lg py-3 px-5 fs-5">
+          <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="fa-solid fa-poo fa-xl text-success"></i>
+          </div>
+          <h5 class="fw-bold mb-2">No diaper changes yet</h5>
+          <p class="text-body-secondary small mb-4">Log your first diaper change to get started.</p>
+          <a href="{% url 'diapers:diaper_add' child.pk %}" class="btn btn-success btn-lg rounded-pill px-5">
             <i class="fa-solid fa-plus me-2"></i>Log Diaper
           </a>
         </div>
