@@ -1,0 +1,66 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ child.name }} – Timeline | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <span aria-current="page">Timeline</span>
+    </nav>
+
+    <h1 class="h3 mb-4">
+      <i class="fa-solid fa-timeline-line me-2 text-primary"></i>Timeline
+    </h1>
+
+    {% if page_obj %}
+      <ul class="list-group list-group-flush mb-4">
+        {% for activity in page_obj %}
+          <li class="list-group-item d-flex align-items-center border-start-0 border-end-0 py-3">
+            {% if activity.type == "feeding" %}
+              <span class="badge bg-warning-subtle text-warning rounded-3 p-2 me-3"><i class="fa-solid fa-bottle-water"></i></span>
+              <span class="flex-grow-1">Feeding – {{ activity.obj.feeding_type }}{% if activity.obj.amount_oz %} {{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %} {{ activity.obj.duration_minutes }} min{% endif %}</span>
+              {% if can_edit %}<a href="{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
+            {% elif activity.type == "diaper" %}
+              <span class="badge bg-success-subtle text-success rounded-3 p-2 me-3"><i class="fa-solid fa-poo"></i></span>
+              <span class="flex-grow-1">Diaper – {{ activity.obj.change_type }}</span>
+              {% if can_edit %}<a href="{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
+            {% else %}
+              <span class="badge bg-primary-subtle text-primary rounded-3 p-2 me-3"><i class="fa-solid fa-moon"></i></span>
+              <span class="flex-grow-1">Nap{% if activity.obj.ended_at %} (ended){% endif %}</span>
+              {% if can_edit %}<a href="{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
+            {% endif %}
+            <time datetime="{{ activity.at|date:'c' }}" class="text-body-secondary relative-time ms-2">{{ activity.at|date:"M j, g:i A" }}</time>
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if page_obj.has_other_pages %}
+        <nav aria-label="Timeline pagination" class="d-flex justify-content-center">
+          <ul class="pagination mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    {% else %}
+      <p class="text-body-tertiary fst-italic">No activity yet.</p>
+    {% endif %}
+
+    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary mt-3">Back to dashboard</a>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>DateTimeUtils.formatRelativeTimeElements();</script>
+{% endblock extra_js %}

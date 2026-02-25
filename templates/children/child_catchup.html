@@ -1,0 +1,69 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ child.name }} – Catch-up | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <span aria-current="page">Catch-up</span>
+    </nav>
+
+    <h1 class="h3 mb-4"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Catch-up</h1>
+
+    <form method="get" class="card shadow-sm border-0 rounded-4 p-4 mb-4">
+      <div class="row g-2">
+        <div class="col-md-5">
+          <label class="form-label">Start date</label>
+          <input type="date" name="start" class="form-control" value="{{ start }}" required>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">End date</label>
+          <input type="date" name="end" class="form-control" value="{{ end }}" required>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">View</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning">Add feeding</a>
+      <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}" class="btn btn-success">Add diaper</a>
+      <a href="{% url 'naps:nap_add' child_pk=child.pk %}" class="btn btn-primary">Add nap</a>
+    </div>
+
+    <h2 class="h6 text-uppercase text-body-secondary fw-semibold mb-2">Events in range</h2>
+    {% if events %}
+      <ul class="list-group list-group-flush mb-4">
+        {% for activity in events %}
+          <li class="list-group-item d-flex align-items-center border-start-0 border-end-0 py-3">
+            {% if activity.type == "feeding" %}
+              <span class="badge bg-warning-subtle text-warning rounded-3 p-2 me-3"><i class="fa-solid fa-bottle-water"></i></span>
+              <span class="flex-grow-1">Feeding – {{ activity.obj.feeding_type }}{% if activity.obj.amount_oz %} {{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %} {{ activity.obj.duration_minutes }} min{% endif %}</span>
+              {% if can_edit %}<a href="{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
+            {% elif activity.type == "diaper" %}
+              <span class="badge bg-success-subtle text-success rounded-3 p-2 me-3"><i class="fa-solid fa-poo"></i></span>
+              <span class="flex-grow-1">Diaper – {{ activity.obj.change_type }}</span>
+              {% if can_edit %}<a href="{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
+            {% else %}
+              <span class="badge bg-primary-subtle text-primary rounded-3 p-2 me-3"><i class="fa-solid fa-moon"></i></span>
+              <span class="flex-grow-1">Nap</span>
+              {% if can_edit %}<a href="{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}" class="btn btn-link btn-sm text-secondary">Edit</a>{% endif %}
+            {% endif %}
+            <time datetime="{{ activity.at|date:'c' }}" class="text-body-secondary ms-2">{{ activity.at|date:"M j, g:i A" }}</time>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-body-tertiary fst-italic">No events in this date range. Use the buttons above to add feedings, diapers, or naps.</p>
+    {% endif %}
+
+    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary">Back to dashboard</a>
+  </div>
+</div>
+{% endblock content %}

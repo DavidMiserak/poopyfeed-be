@@ -1,0 +1,41 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ child.name }} – Export status | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <a href="{% url 'children:child_export' pk=child.pk %}" class="text-body-secondary text-decoration-none">Export</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <span aria-current="page">Status</span>
+    </nav>
+
+    <h1 class="h3 mb-4"><i class="fa-solid fa-file-pdf me-2 text-primary"></i>PDF export</h1>
+
+    {% if status == "completed" and download_url %}
+      <div class="alert alert-success">
+        <p class="mb-2">Your PDF is ready.</p>
+        <a href="{{ download_url }}" class="btn btn-primary" download>Download PDF</a>
+      </div>
+    {% elif status == "failed" or error %}
+      <div class="alert alert-danger">
+        <p class="mb-0">Export failed. {% if error %}{{ error }}{% else %}Please try again.{% endif %}</p>
+      </div>
+      <a href="{% url 'children:child_export' pk=child.pk %}" class="btn btn-outline-secondary">Try again</a>
+    {% else %}
+      <div class="alert alert-info">
+        <p class="mb-0">Generating your PDF… This may take a moment.</p>
+      </div>
+      <meta http-equiv="refresh" content="{{ poll_interval_sec }}">
+      <p class="text-body-secondary small">This page will refresh automatically. If it doesn’t, <a href="?">refresh</a>.</p>
+    {% endif %}
+
+    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-link text-secondary mt-3">Back to dashboard</a>
+  </div>
+</div>
+{% endblock content %}

@@ -1,8 +1,13 @@
+import csv
+from io import StringIO
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Max, Q
-from django.shortcuts import get_object_or_404, redirect
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import (
@@ -14,11 +19,14 @@ from django.views.generic import (
 )
 
 from .forms import ChildForm
-from .mixins import ChildEditMixin, ChildOwnerMixin
+from .mixins import ChildAccessMixin, ChildEditMixin, ChildOwnerMixin
 from .models import Child, ChildShare, ShareInvite
 
 URL_CHILD_LIST = "children:child_list"
 URL_CHILD_SHARING = "children:child_sharing"
+
+# Number of recent activities to show on dashboard (merged feed)
+DASHBOARD_RECENT_ACTIVITY_LIMIT = 10
 
 
 class ChildListView(LoginRequiredMixin, ListView):
@@ -124,6 +132,393 @@ class ChildDeleteView(ChildOwnerMixin, DeleteView):
     def get_queryset(self):
         # Only owners can delete
         return Child.objects.filter(parent=self.request.user)
+
+
+class ChildDashboardView(ChildAccessMixin, DetailView):
+    """Child dashboard: today summary, recent activity, quick actions and nav links.
+
+    Any user with access (owner, co-parent, caregiver) can view. Shows today's
+    counts, last N combined activities, and links to add/view tracking, analytics,
+    export, catch-up, timeline; sharing link only for owner (NFR-1, FR-1–FR-3).
+    """
+
+    model = Child
+    template_name = "children/child_dashboard.html"
+    context_object_name = "child"
+
+    def get_queryset(self):
+        return Child.for_user(self.request.user).distinct()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from analytics.utils import get_today_summary
+
+        context["today_summary"] = get_today_summary(self.object.id)
+        context["recent_activities"] = self._get_recent_activities()
+        context["can_edit"] = self.object.can_edit(self.request.user)
+        context["can_manage_sharing"] = self.object.can_manage_sharing(
+            self.request.user
+        )
+        return context
+
+    def _get_recent_activities(self):
+        """Merge last feedings, diapers, naps by timestamp; return top N."""
+        from diapers.models import DiaperChange
+        from feedings.models import Feeding
+        from naps.models import Nap
+
+        child_id = self.object.id
+        n_per_type = 5
+        feedings = list(
+            Feeding.objects.filter(child_id=child_id)
+            .order_by("-fed_at")[:n_per_type]
+            .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes")
+        )
+        diapers = list(
+            DiaperChange.objects.filter(child_id=child_id)
+            .order_by("-changed_at")[:n_per_type]
+            .values("id", "changed_at", "change_type")
+        )
+        naps = list(
+            Nap.objects.filter(child_id=child_id)
+            .order_by("-napped_at")[:n_per_type]
+            .values("id", "napped_at", "ended_at")
+        )
+        merged = []
+        for f in feedings:
+            merged.append(
+                {
+                    "type": "feeding",
+                    "at": f["fed_at"],
+                    "obj": f,
+                    "url_name": "feedings:feeding_edit",
+                    "url_pk": f["id"],
+                }
+            )
+        for d in diapers:
+            merged.append(
+                {
+                    "type": "diaper",
+                    "at": d["changed_at"],
+                    "obj": d,
+                    "url_name": "diapers:diaper_edit",
+                    "url_pk": d["id"],
+                }
+            )
+        for n in naps:
+            merged.append(
+                {
+                    "type": "nap",
+                    "at": n["napped_at"],
+                    "obj": n,
+                    "url_name": "naps:nap_edit",
+                    "url_pk": n["id"],
+                }
+            )
+        merged.sort(key=lambda x: x["at"], reverse=True)
+        return merged[:DASHBOARD_RECENT_ACTIVITY_LIMIT]
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response["Pragma"] = "no-cache"
+        response["Expires"] = "0"
+        return response
+
+
+# Timeline: fetch up to this many per type before merge (then paginate)
+TIMELINE_FETCH_PER_TYPE = 100
+TIMELINE_PAGE_SIZE = 25
+
+
+class ChildTimelineView(ChildAccessMixin, View):
+    """Unified chronological timeline of feedings, diapers, naps (FR-4, FR-5)."""
+
+    template_name = "children/child_timeline.html"
+
+    def get(self, request, pk):
+        from diapers.models import DiaperChange
+        from feedings.models import Feeding
+        from naps.models import Nap
+
+        child = self.child
+        feedings = list(
+            Feeding.objects.filter(child_id=child.id)
+            .order_by("-fed_at")[:TIMELINE_FETCH_PER_TYPE]
+            .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes")
+        )
+        diapers = list(
+            DiaperChange.objects.filter(child_id=child.id)
+            .order_by("-changed_at")[:TIMELINE_FETCH_PER_TYPE]
+            .values("id", "changed_at", "change_type")
+        )
+        naps = list(
+            Nap.objects.filter(child_id=child.id)
+            .order_by("-napped_at")[:TIMELINE_FETCH_PER_TYPE]
+            .values("id", "napped_at", "ended_at")
+        )
+        merged = []
+        for f in feedings:
+            merged.append({"type": "feeding", "at": f["fed_at"], "obj": f})
+        for d in diapers:
+            merged.append({"type": "diaper", "at": d["changed_at"], "obj": d})
+        for n in naps:
+            merged.append({"type": "nap", "at": n["napped_at"], "obj": n})
+        merged.sort(key=lambda x: x["at"], reverse=True)
+
+        paginator = Paginator(merged, TIMELINE_PAGE_SIZE)
+        page_number = request.GET.get("page", 1)
+        page = paginator.get_page(page_number)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "child": child,
+                "page_obj": page,
+                "can_edit": child.can_edit(request.user),
+            },
+        )
+
+
+class ChildAnalyticsView(ChildAccessMixin, View):
+    """Analytics dashboard: feeding trends, diaper patterns, sleep summary (FR-6, FR-7)."""
+
+    template_name = "children/child_analytics.html"
+
+    def get(self, request, pk):
+        from analytics.utils import (
+            get_diaper_patterns,
+            get_feeding_trends,
+            get_sleep_summary,
+        )
+
+        child = self.child
+        days = int(request.GET.get("days", 30))
+        if days not in (7, 14, 30):
+            days = 30
+
+        feeding = get_feeding_trends(child.id, days=days)
+        diaper = get_diaper_patterns(child.id, days=days)
+        sleep = get_sleep_summary(child.id, days=days)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "child": child,
+                "days": days,
+                "feeding_trends": feeding,
+                "diaper_patterns": diaper,
+                "sleep_summary": sleep,
+            },
+        )
+
+
+class ChildExportView(ChildAccessMixin, View):
+    """Export page: format (CSV/PDF) and date range; CSV download, PDF queue + poll (FR-8–FR-10)."""
+
+    template_name = "children/child_export.html"
+
+    def get(self, request, pk):
+        return render(request, self.template_name, {"child": self.child})
+
+    def post(self, request, pk):
+        from analytics.tasks import generate_pdf_report
+        from analytics.utils import (
+            get_diaper_patterns,
+            get_feeding_trends,
+            get_sleep_summary,
+        )
+
+        child = self.child
+        export_format = request.POST.get("format", "csv").lower()
+        try:
+            days = int(request.POST.get("days", 30))
+        except (TypeError, ValueError):
+            days = 30
+        if days not in (7, 14, 30):
+            days = 30
+
+        if export_format == "csv":
+            feeding_data = get_feeding_trends(child.id, days=days)
+            diaper_data = get_diaper_patterns(child.id, days=days)
+            sleep_data = get_sleep_summary(child.id, days=days)
+
+            csv_buffer = StringIO()
+            writer = csv.writer(csv_buffer)
+            writer.writerow(
+                [
+                    "Date",
+                    "Feedings (count)",
+                    "Feedings (avg duration min)",
+                    "Feedings (total oz)",
+                    "Diaper Changes (count)",
+                    "Diaper Changes (wet)",
+                    "Diaper Changes (dirty)",
+                    "Diaper Changes (both)",
+                    "Naps (count)",
+                    "Naps (avg duration min)",
+                    "Naps (total minutes)",
+                ]
+            )
+            feeding_by_date = {d["date"]: d for d in feeding_data.get("daily_data", [])}
+            diaper_by_date = {d["date"]: d for d in diaper_data.get("daily_data", [])}
+            sleep_by_date = {d["date"]: d for d in sleep_data.get("daily_data", [])}
+            all_dates = sorted(
+                set(feeding_by_date.keys())
+                | set(diaper_by_date.keys())
+                | set(sleep_by_date.keys())
+            )
+            for d in all_dates:
+                f = feeding_by_date.get(d, {})
+                di = diaper_by_date.get(d, {})
+                s = sleep_by_date.get(d, {})
+                writer.writerow(
+                    [
+                        d,
+                        f.get("count", 0),
+                        f.get("average_duration") or "",
+                        f.get("total_oz") or "",
+                        di.get("count", 0),
+                        di.get("wet_count", 0),
+                        di.get("dirty_count", 0),
+                        di.get("both_count", 0),
+                        s.get("count", 0),
+                        s.get("average_duration") or "",
+                        s.get("total_minutes") or "",
+                    ]
+                )
+            response = HttpResponse(csv_buffer.getvalue(), content_type="text/csv")
+            filename = f"analytics-{child.name.replace(' ', '_')}-{days}days.csv"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+
+        if export_format == "pdf":
+            task = generate_pdf_report.delay(child.id, request.user.id, days)
+            return redirect(
+                "children:child_export_status", pk=child.pk, task_id=task.id
+            )
+
+        messages.warning(request, "Please choose CSV or PDF.")
+        return redirect("children:child_export", pk=child.pk)
+
+
+class ChildExportStatusView(ChildAccessMixin, View):
+    """Poll PDF export job status; show download link when ready or error (FR-10)."""
+
+    template_name = "children/child_export_status.html"
+
+    def get(self, request, pk, task_id):
+        from celery.result import AsyncResult
+
+        child = self.child
+        task_result = AsyncResult(task_id)
+        status_map = {
+            "PENDING": "pending",
+            "STARTED": "processing",
+            "SUCCESS": "completed",
+            "FAILURE": "failed",
+        }
+        frontend_status = status_map.get(task_result.status, "processing")
+        context = {
+            "child": child,
+            "task_id": task_id,
+            "status": frontend_status,
+            "poll_interval_sec": 2,
+        }
+        if task_result.successful():
+            result = task_result.result
+            context["filename"] = (
+                result.get("filename") if isinstance(result, dict) else None
+            )
+            context["download_url"] = (
+                result.get("download_url") if isinstance(result, dict) else None
+            )
+        elif task_result.failed():
+            context["error"] = str(getattr(task_result, "info", "Unknown error"))
+        return render(request, self.template_name, context)
+
+
+class ChildCatchUpView(ChildAccessMixin, View):
+    """Catch-up: time window selector and event timeline (FR-11, FR-12)."""
+
+    template_name = "children/child_catchup.html"
+
+    def get(self, request, pk):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from diapers.models import DiaperChange
+        from feedings.models import Feeding
+        from naps.models import Nap
+
+        child = self.child
+        today = timezone.now().date()
+        start_s = request.GET.get("start")
+        end_s = request.GET.get("end")
+        events = []
+        start_date = end_date = None
+
+        if start_s and end_s:
+            try:
+                from datetime import datetime
+
+                start_date = datetime.strptime(start_s, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_s, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass
+        if not start_date or not end_date or start_date > end_date:
+            end_date = today
+            start_date = today - timedelta(days=6)
+
+        feedings = list(
+            Feeding.objects.filter(
+                child_id=child.id,
+                fed_at__date__gte=start_date,
+                fed_at__date__lte=end_date,
+            )
+            .order_by("-fed_at")
+            .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes")
+        )
+        diapers = list(
+            DiaperChange.objects.filter(
+                child_id=child.id,
+                changed_at__date__gte=start_date,
+                changed_at__date__lte=end_date,
+            )
+            .order_by("-changed_at")
+            .values("id", "changed_at", "change_type")
+        )
+        naps = list(
+            Nap.objects.filter(
+                child_id=child.id,
+                napped_at__date__gte=start_date,
+                napped_at__date__lte=end_date,
+            )
+            .order_by("-napped_at")
+            .values("id", "napped_at", "ended_at")
+        )
+        for f in feedings:
+            events.append({"type": "feeding", "at": f["fed_at"], "obj": f})
+        for d in diapers:
+            events.append({"type": "diaper", "at": d["changed_at"], "obj": d})
+        for n in naps:
+            events.append({"type": "nap", "at": n["napped_at"], "obj": n})
+        events.sort(key=lambda x: x["at"], reverse=True)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "child": child,
+                "events": events,
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat(),
+                "can_edit": child.can_edit(request.user),
+            },
+        )
 
 
 class ChildSharingView(ChildOwnerMixin, DetailView):

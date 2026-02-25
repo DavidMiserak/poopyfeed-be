@@ -22,7 +22,7 @@
             <div class="card h-100 shadow-sm border-0 rounded-4">
               <div class="card-body pb-2">
                 <div class="d-flex justify-content-between align-items-start">
-                  <h2 class="h4 fw-bold mb-1">{{ child.name }}</h2>
+                  <h2 class="h4 fw-bold mb-1"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-dark text-decoration-none">{{ child.name }}</a></h2>
                   {% if role == "co-parent" %}
                     <span class="badge bg-primary">Co-parent</span>
                   {% elif role == "caregiver" %}

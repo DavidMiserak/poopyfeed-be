@@ -1,0 +1,85 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ child.name }} – Analytics | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <a href="{% url 'children:child_list' %}" class="text-body-secondary text-decoration-none">My Children</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none">{{ child.name }}</a>
+      <span class="text-body-secondary mx-2">/</span>
+      <span aria-current="page">Analytics</span>
+    </nav>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+      <h1 class="h3 mb-0"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Analytics</h1>
+      <form method="get" class="d-flex gap-2 align-items-center">
+        <label class="form-label mb-0">Period:</label>
+        <select name="days" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+          <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+          <option value="14" {% if days == 14 %}selected{% endif %}>Last 14 days</option>
+          <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+        </select>
+      </form>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+      <div class="card-header"><h2 class="h6 mb-0">Feeding trends</h2></div>
+      <div class="card-body overflow-auto">
+        {% if feeding_trends.daily_data %}
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Count</th><th>Total oz</th><th>Avg duration (min)</th></tr></thead>
+            <tbody>
+              {% for row in feeding_trends.daily_data %}
+                <tr><td>{{ row.date }}</td><td>{{ row.count }}</td><td>{{ row.total_oz|default:"" }}</td><td>{{ row.average_duration|default:"" }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-body-tertiary fst-italic mb-0">No feeding data for this period.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+      <div class="card-header"><h2 class="h6 mb-0">Diaper patterns</h2></div>
+      <div class="card-body overflow-auto">
+        {% if diaper_patterns.daily_data %}
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Count</th><th>Wet</th><th>Dirty</th><th>Both</th></tr></thead>
+            <tbody>
+              {% for row in diaper_patterns.daily_data %}
+                <tr><td>{{ row.date }}</td><td>{{ row.count }}</td><td>{{ row.wet_count|default:0 }}</td><td>{{ row.dirty_count|default:0 }}</td><td>{{ row.both_count|default:0 }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-body-tertiary fst-italic mb-0">No diaper data for this period.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+      <div class="card-header"><h2 class="h6 mb-0">Sleep summary</h2></div>
+      <div class="card-body overflow-auto">
+        {% if sleep_summary.daily_data %}
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Naps</th><th>Total min</th><th>Avg duration (min)</th></tr></thead>
+            <tbody>
+              {% for row in sleep_summary.daily_data %}
+                <tr><td>{{ row.date }}</td><td>{{ row.count }}</td><td>{{ row.total_minutes|default:"" }}</td><td>{{ row.average_duration|default:"" }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-body-tertiary fst-italic mb-0">No sleep data for this period.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="btn btn-outline-secondary">Back to dashboard</a>
+  </div>
+</div>
+{% endblock content %}

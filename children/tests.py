@@ -1066,3 +1066,188 @@ class AcceptInviteViewRaceConditionTests(TestCase):
 
         # Should redirect (302) without crashing
         self.assertEqual(response.status_code, 302)
+
+
+class ChildDashboardViewTests(TestCase):
+    """Tests for child dashboard (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="dashboarduser",
+            email="dashboard@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_dashboard_requires_login(self):
+        response = self.client.get(
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_dashboard_200_for_owner(self):
+        self.client.login(email="dashboard@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("today_summary", response.context)
+        self.assertIn("recent_activities", response.context)
+        self.assertTrue(response.context["can_manage_sharing"])
+
+    def test_dashboard_404_for_no_access(self):
+        other = get_user_model().objects.create_user(
+            username="other",
+            email="other@example.com",
+            password=TEST_PASSWORD,
+        )
+        self.client.login(email="other@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class ChildTimelineViewTests(TestCase):
+    """Tests for child timeline (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="timelineuser",
+            email="timeline@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_timeline_requires_login(self):
+        response = self.client.get(
+            reverse("children:child_timeline", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_timeline_200_for_owner(self):
+        self.client.login(email="timeline@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_timeline", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("page_obj", response.context)
+
+
+class ChildAnalyticsViewTests(TestCase):
+    """Tests for child analytics (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="analyticsuser",
+            email="analytics@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_analytics_requires_login(self):
+        response = self.client.get(
+            reverse("children:child_analytics", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_analytics_200_with_days_param(self):
+        self.client.login(email="analytics@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_analytics", kwargs={"pk": self.child.pk}),
+            {"days": "7"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 7)
+        self.assertIn("feeding_trends", response.context)
+
+
+class ChildExportViewTests(TestCase):
+    """Tests for child export (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="exportuser",
+            email="export@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_export_get_200(self):
+        self.client.login(email="export@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_export", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_export_post_csv_returns_attachment(self):
+        self.client.login(email="export@example.com", password=TEST_PASSWORD)
+        response = self.client.post(
+            reverse("children:child_export", kwargs={"pk": self.child.pk}),
+            {"format": "csv", "days": "30"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment", response["Content-Disposition"])
+
+    def test_export_post_pdf_redirects_to_status(self):
+        self.client.login(email="export@example.com", password=TEST_PASSWORD)
+        response = self.client.post(
+            reverse("children:child_export", kwargs={"pk": self.child.pk}),
+            {"format": "pdf", "days": "30"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("export/status/", response["Location"])
+
+
+class ChildCatchUpViewTests(TestCase):
+    """Tests for child catch-up (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="catchupuser",
+            email="catchup@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_catchup_requires_login(self):
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_catchup_200_with_default_dates(self):
+        self.client.login(email="catchup@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("events", response.context)
+        self.assertIn("start", response.context)
+        self.assertIn("end", response.context)

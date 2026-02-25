@@ -2,10 +2,16 @@ from django.urls import path
 
 from .views import (
     AcceptInviteView,
+    ChildAnalyticsView,
+    ChildCatchUpView,
     ChildCreateView,
+    ChildDashboardView,
     ChildDeleteView,
+    ChildExportStatusView,
+    ChildExportView,
     ChildListView,
     ChildSharingView,
+    ChildTimelineView,
     ChildUpdateView,
     CreateInviteView,
     DeleteInviteView,
@@ -18,6 +24,16 @@ app_name = "children"
 urlpatterns = [
     path("", ChildListView.as_view(), name="child_list"),
     path("add/", ChildCreateView.as_view(), name="child_add"),
+    path("<int:pk>/dashboard/", ChildDashboardView.as_view(), name="child_dashboard"),
+    path("<int:pk>/timeline/", ChildTimelineView.as_view(), name="child_timeline"),
+    path("<int:pk>/analytics/", ChildAnalyticsView.as_view(), name="child_analytics"),
+    path("<int:pk>/export/", ChildExportView.as_view(), name="child_export"),
+    path(
+        "<int:pk>/export/status/<str:task_id>/",
+        ChildExportStatusView.as_view(),
+        name="child_export_status",
+    ),
+    path("<int:pk>/catch-up/", ChildCatchUpView.as_view(), name="child_catchup"),
     path("<int:pk>/edit/", ChildUpdateView.as_view(), name="child_edit"),
     path("<int:pk>/delete/", ChildDeleteView.as_view(), name="child_delete"),
     # Sharing management
