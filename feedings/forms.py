@@ -62,6 +62,7 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
     datetime_field_name = "fed_at"
 
     fed_at = forms.DateTimeField(
+        label="Time of Feeding",
         widget=forms.DateTimeInput(
             attrs={
                 "type": "datetime-local",
@@ -70,6 +71,7 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
         ),
     )
     amount_oz = forms.DecimalField(
+        label="Amount (oz)",
         max_digits=BOTTLE_MAX_DIGITS,
         decimal_places=BOTTLE_DECIMAL_PLACES,
         required=False,
@@ -87,6 +89,7 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
         ),
     )
     duration_minutes = forms.IntegerField(
+        label="Duration (minutes)",
         required=False,
         validators=[
             MinValueValidator(MIN_BREAST_MINUTES),
@@ -111,6 +114,10 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
             "side",
             "tz_offset",
         ]
+        labels = {
+            "feeding_type": "Feeding Type",
+            "side": "Side",
+        }
         widgets = {
             "feeding_type": forms.Select(
                 attrs={"class": "form-select form-select-lg border-2"}

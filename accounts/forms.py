@@ -1,5 +1,7 @@
 from zoneinfo import available_timezones
 
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Column, Layout, Row
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
@@ -30,18 +32,21 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = get_user_model()
         fields = ("first_name", "last_name", "email", "timezone")
-        widgets = {
-            "first_name": forms.TextInput(attrs={"class": "form-control"}),
-            "last_name": forms.TextInput(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control"}),
-            "timezone": forms.Select(attrs={"class": "form-select"}),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         tz_choices = [(tz, tz) for tz in sorted(available_timezones())]
-        self.fields["timezone"].widget = forms.Select(
-            attrs={"class": "form-select"}, choices=tz_choices
+        self.fields["timezone"].widget = forms.Select(choices=tz_choices)
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Row(
+                Column("first_name", css_class="col-sm-6"),
+                Column("last_name", css_class="col-sm-6"),
+            ),
+            "email",
+            "timezone",
         )
 
     def clean_email(self):
@@ -54,7 +59,7 @@ class ProfileForm(forms.ModelForm):
 
 class DeleteAccountForm(forms.Form):
     current_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        widget=forms.PasswordInput(),
         label="Confirm your password",
     )
 

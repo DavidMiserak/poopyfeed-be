@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load crispy_forms_tags %}
 
 {% block title %}Account Settings | PoopyFeed{% endblock title %}
 
@@ -28,40 +29,7 @@
         <form method="post">
           {% csrf_token %}
           <input type="hidden" name="action" value="profile">
-
-          <div class="row mb-3">
-            <div class="col-sm-6">
-              <label for="id_first_name" class="form-label">First Name</label>
-              {{ profile_form.first_name }}
-              {% if profile_form.first_name.errors %}
-                <div class="invalid-feedback d-block">{{ profile_form.first_name.errors.0 }}</div>
-              {% endif %}
-            </div>
-            <div class="col-sm-6">
-              <label for="id_last_name" class="form-label">Last Name</label>
-              {{ profile_form.last_name }}
-              {% if profile_form.last_name.errors %}
-                <div class="invalid-feedback d-block">{{ profile_form.last_name.errors.0 }}</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="id_email" class="form-label">Email</label>
-            {{ profile_form.email }}
-            {% if profile_form.email.errors %}
-              <div class="invalid-feedback d-block">{{ profile_form.email.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="mb-3">
-            <label for="id_timezone" class="form-label">Timezone</label>
-            {{ profile_form.timezone }}
-            {% if profile_form.timezone.errors %}
-              <div class="invalid-feedback d-block">{{ profile_form.timezone.errors.0 }}</div>
-            {% endif %}
-          </div>
-
+          {% crispy profile_form %}
           <div class="d-grid">
             <button type="submit" class="btn btn-primary">
               <i class="fa-solid fa-check me-1"></i>Save Profile
@@ -102,15 +70,7 @@
           <form method="post">
             {% csrf_token %}
             <input type="hidden" name="action" value="delete">
-
-            <div class="mb-3">
-              <label for="id_current_password" class="form-label">{{ delete_form.current_password.label }}</label>
-              {{ delete_form.current_password }}
-              {% if delete_form.current_password.errors %}
-                <div class="invalid-feedback d-block">{{ delete_form.current_password.errors.0 }}</div>
-              {% endif %}
-            </div>
-
+            {{ delete_form|crispy }}
             <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
               <i class="fa-solid fa-trash me-1"></i>Permanently Delete Account
             </button>

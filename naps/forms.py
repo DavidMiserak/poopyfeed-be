@@ -11,6 +11,7 @@ class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
     datetime_field_name = "napped_at"
 
     napped_at = forms.DateTimeField(
+        label="Start Time",
         widget=forms.DateTimeInput(
             attrs={
                 "type": "datetime-local",
@@ -20,6 +21,7 @@ class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
     )
 
     ended_at = forms.DateTimeField(
+        label="End Time (optional)",
         required=False,
         widget=forms.DateTimeInput(
             attrs={

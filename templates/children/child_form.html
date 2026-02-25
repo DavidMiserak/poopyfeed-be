@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load crispy_forms_tags %}
 
 {% block title %}{% if object %}Edit{% else %}Add{% endif %} Child | PoopyFeed{% endblock title %}
 
@@ -18,27 +19,7 @@
       <div class="card-body">
         <form method="post">
           {% csrf_token %}
-          <div class="mb-3">
-            <label for="id_name" class="form-label">Name</label>
-            {{ form.name }}
-            {% if form.name.errors %}
-              <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3">
-            <label for="id_date_of_birth" class="form-label">Date of Birth</label>
-            {{ form.date_of_birth }}
-            {% if form.date_of_birth.errors %}
-              <div class="invalid-feedback d-block">{{ form.date_of_birth.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3">
-            <label for="id_gender" class="form-label">Gender <span class="text-body-secondary">(optional)</span></label>
-            {{ form.gender }}
-            {% if form.gender.errors %}
-              <div class="invalid-feedback d-block">{{ form.gender.errors.0 }}</div>
-            {% endif %}
-          </div>
+          {{ form|crispy }}
           <div class="d-grid gap-2 d-sm-flex">
             <button type="submit" class="btn btn-primary btn-lg py-3 flex-sm-grow-1 fs-5 fw-semibold">
               <i class="fa-solid fa-check me-2"></i>Save

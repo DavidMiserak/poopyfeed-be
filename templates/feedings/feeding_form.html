@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load crispy_forms_tags %}
 
 {% block title %}{% if object %}Edit{% else %}Log{% endif %} Feeding | {{ child.name }}{% endblock title %}
 
@@ -20,42 +21,14 @@
         <form method="post">
           {% csrf_token %}
           {{ form.tz_offset }}
-          <div class="mb-3">
-            <label for="id_feeding_type" class="form-label">Feeding Type</label>
-            {{ form.feeding_type }}
-            {% if form.feeding_type.errors %}
-              <div class="invalid-feedback d-block">{{ form.feeding_type.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3">
-            <label for="id_fed_at" class="form-label">Time of Feeding</label>
-            {{ form.fed_at }}
-            {% if form.fed_at.errors %}
-              <div class="invalid-feedback d-block">{{ form.fed_at.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3" id="bottle-fields">
-            <label for="id_amount_oz" class="form-label">Amount (oz)</label>
-            {{ form.amount_oz }}
-            {% if form.amount_oz.errors %}
-              <div class="invalid-feedback d-block">{{ form.amount_oz.errors.0 }}</div>
-            {% endif %}
+          {{ form.feeding_type|as_crispy_field }}
+          {{ form.fed_at|as_crispy_field }}
+          <div id="bottle-fields">
+            {{ form.amount_oz|as_crispy_field }}
           </div>
           <div id="breast-fields">
-            <div class="mb-3">
-              <label for="id_duration_minutes" class="form-label">Duration (minutes)</label>
-              {{ form.duration_minutes }}
-              {% if form.duration_minutes.errors %}
-                <div class="invalid-feedback d-block">{{ form.duration_minutes.errors.0 }}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label for="id_side" class="form-label">Side</label>
-              {{ form.side }}
-              {% if form.side.errors %}
-                <div class="invalid-feedback d-block">{{ form.side.errors.0 }}</div>
-              {% endif %}
-            </div>
+            {{ form.duration_minutes|as_crispy_field }}
+            {{ form.side|as_crispy_field }}
           </div>
           <div class="d-grid gap-2 d-sm-flex">
             <button type="submit" class="btn btn-warning btn-lg py-3 flex-sm-grow-1 fs-5 fw-semibold">

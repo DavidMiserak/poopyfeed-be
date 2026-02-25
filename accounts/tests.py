@@ -180,13 +180,11 @@ class ProfileFormTests(TestCase):
         self.assertIn("UTC", tz_values)
         self.assertIn("America/New_York", tz_values)
 
-    def test_profile_form_widgets_have_css_classes(self):
-        """Test ProfileForm widgets have form-control CSS classes."""
+    def test_profile_form_has_crispy_helper(self):
+        """Test ProfileForm has crispy FormHelper with row layout."""
         form = ProfileForm(instance=self.user)
-        self.assertIn("form-control", str(form.fields["first_name"].widget.attrs))
-        self.assertIn("form-control", str(form.fields["last_name"].widget.attrs))
-        self.assertIn("form-control", str(form.fields["email"].widget.attrs))
-        self.assertIn("form-select", str(form.fields["timezone"].widget.attrs))
+        self.assertIsNotNone(form.helper)
+        self.assertFalse(form.helper.form_tag)
 
     def test_profile_form_empty_names_allowed(self):
         """Test ProfileForm allows empty first_name and last_name."""
@@ -248,12 +246,11 @@ class DeleteAccountFormTests(TestCase):
         # Form is valid because check is skipped when user is None
         self.assertTrue(form.is_valid())
 
-    def test_delete_account_form_widget_attributes(self):
-        """Test DeleteAccountForm has proper widget attributes."""
+    def test_delete_account_form_widget_is_password_input(self):
+        """Test DeleteAccountForm uses PasswordInput widget."""
         form = DeleteAccountForm(user=self.user)
         password_field = form.fields["current_password"]
         self.assertEqual(password_field.widget.__class__.__name__, "PasswordInput")
-        self.assertIn("form-control", str(password_field.widget.attrs))
 
 
 class AccountSettingsViewTests(TestCase):

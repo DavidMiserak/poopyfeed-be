@@ -21,6 +21,7 @@ class ChildForm(forms.ModelForm):
     - name: Required, max 100 chars
     - date_of_birth: Required, ISO format, cannot be in future
     - gender: Optional, one of 'M', 'F', 'O'
+    - custom_bottle_*_oz: Optional bottle feeding presets (0.1-50 oz)
 
     Uses HTML5 date input widget for date_of_birth field.
     Applies Bootstrap CSS classes for consistent styling.
@@ -37,13 +38,49 @@ class ChildForm(forms.ModelForm):
 
     class Meta:
         model = Child
-        fields = ["name", "date_of_birth", "gender"]
+        fields = [
+            "name",
+            "date_of_birth",
+            "gender",
+            "custom_bottle_low_oz",
+            "custom_bottle_mid_oz",
+            "custom_bottle_high_oz",
+        ]
+        labels = {
+            "custom_bottle_low_oz": "Bottle Preset — Low (oz)",
+            "custom_bottle_mid_oz": "Bottle Preset — Mid (oz)",
+            "custom_bottle_high_oz": "Bottle Preset — High (oz)",
+        }
         widgets = {
             "name": forms.TextInput(
                 attrs={"class": "form-control form-control-lg border-2"}
             ),
             "gender": forms.Select(
                 attrs={"class": "form-select form-select-lg border-2"}
+            ),
+            "custom_bottle_low_oz": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-lg border-2",
+                    "step": "0.1",
+                    "min": "0.1",
+                    "max": "50",
+                }
+            ),
+            "custom_bottle_mid_oz": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-lg border-2",
+                    "step": "0.1",
+                    "min": "0.1",
+                    "max": "50",
+                }
+            ),
+            "custom_bottle_high_oz": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-lg border-2",
+                    "step": "0.1",
+                    "min": "0.1",
+                    "max": "50",
+                }
             ),
         }
 

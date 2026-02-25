@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load crispy_forms_tags %}
 
 {% block title %}{% if object %}Edit{% else %}Log{% endif %} Diaper | {{ child.name }}{% endblock title %}
 
@@ -19,21 +20,7 @@
       <div class="card-body">
         <form method="post">
           {% csrf_token %}
-          {{ form.tz_offset }}
-          <div class="mb-3">
-            <label for="id_change_type" class="form-label">Change Type</label>
-            {{ form.change_type }}
-            {% if form.change_type.errors %}
-              <div class="invalid-feedback d-block">{{ form.change_type.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3">
-            <label for="id_changed_at" class="form-label">Time of Change</label>
-            {{ form.changed_at }}
-            {% if form.changed_at.errors %}
-              <div class="invalid-feedback d-block">{{ form.changed_at.errors.0 }}</div>
-            {% endif %}
-          </div>
+          {{ form|crispy }}
           <div class="d-grid gap-2 d-sm-flex">
             <button type="submit" class="btn btn-success btn-lg py-3 flex-sm-grow-1 fs-5 fw-semibold">
               <i class="fa-solid fa-check me-2"></i>Save
