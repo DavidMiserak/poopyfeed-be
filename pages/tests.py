@@ -25,7 +25,7 @@ class HomePageTests(TestCase):
         self.assertContains(self.response, "Feeding Tracker")
         self.assertContains(self.response, "Diaper Changes")
         self.assertContains(self.response, "Sleep Patterns")
-        self.assertContains(self.response, "Health Metrics")
+        self.assertContains(self.response, "Share Access")
 
     def test_homepage_url_resolves_homepageview(self):
         view = resolve("/")

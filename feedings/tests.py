@@ -537,7 +537,7 @@ class FeedingViewTests(TestCase):
         self.client.login(email=TEST_PARENT_EMAIL, password=TEST_PASSWORD)
         response = self.client.get(reverse("children:child_list"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Feedings")
+        self.assertContains(response, "Feeding")
 
     def test_feeding_edit_get_shows_context(self):
         self.client.login(email=TEST_PARENT_EMAIL, password=TEST_PASSWORD)
