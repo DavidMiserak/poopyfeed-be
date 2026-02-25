@@ -13,6 +13,15 @@ from django.utils import timezone
 
 from .models import Child
 
+# Shared widget attrs for consistent styling (single source of truth)
+INPUT_CLASS = "form-control form-control-lg border-2"
+BOTTLE_PRESET_ATTRS = {
+    "class": INPUT_CLASS,
+    "step": "0.1",
+    "min": "0.1",
+    "max": "50",
+}
+
 
 class ChildForm(forms.ModelForm):
     """Form for creating/updating child profiles.
@@ -32,7 +41,7 @@ class ChildForm(forms.ModelForm):
 
     date_of_birth = forms.DateField(
         widget=forms.DateInput(
-            attrs={"type": "date", "class": "form-control form-control-lg border-2"},
+            attrs={"type": "date", "class": INPUT_CLASS},
         ),
     )
 
@@ -52,36 +61,13 @@ class ChildForm(forms.ModelForm):
             "custom_bottle_high_oz": "Bottle Preset — High (oz)",
         }
         widgets = {
-            "name": forms.TextInput(
-                attrs={"class": "form-control form-control-lg border-2"}
-            ),
+            "name": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "gender": forms.Select(
                 attrs={"class": "form-select form-select-lg border-2"}
             ),
-            "custom_bottle_low_oz": forms.NumberInput(
-                attrs={
-                    "class": "form-control form-control-lg border-2",
-                    "step": "0.1",
-                    "min": "0.1",
-                    "max": "50",
-                }
-            ),
-            "custom_bottle_mid_oz": forms.NumberInput(
-                attrs={
-                    "class": "form-control form-control-lg border-2",
-                    "step": "0.1",
-                    "min": "0.1",
-                    "max": "50",
-                }
-            ),
-            "custom_bottle_high_oz": forms.NumberInput(
-                attrs={
-                    "class": "form-control form-control-lg border-2",
-                    "step": "0.1",
-                    "min": "0.1",
-                    "max": "50",
-                }
-            ),
+            "custom_bottle_low_oz": forms.NumberInput(attrs=BOTTLE_PRESET_ATTRS),
+            "custom_bottle_mid_oz": forms.NumberInput(attrs=BOTTLE_PRESET_ATTRS),
+            "custom_bottle_high_oz": forms.NumberInput(attrs=BOTTLE_PRESET_ATTRS),
         }
 
     def clean_date_of_birth(self):
