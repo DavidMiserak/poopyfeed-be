@@ -48,8 +48,8 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
     3. Database constraints: CheckConstraints at schema level
 
     Datetime handling:
-    - Accepts local datetime from HTML5 input
-    - LocalDateTimeFormMixin converts to UTC using tz_offset
+    - Datetime input is in the user's profile timezone (set by server)
+    - LocalDateTimeFormMixin converts to UTC for storage
     - Validation prevents future timestamps
 
     Attributes:
@@ -112,7 +112,6 @@ class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
             "amount_oz",
             "duration_minutes",
             "side",
-            "tz_offset",
         ]
         labels = {
             "feeding_type": "Feeding Type",

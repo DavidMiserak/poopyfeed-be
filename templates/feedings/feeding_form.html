@@ -18,7 +18,6 @@
       <div class="card-body p-4">
         <form method="post">
           {% csrf_token %}
-          {{ form.tz_offset }}
           {{ form.feeding_type|as_crispy_field }}
           {{ form.fed_at|as_crispy_field }}
           <div id="bottle-fields">
@@ -44,8 +43,6 @@
 {% block extra_js %}
 <script>
   (function() {
-    DateTimeUtils.initFormDatetime();
-
     var feedingTypeSelect = document.getElementById('id_feeding_type');
     var bottleFields = document.getElementById('bottle-fields');
     var breastFields = document.getElementById('breast-fields');

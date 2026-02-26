@@ -151,14 +151,25 @@ class NapFormTests(TestCase):
         self.assertIn("napped_at", form.errors)
 
     def test_form_converts_local_time_to_utc(self):
+        """Form interprets submitted datetime in user's timezone and converts to UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="koluser",
+            email="kol@example.com",
+            password=TEST_PASSWORD,
+            timezone="Asia/Kolkata",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
         form = NapForm(
+            request=request,
             data={
                 "napped_at": "2026-02-01T14:00",
-                "tz_offset": -330,  # UTC+5:30 (IST)
-            }
+            },
         )
         self.assertTrue(form.is_valid())
-        # 14:00 local - 330 minutes = 08:30 UTC
+        # 14:00 Asia/Kolkata (IST UTC+5:30) = 08:30 UTC
         self.assertEqual(form.cleaned_data["napped_at"].hour, 8)
         self.assertEqual(form.cleaned_data["napped_at"].minute, 30)
 
@@ -191,17 +202,64 @@ class NapFormTests(TestCase):
         self.assertIn("ended_at", form.errors)
 
     def test_form_converts_ended_at_to_utc(self):
+        """Ended_at is converted from user timezone to UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="koluser2",
+            email="kol2@example.com",
+            password=TEST_PASSWORD,
+            timezone="Asia/Kolkata",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
         form = NapForm(
+            request=request,
             data={
                 "napped_at": "2026-02-01T14:00",
                 "ended_at": "2026-02-01T15:30",
-                "tz_offset": -330,  # UTC+5:30 (IST)
+            },
+        )
+        self.assertTrue(form.is_valid())
+        # 15:30 Asia/Kolkata = 10:00 UTC
+        self.assertEqual(form.cleaned_data["ended_at"].hour, 10)
+        self.assertEqual(form.cleaned_data["ended_at"].minute, 0)
+
+    def test_form_utc_user_keeps_submitted_times_as_utc(self):
+        """With user timezone UTC, submitted local times equal cleaned UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="utcuser",
+            email="utc@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        form = NapForm(
+            request=request,
+            data={
+                "napped_at": "2026-02-01T10:00",
+                "ended_at": "2026-02-01T11:30",
+            },
+        )
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["napped_at"].hour, 10)
+        self.assertEqual(form.cleaned_data["napped_at"].minute, 0)
+        self.assertEqual(form.cleaned_data["ended_at"].hour, 11)
+        self.assertEqual(form.cleaned_data["ended_at"].minute, 30)
+
+    def test_form_no_request_uses_utc(self):
+        """When request is omitted, form uses UTC for conversion."""
+        form = NapForm(
+            data={
+                "napped_at": "2026-02-01T14:00",
             }
         )
         self.assertTrue(form.is_valid())
-        # 15:30 local - 330 minutes = 10:00 UTC
-        self.assertEqual(form.cleaned_data["ended_at"].hour, 10)
-        self.assertEqual(form.cleaned_data["ended_at"].minute, 0)
+        self.assertEqual(form.cleaned_data["napped_at"].hour, 14)
+        self.assertEqual(form.cleaned_data["napped_at"].minute, 0)
 
 
 class NapViewTests(TestCase):

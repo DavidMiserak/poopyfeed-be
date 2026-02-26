@@ -20,7 +20,7 @@ class DiaperChangeForm(LocalDateTimeFormMixin, forms.ModelForm):
 
     class Meta:
         model = DiaperChange
-        fields = ["change_type", "changed_at", "tz_offset"]
+        fields = ["change_type", "changed_at"]
         labels = {
             "change_type": "Change Type",
         }

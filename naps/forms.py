@@ -1,7 +1,9 @@
-from datetime import timedelta
-
 from django import forms
 
+from children.datetime_utils import (
+    naive_local_to_utc,
+    utc_to_local_datetime_local_str,
+)
 from children.forms import LocalDateTimeFormMixin
 
 from .models import Nap
@@ -33,23 +35,25 @@ class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
 
     class Meta:
         model = Nap
-        fields = ["napped_at", "ended_at", "tz_offset"]
+        fields = ["napped_at", "ended_at"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        tz = self._user_tz()
+        if self.instance and getattr(self.instance, "pk", None) and tz:
+            ended_at = getattr(self.instance, "ended_at", None)
+            if ended_at is not None:
+                self.initial["ended_at"] = utc_to_local_datetime_local_str(ended_at, tz)
 
     def clean(self):
-        """Convert local datetimes to UTC and validate ended_at > napped_at."""
+        """Convert ended_at from user TZ to UTC and validate ended_at > napped_at."""
         cleaned_data = super().clean()
-        tz_offset = cleaned_data.get("tz_offset")
         ended_at = cleaned_data.get("ended_at")
-
-        # Convert ended_at from local to UTC using same tz_offset
-        if tz_offset is not None and ended_at is not None:
-            ended_at = ended_at + timedelta(minutes=tz_offset)
-            cleaned_data["ended_at"] = ended_at
-
-        # Validate ended_at > napped_at (both now in UTC)
+        if ended_at is not None and self._request:
+            tz = self._user_tz()
+            cleaned_data["ended_at"] = naive_local_to_utc(ended_at, tz)
         napped_at = cleaned_data.get("napped_at")
         ended_at = cleaned_data.get("ended_at")
         if napped_at and ended_at and ended_at <= napped_at:
             self.add_error("ended_at", "End time must be after start time.")
-
         return cleaned_data

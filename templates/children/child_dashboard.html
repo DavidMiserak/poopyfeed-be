@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load poopyfeed_dt %}
 
 {% block title %}{{ child.name }} – Dashboard | PoopyFeed{% endblock title %}
 
@@ -19,7 +20,7 @@
         <h1 class="h3 fw-bold mb-1">{{ child.name }}</h1>
         <div class="text-body-secondary small">
           <i class="fa-solid fa-cake-candles me-1"></i>{{ child.date_of_birth|date:"M j, Y" }}
-          <span class="child-age" data-dob="{{ child.date_of_birth|date:'c' }}"></span>
+          <span class="text-body-secondary">{{ child.date_of_birth|format_child_age_tz:user_timezone }}</span>
           {% if child.gender %}
             <span class="ms-1">
               {% if child.gender == "M" %}<i class="fa-solid fa-mars text-info"></i>
@@ -159,7 +160,7 @@
                           </a>
                         {% endif %}
                       </div>
-                      <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small relative-time">{{ activity.at|date:"g:i A" }}</time>
+                      <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small">{{ activity.at|format_relative_tz:user_timezone }}</time>
                     </div>
                   </div>
                 {% endfor %}
@@ -220,10 +221,3 @@
   </div>
 </div>
 {% endblock content %}
-
-{% block extra_js %}
-<script>
-  DateTimeUtils.formatRelativeTimeElements();
-  DateTimeUtils.formatChildAges();
-</script>
-{% endblock extra_js %}

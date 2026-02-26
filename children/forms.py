@@ -1,18 +1,20 @@
 """Forms for child creation/update and tracking record timezone handling.
 
-LocalDateTimeFormMixin handles the critical task of converting browser-local
-datetime inputs to UTC for storage and API responses. This ensures all timestamps
-in the database are normalized to UTC, while the frontend handles client-side
-timezone display via JavaScript.
+LocalDateTimeFormMixin converts datetime inputs from the user's profile timezone
+to UTC for storage. All display and form defaults use the user's timezone (pure
+Django; no JavaScript).
 """
-
-from datetime import timedelta
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Column, Div, Layout, Row
 from django import forms
 from django.utils import timezone
 
+from .datetime_utils import (
+    naive_local_to_utc,
+    now_in_user_tz_str,
+    utc_to_local_datetime_local_str,
+)
 from .models import Child
 
 # Shared widget attrs for consistent styling (single source of truth)
@@ -144,80 +146,50 @@ class ChildForm(forms.ModelForm):
 
 
 class LocalDateTimeFormMixin(forms.Form):
-    """Mixin to handle local timezone conversion for datetime fields.
+    """Mixin to convert user-timezone datetime inputs to UTC.
 
-    Critical for tracking apps (feedings, diapers, naps) which need to accept
-    local datetime inputs from users and convert them to UTC for storage.
-
-    Timezone handling architecture:
-    1. Frontend: JavaScript captures browser timezone offset (getTimezoneOffset)
-    2. Hidden field: tz_offset sent in form submission
-    3. Form clean(): Converts local datetime to UTC using offset
-    4. Database: All datetime fields stored in UTC
-    5. API responses: Return UTC timestamps (frontend converts back to local)
-
-    Subclasses must set:
-        datetime_field_name: Name of the datetime field to convert (e.g., "fed_at")
-
-    Timezone offset math:
-    - JavaScript getTimezoneOffset() returns minutes offset from UTC
-    - Positive offset = behind UTC (e.g., EST is UTC-5 = +300 minutes)
-    - Negative offset = ahead of UTC (e.g., IST is UTC+5:30 = -330 minutes)
-    - Conversion: utc_datetime = local_datetime + timedelta(minutes=offset)
-
-    Example usage in forms.py:
-        class FeedingForm(LocalDateTimeFormMixin, forms.ModelForm):
-            datetime_field_name = "fed_at"
-
-    Example usage in template:
-        <input type="hidden" class="tz-offset" name="tz_offset"
-               value="{{ tz_offset }}" />
-        <script>
-            document.querySelector('.tz-offset').value =
-                new Date().getTimezoneOffset();
-        </script>
+    Uses the request user's profile timezone (no JavaScript). Subclasses must set
+    datetime_field_name to the primary datetime field. The form receives request
+    via get_form_kwargs in the view; __init__ sets initial datetime in user TZ
+    (edit: from instance; create: now). clean() interprets submitted naive
+    datetime as user TZ and converts to UTC.
     """
 
     datetime_field_name = None  # Subclasses MUST set this to field name
 
-    tz_offset = forms.IntegerField(
-        widget=forms.HiddenInput(attrs={"class": "tz-offset"}),
-        required=False,
-    )
+    def __init__(self, *args, **kwargs):
+        self._request = kwargs.pop("request", None)
+        super().__init__(*args, **kwargs)
+        tz = self._user_tz()
+        field_name = self.datetime_field_name
+        if not field_name or not tz:
+            return
+        instance = getattr(self, "instance", None)
+        if instance is not None and getattr(instance, "pk", None):
+            utc_dt = getattr(instance, field_name, None)
+            if utc_dt is not None:
+                self.initial[field_name] = utc_to_local_datetime_local_str(utc_dt, tz)
+        elif instance is None or not getattr(instance, "pk", None):
+            self.initial[field_name] = now_in_user_tz_str(tz)
+
+    def _user_tz(self):
+        """Return user's timezone or UTC."""
+        if not self._request or not getattr(self._request, "user", None):
+            return "UTC"
+        return getattr(self._request.user, "timezone", None) or "UTC"
 
     def clean(self):
-        """Convert local datetime to UTC using timezone offset.
-
-        Performs two conversions:
-        1. Local datetime + tz_offset → UTC datetime
-        2. Validate UTC datetime is not in future
-
-        The datetime_field_name subclass attribute specifies which form field
-        contains the local datetime.
-
-        Returns:
-            dict: cleaned_data with datetime field converted to UTC
-
-        Raises:
-            ValidationError: If resulting UTC datetime is in the future
-        """
+        """Convert naive datetime from user timezone to UTC and validate not future."""
         cleaned_data = super().clean()
-        tz_offset = cleaned_data.get("tz_offset")
-        dt_value = cleaned_data.get(self.datetime_field_name)
-
-        if tz_offset is not None and dt_value is not None:
-            # tz_offset is JavaScript's getTimezoneOffset() in minutes
-            # Positive means behind UTC (e.g., EST UTC-5 = +300)
-            # Negative means ahead of UTC (e.g., IST UTC+5:30 = -330)
-            # To convert local time to UTC, add the offset
-            utc_dt = dt_value + timedelta(minutes=tz_offset)
-            cleaned_data[self.datetime_field_name] = utc_dt
-
-            # Validate not in future (compare UTC times)
+        field_name = self.datetime_field_name
+        dt_value = cleaned_data.get(field_name) if field_name else None
+        if dt_value is not None:
+            tz = self._user_tz()
+            utc_dt = naive_local_to_utc(dt_value, tz)
+            cleaned_data[field_name] = utc_dt
             if utc_dt > timezone.now():
                 self.add_error(
-                    self.datetime_field_name,
+                    field_name,
                     "Date/time cannot be in the future.",
                 )
-
         return cleaned_data

@@ -82,16 +82,62 @@ class DiaperChangeFormTests(TestCase):
         self.assertTrue(form.is_valid())
 
     def test_form_converts_local_time_to_utc(self):
+        """Form interprets submitted datetime in user's timezone and converts to UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="estuser",
+            email="est@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        form = DiaperChangeForm(
+            request=request,
+            data={
+                "change_type": DiaperChange.ChangeType.WET,
+                "changed_at": TEST_DATETIME,
+            },
+        )
+        self.assertTrue(form.is_valid())
+        # 10:30 America/New_York (EST) = 15:30 UTC
+        self.assertEqual(form.cleaned_data["changed_at"].hour, 15)
+        self.assertEqual(form.cleaned_data["changed_at"].minute, 30)
+
+    def test_form_utc_user_keeps_submitted_time_as_utc(self):
+        """With user timezone UTC, submitted local time equals cleaned UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="utcuser",
+            email="utc@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        form = DiaperChangeForm(
+            request=request,
+            data={
+                "change_type": DiaperChange.ChangeType.WET,
+                "changed_at": TEST_DATETIME,
+            },
+        )
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["changed_at"].hour, 10)
+        self.assertEqual(form.cleaned_data["changed_at"].minute, 30)
+
+    def test_form_no_request_uses_utc(self):
+        """When request is omitted, form uses UTC for conversion."""
         form = DiaperChangeForm(
             data={
                 "change_type": DiaperChange.ChangeType.WET,
                 "changed_at": TEST_DATETIME,
-                "tz_offset": 300,  # UTC-5 (EST)
             }
         )
         self.assertTrue(form.is_valid())
-        # 10:30 local + 300 minutes = 15:30 UTC
-        self.assertEqual(form.cleaned_data["changed_at"].hour, 15)
+        self.assertEqual(form.cleaned_data["changed_at"].hour, 10)
         self.assertEqual(form.cleaned_data["changed_at"].minute, 30)
 
 

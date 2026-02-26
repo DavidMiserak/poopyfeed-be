@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load poopyfeed_dt %}
 
 {% block title %}Diaper Changes | {{ child.name }}{% endblock title %}
 
@@ -47,11 +48,11 @@
                   </div>
                 </div>
                 <div class="text-end">
-                  <div class="fw-semibold small local-time-relative" data-datetime="{{ change.changed_at|date:'c' }}">
-                    {{ change.changed_at|timesince }} ago
+                  <div class="fw-semibold small">
+                    {{ change.changed_at|format_relative_tz:user_timezone }}
                   </div>
-                  <div class="text-body-tertiary small local-time-exact" data-datetime="{{ change.changed_at|date:'c' }}">
-                    {{ change.changed_at|date:"M j, g:i A" }}
+                  <div class="text-body-tertiary small">
+                    {{ change.changed_at|format_exact_tz:user_timezone }}
                   </div>
                 </div>
               </div>
@@ -86,10 +87,3 @@
   </div>
 </div>
 {% endblock content %}
-
-{% block extra_js %}
-<script>
-  DateTimeUtils.formatRelativeTimes();
-  DateTimeUtils.formatExactTimes();
-</script>
-{% endblock extra_js %}

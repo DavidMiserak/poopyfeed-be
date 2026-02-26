@@ -248,17 +248,65 @@ class FeedingFormTests(TestCase):
         self.assertIn("feeding_type", form.errors)
 
     def test_form_converts_local_time_to_utc(self):
+        """Form interprets submitted datetime in user's timezone and converts to UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="estuser",
+            email="est@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        form = FeedingForm(
+            request=request,
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": TEST_DATETIME,
+                "amount_oz": "4.0",
+            },
+        )
+        self.assertTrue(form.is_valid())
+        # 10:30 America/New_York (EST) = 15:30 UTC
+        self.assertEqual(form.cleaned_data["fed_at"].hour, 15)
+        self.assertEqual(form.cleaned_data["fed_at"].minute, 30)
+
+    def test_form_utc_user_keeps_submitted_time_as_utc(self):
+        """With user timezone UTC, submitted local time equals cleaned UTC."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="utcuser",
+            email="utc@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        form = FeedingForm(
+            request=request,
+            data={
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": TEST_DATETIME,
+                "amount_oz": "4.0",
+            },
+        )
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["fed_at"].hour, 10)
+        self.assertEqual(form.cleaned_data["fed_at"].minute, 30)
+
+    def test_form_no_request_uses_utc(self):
+        """When request is omitted, form uses UTC for conversion."""
         form = FeedingForm(
             data={
                 "feeding_type": Feeding.FeedingType.BOTTLE,
                 "fed_at": TEST_DATETIME,
                 "amount_oz": "4.0",
-                "tz_offset": 300,  # UTC-5 (EST)
             }
         )
         self.assertTrue(form.is_valid())
-        # 10:30 local + 300 minutes = 15:30 UTC
-        self.assertEqual(form.cleaned_data["fed_at"].hour, 15)
+        self.assertEqual(form.cleaned_data["fed_at"].hour, 10)
         self.assertEqual(form.cleaned_data["fed_at"].minute, 30)
 
     def test_negative_amount_invalid(self):
@@ -399,6 +447,33 @@ class FeedingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Bottle")
         self.assertContains(response, "4.0 oz")
+
+    def test_feeding_list_renders_with_user_timezone(self):
+        """List page renders; times are formatted in user's profile timezone (pure Django)."""
+        user = get_user_model().objects.create_user(
+            username="tzuser",
+            email="tzuser@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="TZ Baby",
+            date_of_birth=date(2025, 1, 1),
+        )
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=timezone.now(),
+            amount_oz=3.0,
+        )
+        self.client.login(email="tzuser@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bottle")
+        self.assertContains(response, "3.0 oz")
 
     def test_feeding_create_requires_login(self):
         response = self.client.get(

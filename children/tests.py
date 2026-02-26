@@ -1009,20 +1009,28 @@ class LocalDateTimeFormMixinTests(TestCase):
     """Test LocalDateTimeFormMixin timezone conversion and future validation."""
 
     def test_future_utc_datetime_rejected(self):
-        """Datetime that becomes future after UTC conversion is rejected."""
+        """Datetime in the future (in user TZ) is rejected."""
         from django import forms as django_forms
+        from django.test import RequestFactory
 
         class TestForm(LocalDateTimeFormMixin, django_forms.Form):
             datetime_field_name = "test_dt"
             test_dt = django_forms.DateTimeField()
 
-        # A datetime far in the future + offset that keeps it in the future
+        user = get_user_model().objects.create_user(
+            username="utcfuture",
+            email="utcfuture@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
         future_local = timezone.now() + timedelta(hours=2)
         form = TestForm(
+            request=request,
             data={
-                "test_dt": future_local.strftime("%Y-%m-%d %H:%M:%S"),
-                "tz_offset": "0",  # UTC, so it stays in the future
-            }
+                "test_dt": future_local.strftime("%Y-%m-%dT%H:%M"),
+            },
         )
         self.assertFalse(form.is_valid())
         self.assertIn("test_dt", form.errors)

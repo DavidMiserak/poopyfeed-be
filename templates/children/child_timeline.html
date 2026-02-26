@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load poopyfeed_dt %}
 
 {% block title %}{{ child.name }} – Timeline | PoopyFeed{% endblock title %}
 
@@ -84,7 +85,7 @@
                 </a>
               {% endif %}
             </div>
-            <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small relative-time">{{ activity.at|date:"g:i A" }}</time>
+            <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small">{{ activity.at|format_relative_tz:user_timezone }}</time>
           </div>
         </div>
 
@@ -120,5 +121,4 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script>DateTimeUtils.formatRelativeTimeElements();</script>
 {% endblock extra_js %}

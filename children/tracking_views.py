@@ -146,8 +146,8 @@ class TrackingCreateView(ChildAccessMixin, CreateView):
     tracking records (feedings, diapers, naps). ChildAccessMixin allows any
     user with access to the child to add records (owner/co-parent/caregiver).
 
-    Timezone handling: Forms using LocalDateTimeFormMixin convert local time
-    to UTC before saving. The tz_offset hidden field captures browser timezone.
+    Timezone handling: Forms using LocalDateTimeFormMixin use the user's profile
+    timezone; datetime inputs are shown and interpreted in that timezone (pure Django).
 
     Template context (GET):
     - form: The form instance
@@ -185,6 +185,12 @@ class TrackingCreateView(ChildAccessMixin, CreateView):
             Http404: If child_pk is missing or child not found
         """
         return get_object_or_404(Child, pk=self.kwargs["child_pk"])
+
+    def get_form_kwargs(self):
+        """Pass request so the form can use user timezone for datetime."""
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def form_valid(self, form):
         """Set child before saving form.
@@ -231,8 +237,7 @@ class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
     - Co-parent: Can edit shared child's records
     - Caregiver: Cannot edit (forbidden via ChildEditMixin)
 
-    Timezone handling: LocalDateTimeFormMixin converts local time to UTC.
-    The datetime field is converted back to local time for form display.
+    Timezone handling: Form datetimes are in the user's profile timezone (pure Django).
 
     Template context (GET):
     - form: The form instance with current values
@@ -259,6 +264,12 @@ class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
     """
 
     success_url_name = None  # Must be set by subclass
+
+    def get_form_kwargs(self):
+        """Pass request so the form can use user timezone for datetime."""
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request
+        return kwargs
 
     def get_success_url(self):
         """Generate URL to list view after successful update.
