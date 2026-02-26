@@ -958,10 +958,11 @@ class SharedChildListViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    def test_share_button_visible_only_for_owner(self):
+    def test_share_button_not_on_child_list(self):
+        """Child list does not show share icon; sharing is from child dashboard."""
         self.client.login(email=TEST_OWNER_EMAIL, password=TEST_PASSWORD)
         response = self.client.get(reverse(URL_CHILD_LIST))
-        self.assertContains(response, "fa-share-nodes")
+        self.assertNotContains(response, "fa-share-nodes")
 
     def test_share_button_hidden_for_coparent(self):
         self.client.login(email=TEST_COPARENT_EMAIL, password=TEST_PASSWORD)

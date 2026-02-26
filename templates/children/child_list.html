@@ -46,11 +46,7 @@
                       {% endif %}
                     </div>
                   </div>
-                  {% if is_owner %}
-                    <a href="{% url 'children:child_sharing' pk=child.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill" title="Share">
-                      <i class="fa-solid fa-share-nodes"></i>
-                    </a>
-                  {% elif role == "co-parent" %}
+                  {% if role == "co-parent" %}
                     <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 small">Co-parent</span>
                   {% elif role == "caregiver" %}
                     <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2 small">Caregiver</span>
