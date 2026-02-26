@@ -123,6 +123,51 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
             .distinct()
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:
+            from notifications.forms import NotificationPreferenceForm
+            from notifications.models import NotificationPreference
+
+            pref, _ = NotificationPreference.objects.get_or_create(
+                user=self.request.user, child=self.object
+            )
+            context["notification_preference"] = pref
+            context["notification_preference_form"] = context.get(
+                "notification_preference_form"
+            ) or NotificationPreferenceForm(instance=pref)
+            context["notifications_saved"] = (
+                self.request.GET.get("notifications_saved") == "1"
+            )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get("action") == "notification_preference":
+            return self._handle_notification_preference(request, *args, **kwargs)
+        return super().post(request, *args, **kwargs)
+
+    def _handle_notification_preference(self, request, *args, **kwargs):
+        from notifications.forms import NotificationPreferenceForm
+        from notifications.models import NotificationPreference
+
+        self.object = self.get_object()
+        pref = NotificationPreference.objects.filter(
+            user=request.user, child=self.object
+        ).first()
+        if not pref:
+            return redirect(URL_CHILD_LIST)
+        form = NotificationPreferenceForm(request.POST, instance=pref)
+        if form.is_valid():
+            form.save()
+            return redirect(
+                reverse("children:child_edit", kwargs={"pk": self.object.pk})
+                + "?notifications_saved=1"
+            )
+        context = self.get_context_data(
+            notification_preference_form=form,
+        )
+        return self.render_to_response(context)
+
 
 class ChildDeleteView(ChildOwnerMixin, DeleteView):
     model = Child

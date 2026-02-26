@@ -926,6 +926,17 @@ class SharedChildListViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_child_edit_context_has_notification_preference(self):
+        """Child edit page includes notification preference form when editing."""
+        self.client.login(email=TEST_OWNER_EMAIL, password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("notification_preference", response.context)
+        self.assertIn("notification_preference_form", response.context)
+        self.assertContains(response, "Notification alerts")
+
     def test_caregiver_cannot_edit_child(self):
         self.client.login(email=TEST_CAREGIVER_EMAIL, password=TEST_PASSWORD)
         response = self.client.get(

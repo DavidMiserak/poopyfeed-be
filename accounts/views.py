@@ -15,7 +15,21 @@ class AccountSettingsView(LoginRequiredMixin, TemplateView):
         if "delete_form" not in context:
             context["delete_form"] = DeleteAccountForm(user=self.request.user)
         context["profile_success"] = self.request.GET.get("profile_saved") == "1"
+        context["notifications_success"] = (
+            self.request.GET.get("notifications_saved") == "1"
+        )
+        self._add_quiet_hours_context(context)
         return context
+
+    def _add_quiet_hours_context(self, context):
+        """Add quiet hours form for the account settings page."""
+        from notifications.forms import QuietHoursForm
+        from notifications.models import QuietHours
+
+        quiet_hours, _ = QuietHours.objects.get_or_create(user=self.request.user)
+        context["quiet_hours_form"] = context.get("quiet_hours_form") or QuietHoursForm(
+            instance=quiet_hours
+        )
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
@@ -24,6 +38,8 @@ class AccountSettingsView(LoginRequiredMixin, TemplateView):
             return self._handle_profile(request)
         elif action == "delete":
             return self._handle_delete(request)
+        elif action == "quiet_hours":
+            return self._handle_quiet_hours(request)
 
         return redirect("account_settings")
 
@@ -41,4 +57,16 @@ class AccountSettingsView(LoginRequiredMixin, TemplateView):
             request.user.delete()
             return redirect("home")
         context = self.get_context_data(delete_form=form)
+        return self.render_to_response(context)
+
+    def _handle_quiet_hours(self, request):
+        from notifications.forms import QuietHoursForm
+        from notifications.models import QuietHours
+
+        quiet_hours, _ = QuietHours.objects.get_or_create(user=request.user)
+        form = QuietHoursForm(request.POST, instance=quiet_hours)
+        if form.is_valid():
+            form.save()
+            return redirect(f"{request.path}?notifications_saved=1")
+        context = self.get_context_data(quiet_hours_form=form)
         return self.render_to_response(context)

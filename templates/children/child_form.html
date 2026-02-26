@@ -37,6 +37,43 @@
       </div>
     </div>
 
+    {% if object and notification_preference %}
+    <div class="card border-0 shadow-sm rounded-4 mt-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-bell me-2 text-primary"></i>Notification alerts</h2>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-body-secondary small mb-3">When someone else logs a feeding, diaper change, or nap for {{ object.name }}, you can get an in-app notification. Choose which activities to get alerts for.</p>
+        {% if notifications_saved %}
+          <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
+            <i class="fa-solid fa-check-circle me-1"></i>
+            Notification settings saved.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="notification_preference">
+          <div class="row g-2">
+            {% for field in notification_preference_form %}
+              <div class="col-12 col-md-4">
+                <div class="form-check">
+                  {{ field }}
+                  <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="mt-2">
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+              <i class="fa-solid fa-check me-1"></i>Save notification settings
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
     {% if object and user_role == "owner" %}
     <div class="text-center mt-4 pt-4 border-top">
       <a href="{% url 'children:child_delete' object.pk %}" class="btn btn-sm btn-link text-danger text-decoration-none">

@@ -38,6 +38,46 @@
       </div>
     </div>
 
+    <!-- Quiet hours -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-bell me-2 text-primary"></i>Quiet hours</h2>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-body-secondary small mb-3">During this time (in your timezone), no in-app notification alerts will be created.</p>
+        {% if notifications_success %}
+          <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
+            <i class="fa-solid fa-check-circle me-1"></i>
+            Quiet hours saved.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="quiet_hours">
+          <div class="form-check mb-2">
+            {{ quiet_hours_form.enabled }}
+            <label class="form-check-label" for="{{ quiet_hours_form.enabled.id_for_label }}">{{ quiet_hours_form.enabled.label }}</label>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ quiet_hours_form.start_time.id_for_label }}">{{ quiet_hours_form.start_time.label }}</label>
+              {{ quiet_hours_form.start_time }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ quiet_hours_form.end_time.id_for_label }}">{{ quiet_hours_form.end_time.label }}</label>
+              {{ quiet_hours_form.end_time }}
+            </div>
+          </div>
+          <div class="d-grid d-md-block mt-2">
+            <button type="submit" class="btn btn-outline-primary">
+              <i class="fa-solid fa-check me-1"></i>Save quiet hours
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Password -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">

@@ -295,6 +295,31 @@ class AccountSettingsViewTests(TestCase):
         delete_form = response.context["delete_form"]
         self.assertIsNotNone(delete_form)
 
+    def test_account_settings_context_has_quiet_hours_form(self):
+        """Test AccountSettingsView provides quiet hours form in context."""
+        response = self.client.get(reverse("account_settings"))
+        self.assertIn("quiet_hours_form", response.context)
+
+    def test_account_settings_post_quiet_hours_valid(self):
+        """Test AccountSettingsView saves quiet hours and redirects with success."""
+        response = self.client.post(
+            reverse("account_settings"),
+            {
+                "action": "quiet_hours",
+                "enabled": "on",
+                "start_time": "22:00",
+                "end_time": "07:00",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("notifications_saved=1", response.url)
+        from notifications.models import QuietHours
+
+        qh = QuietHours.objects.get(user=self.user)
+        self.assertTrue(qh.enabled)
+        self.assertEqual(str(qh.start_time), "22:00:00")
+        self.assertEqual(str(qh.end_time), "07:00:00")
+
     def test_account_settings_profile_success_flag_from_query(self):
         """Test AccountSettingsView shows success message from query param."""
         response = self.client.get(reverse("account_settings") + "?profile_saved=1")
