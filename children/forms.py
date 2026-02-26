@@ -8,6 +8,8 @@ timezone display via JavaScript.
 
 from datetime import timedelta
 
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import HTML, Column, Div, Layout, Row
 from django import forms
 from django.utils import timezone
 
@@ -56,9 +58,9 @@ class ChildForm(forms.ModelForm):
             "custom_bottle_high_oz",
         ]
         labels = {
-            "custom_bottle_low_oz": "Bottle Preset — Low (oz)",
-            "custom_bottle_mid_oz": "Bottle Preset — Mid (oz)",
-            "custom_bottle_high_oz": "Bottle Preset — High (oz)",
+            "custom_bottle_low_oz": "Low (oz)",
+            "custom_bottle_mid_oz": "Mid (oz)",
+            "custom_bottle_high_oz": "High (oz)",
         }
         widgets = {
             "name": forms.TextInput(attrs={"class": INPUT_CLASS}),
@@ -69,6 +71,59 @@ class ChildForm(forms.ModelForm):
             "custom_bottle_mid_oz": forms.NumberInput(attrs=BOTTLE_PRESET_ATTRS),
             "custom_bottle_high_oz": forms.NumberInput(attrs=BOTTLE_PRESET_ATTRS),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for f in (
+            "custom_bottle_low_oz",
+            "custom_bottle_mid_oz",
+            "custom_bottle_high_oz",
+        ):
+            self.fields[f].help_text = ""
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    HTML(
+                        '<h2 class="h6 fw-bold mb-0">'
+                        '<i class="fa-solid fa-child me-2 text-primary"></i>'
+                        "Details</h2>"
+                    ),
+                    css_class="card-header bg-transparent border-0 pt-4 pb-0 px-4",
+                ),
+                Div(
+                    "name",
+                    "date_of_birth",
+                    "gender",
+                    css_class="card-body p-4",
+                ),
+                css_class="card border-0 shadow-sm rounded-4",
+            ),
+            Div(
+                Div(
+                    HTML(
+                        '<h2 class="h6 fw-bold mb-0">'
+                        '<i class="fa-solid fa-wine-bottle me-2 text-primary"></i>'
+                        "Bottle presets</h2>"
+                    ),
+                    css_class="card-header bg-transparent border-0 pt-4 pb-0 px-4",
+                ),
+                Div(
+                    HTML(
+                        '<p class="text-body-secondary small mb-3">'
+                        "Quick-select amounts when logging. Optional.</p>"
+                    ),
+                    Row(
+                        Column("custom_bottle_low_oz", css_class="col-12 mb-2"),
+                        Column("custom_bottle_mid_oz", css_class="col-12 mb-2"),
+                        Column("custom_bottle_high_oz", css_class="col-12"),
+                    ),
+                    css_class="card-body p-4",
+                ),
+                css_class="card border-0 shadow-sm rounded-4 mt-4",
+            ),
+        )
 
     def clean_date_of_birth(self):
         """Validate that date of birth is not in the future.

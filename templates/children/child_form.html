@@ -22,20 +22,16 @@
       </p>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4">
-      <div class="card-body p-4">
-        <form method="post">
-          {% csrf_token %}
-          {{ form|crispy }}
-          <div class="d-grid gap-2 mt-3">
-            <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">
-              <i class="fa-solid fa-check me-2"></i>Save
-            </button>
-            <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">Cancel</a>
-          </div>
-        </form>
+    <form method="post">
+      {% csrf_token %}
+      {% crispy form %}
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">
+          <i class="fa-solid fa-check me-2"></i>Save
+        </button>
+        <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">Cancel</a>
       </div>
-    </div>
+    </form>
 
     {% if object and notification_preference %}
     <div class="card border-0 shadow-sm rounded-4 mt-4">
