@@ -18,11 +18,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from accounts.views import AccountSettingsView
+from accounts.views import AccountSettingsView, TimezoneUpdateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/settings/", AccountSettingsView.as_view(), name="account_settings"),
+    path(
+        "accounts/settings/timezone/",
+        TimezoneUpdateView.as_view(),
+        name="account_settings_timezone",
+    ),
     path("accounts/", include("allauth.urls")),
     # REST API
     path("api/v1/", include("django_project.api_urls")),

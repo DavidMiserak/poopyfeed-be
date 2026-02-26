@@ -460,3 +460,92 @@ class AccountSettingsViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("profile_form", response.context)
+
+
+class TimezoneUpdateViewTests(TestCase):
+    """Tests for the timezone-only update endpoint used by the timezone banner."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username="tzupdate",
+            email="tzupdate@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+
+    def test_post_requires_login(self):
+        """Unauthenticated POST redirects to login."""
+        response = self.client.post(
+            reverse("account_settings_timezone"),
+            {"timezone": "America/New_York"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("login", response.url)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.timezone, "UTC")
+
+    def test_post_valid_timezone_updates_user(self):
+        """POST with valid timezone updates user and redirects to settings."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("account_settings_timezone"),
+            {"timezone": "America/New_York"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("account_settings") + "?profile_saved=1")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.timezone, "America/New_York")
+
+    def test_post_invalid_timezone_redirects_without_updating(self):
+        """POST with invalid timezone does not update user."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("account_settings_timezone"),
+            {"timezone": "Invalid/Zone"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.timezone, "UTC")
+
+    def test_post_empty_timezone_redirects_without_updating(self):
+        """POST with empty timezone does not update user."""
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("account_settings_timezone"),
+            {"timezone": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.timezone, "UTC")
+
+
+class TimezoneBannerTemplateTests(TestCase):
+    """Tests that the timezone banner is present in base template for authenticated users."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username="tzbanner",
+            email="tzbanner@example.com",
+            password=TEST_PASSWORD,
+            timezone="Europe/London",
+        )
+
+    def test_base_template_includes_tz_banner_when_authenticated(self):
+        """Authenticated users get the timezone banner in the base template."""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("account_settings"))
+        content = response.content.decode()
+        self.assertIn('id="tz-banner"', content)
+        self.assertIn("Europe/London", content)
+        self.assertIn("data-profile-timezone=", content)
+        self.assertIn("tz-banner-dismiss-btn", content)
+        self.assertIn("/accounts/settings/timezone/", content)
+
+    def test_base_template_no_tz_banner_when_anonymous(self):
+        """Anonymous users do not get the timezone banner markup."""
+        response = self.client.get(reverse("account_login"))
+        self.assertNotContains(response, 'id="tz-banner"')

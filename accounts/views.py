@@ -1,6 +1,9 @@
+from zoneinfo import available_timezones
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
-from django.views.generic import TemplateView
+from django.urls import reverse
+from django.views.generic import TemplateView, View
 
 from .forms import DeleteAccountForm, ProfileForm
 
@@ -70,3 +73,14 @@ class AccountSettingsView(LoginRequiredMixin, TemplateView):
             return redirect(f"{request.path}?notifications_saved=1")
         context = self.get_context_data(quiet_hours_form=form)
         return self.render_to_response(context)
+
+
+class TimezoneUpdateView(LoginRequiredMixin, View):
+    """Accept POST with timezone only; update user timezone and redirect back."""
+
+    def post(self, request, *args, **kwargs):
+        tz = (request.POST.get("timezone") or "").strip()
+        if tz in available_timezones():
+            request.user.timezone = tz
+            request.user.save(update_fields=["timezone"])
+        return redirect(reverse("account_settings") + "?profile_saved=1")

@@ -22,6 +22,29 @@
     {% block extra_css %}{% endblock extra_css %}
   </head>
   <body class="d-flex flex-column min-vh-100 bg-body-tertiary">
+    {% if user.is_authenticated %}
+    <div id="tz-banner" class="d-none w-100 border-bottom border-2 border-warning px-3 py-2" style="background: linear-gradient(to right, #fffbeb, #fff7ed);" data-profile-timezone="{{ user_timezone|default:'UTC' }}" role="status" aria-live="polite">
+      <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <p class="text-dark small mb-0 me-2">
+            Your device timezone is <strong id="tz-banner-browser"></strong> but your account is set to <strong id="tz-banner-profile"></strong>.
+          </p>
+          <div class="d-flex align-items-center gap-2">
+            <form id="tz-banner-form" method="post" action="{% url 'account_settings_timezone' %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="timezone" id="tz-banner-timezone-value" value="">
+              <button type="submit" id="tz-banner-update-btn" class="btn btn-warning btn-sm fw-semibold" aria-busy="false">
+                Update to <span id="tz-banner-update-label"></span>
+              </button>
+            </form>
+            <button type="button" id="tz-banner-dismiss-btn" class="btn btn-outline-secondary btn-sm fw-semibold" aria-label="Dismiss timezone mismatch banner">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold fs-5" href="{% url 'home' %}">
@@ -112,6 +135,48 @@
           .catch(function() {});
       }
     </script>
+    {% if user.is_authenticated %}
+    <script>
+      (function() {
+        var TZ_SESSION_KEY = 'tz-banner-dismissed';
+        var banner = document.getElementById('tz-banner');
+        if (!banner) return;
+        var profileTz = (banner.getAttribute('data-profile-timezone') || 'UTC').trim();
+        function getBrowserTz() {
+          try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+          } catch (e) {
+            return null;
+          }
+        }
+        function wasDismissed() {
+          try {
+            return sessionStorage.getItem(TZ_SESSION_KEY) === 'true';
+          } catch (e) {
+            return false;
+          }
+        }
+        var browserTz = getBrowserTz();
+        if (browserTz && browserTz !== profileTz && !wasDismissed()) {
+          banner.classList.remove('d-none');
+          document.getElementById('tz-banner-browser').textContent = browserTz;
+          document.getElementById('tz-banner-profile').textContent = profileTz;
+          document.getElementById('tz-banner-update-label').textContent = browserTz;
+          document.getElementById('tz-banner-timezone-value').value = browserTz;
+        }
+        document.getElementById('tz-banner-dismiss-btn').addEventListener('click', function() {
+          try { sessionStorage.setItem(TZ_SESSION_KEY, 'true'); } catch (e) {}
+          banner.classList.add('d-none');
+        });
+        document.getElementById('tz-banner-form').addEventListener('submit', function() {
+          var btn = document.getElementById('tz-banner-update-btn');
+          btn.disabled = true;
+          btn.setAttribute('aria-busy', 'true');
+          btn.textContent = 'Updating...';
+        });
+      })();
+    </script>
+    {% endif %}
     {% block extra_js %}
     {% endblock extra_js %}
   </body>
