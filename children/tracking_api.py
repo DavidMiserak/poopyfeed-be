@@ -122,13 +122,30 @@ class TrackingViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        """Set child from URL parameter."""
+        """Set child from URL parameter and dispatch notification signal."""
+        from notifications.signals import tracking_created
+
         child_pk = self.kwargs.get("child_pk")
         if child_pk:
             child = Child.objects.get(pk=child_pk)
             if not child.has_access(self.request.user):
                 raise PermissionDenied("You do not have access to this child.")
-            serializer.save(child=child)
+            instance = serializer.save(child=child)
         else:
             # Top-level route: child must be in request data
-            serializer.save()
+            instance = serializer.save()
+
+        # Dispatch notification signal for shared users
+        event_type_map = {
+            "Feeding": "feeding",
+            "DiaperChange": "diaper",
+            "Nap": "nap",
+        }
+        event_type = event_type_map.get(type(instance).__name__)
+        if event_type:
+            tracking_created.send(
+                sender=type(instance),
+                instance=instance,
+                actor_id=self.request.user.id,
+                event_type=event_type,
+            )

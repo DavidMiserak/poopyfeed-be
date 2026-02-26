@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "diapers",
     "feedings",
     "naps",
+    "notifications",
     "pages",
 ]
 
@@ -299,6 +300,13 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = (
     25 * 60
 )  # 25 minutes soft limit (raises SoftTimeLimitExceeded)
+
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-old-notifications": {
+        "task": "notifications.tasks.cleanup_old_notifications",
+        "schedule": 86400.0,  # Every 24 hours
+    },
+}
 
 # =============================================================================
 # Authentication & Authorization

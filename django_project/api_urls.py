@@ -18,11 +18,17 @@ from children.batch_api import BatchCreateView
 from diapers.api import DiaperChangeViewSet
 from feedings.api import FeedingViewSet
 from naps.api import NapViewSet
+from notifications.views import (
+    NotificationPreferenceViewSet,
+    NotificationViewSet,
+    QuietHoursView,
+)
 
 # Main router for top-level resources
 router = DefaultRouter()
 router.register("children", ChildViewSet, basename="child")
 router.register("invites", AcceptInviteViewSet, basename="invite")
+router.register("notifications", NotificationViewSet, basename="notification")
 
 # Tracking ViewSets will be mounted as nested routes under children
 # Using custom URL patterns for nested resources
@@ -50,7 +56,23 @@ urlpatterns = [
     path("", include("allauth.headless.urls")),
     # Get auth token for current session user
     path("browser/v1/auth/token/", get_auth_token, name="get-auth-token"),
-    # Main router (children, invites)
+    # Notification preferences and quiet hours (before router to avoid pk conflict)
+    path(
+        "notifications/preferences/",
+        NotificationPreferenceViewSet.as_view({"get": "list"}),
+        name="notification-preferences-list",
+    ),
+    path(
+        "notifications/preferences/<int:pk>/",
+        NotificationPreferenceViewSet.as_view({"patch": "partial_update"}),
+        name="notification-preferences-detail",
+    ),
+    path(
+        "notifications/quiet-hours/",
+        QuietHoursView.as_view(),
+        name="notification-quiet-hours",
+    ),
+    # Main router (children, invites, notifications)
     path("", include(router.urls)),
     # Nested tracking routes under children
     path(

@@ -191,6 +191,17 @@ class BatchCreateView(APIView):
                         }
                     )
 
+            # Dispatch notification signals for each created object
+            from notifications.signals import tracking_created
+
+            for item in created_objects:
+                tracking_created.send(
+                    sender=type(item["object"]),
+                    instance=item["object"],
+                    actor_id=request.user.id,
+                    event_type=item["type"],
+                )
+
             # Serialize created objects for response
             response_data = {
                 "created": [
