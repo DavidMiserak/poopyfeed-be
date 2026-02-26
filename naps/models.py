@@ -48,3 +48,12 @@ class Nap(models.Model):
         if self.ended_at is None:
             return None
         return (self.ended_at - self.napped_at).total_seconds() / 60
+
+    @property
+    def duration_display(self):
+        """Human-readable duration (e.g. '1h 30m') or None if nap is ongoing."""
+        if self.ended_at is None:
+            return None
+        total = int(self.duration_minutes)
+        h, m = divmod(total, 60)
+        return f"{h}h {m}m" if h else f"{m}m"

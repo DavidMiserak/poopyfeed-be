@@ -34,6 +34,13 @@
                   </span>
                   <div>
                     <div class="fw-bold">Nap</div>
+                    <div class="text-body-secondary small">
+                      {% if nap.ended_at %}
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">{{ nap.duration_display }}</span>
+                      {% else %}
+                        <span class="badge bg-info-subtle text-info rounded-pill">Ongoing</span>
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
                 <div class="text-end">
