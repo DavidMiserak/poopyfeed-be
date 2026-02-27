@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
@@ -1162,6 +1163,38 @@ class ChildTimelineViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("page_obj", response.context)
+
+    def test_timeline_date_header_uses_user_timezone_at_utc_midnight_boundary(self):
+        """Timeline date headers use the user's timezone, not UTC (midnight boundary).
+
+        An event at 04:00 UTC is 23:00 previous day in America/New_York. It must
+        appear under the user's local date (e.g. Wednesday, Feb 25), not UTC date
+        (Thursday, Feb 26).
+        """
+        from feedings.models import Feeding
+
+        self.user.timezone = "America/New_York"
+        self.user.save(update_fields=["timezone"])
+
+        # 04:00 UTC on 2026-02-26 = 23:00 ET on 2026-02-25 (Wednesday)
+        fed_at_utc = datetime(2026, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC"))
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=fed_at_utc,
+            amount_oz=4.0,
+        )
+
+        self.client.login(email="timeline@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_timeline", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode()
+        # User's local date: Wednesday, Feb 25 (not UTC Thursday, Feb 26)
+        self.assertIn("Wednesday, Feb 25", content)
+        self.assertNotIn("Thursday, Feb 26", content)
 
 
 class ChildAnalyticsViewTests(TestCase):

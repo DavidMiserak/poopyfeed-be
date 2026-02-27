@@ -7,6 +7,7 @@ and error handling for all analytics endpoints.
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -525,6 +526,51 @@ class TodaySummaryTests(APITestCase):
         self.assertEqual(data["diapers"]["count"], 1)
         self.assertEqual(data["diapers"]["wet"], 1)
         self.assertEqual(data["sleep"]["naps"], 1)
+
+    @patch("analytics.utils.timezone.now")
+    def test_today_summary_uses_utc_date_at_midnight_boundary(self, mock_now):
+        """get_today_summary uses UTC date for 'today', not the user's local date.
+
+        At UTC midnight boundary: an event at 01:00 UTC is 'today' in UTC but may
+        be 'yesterday' in the user's timezone. We document that current behavior
+        is UTC-based so boundary bugs are explicit and testable.
+        """
+        # 2026-02-26 05:00 UTC → "today" is 2026-02-26 in UTC
+        mock_now.return_value = datetime(2026, 2, 26, 5, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # Feeding at 01:00 UTC same calendar day (UTC) → counted as today
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=datetime(2026, 2, 26, 1, 0, 0, tzinfo=ZoneInfo("UTC")),
+            amount_oz=4.0,
+        )
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/today-summary/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["feedings"]["count"], 1)
+
+    @patch("analytics.utils.timezone.now")
+    def test_today_summary_excludes_events_before_utc_midnight(self, mock_now):
+        """Events before UTC midnight are not counted as 'today' (UTC boundary)."""
+        # 2026-02-26 01:00 UTC → "today" is 2026-02-26
+        mock_now.return_value = datetime(2026, 2, 26, 1, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # Feeding at 23:00 UTC on 2026-02-25 → yesterday in UTC, not counted
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=datetime(2026, 2, 25, 23, 0, 0, tzinfo=ZoneInfo("UTC")),
+            amount_oz=4.0,
+        )
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/today-summary/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["feedings"]["count"], 0)
 
 
 class WeeklySummaryTests(APITestCase):
