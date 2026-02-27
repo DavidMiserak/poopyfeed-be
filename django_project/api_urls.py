@@ -154,6 +154,11 @@ urlpatterns = [
         name="analytics-today-summary",
     ),
     path(
+        "analytics/children/<int:pk>/timeline/",
+        AnalyticsViewSet.as_view({"get": "timeline"}),
+        name="analytics-timeline",
+    ),
+    path(
         "analytics/children/<int:pk>/weekly-summary/",
         AnalyticsViewSet.as_view({"get": "weekly_summary"}),
         name="analytics-weekly-summary",

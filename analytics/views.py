@@ -37,6 +37,7 @@ from .serializers import (
 )
 from .tasks import generate_pdf_report
 from .utils import (
+    get_child_timeline_events,
     get_diaper_patterns,
     get_feeding_trends,
     get_sleep_summary,
@@ -277,6 +278,57 @@ class AnalyticsViewSet(viewsets.ViewSet):
         # Validate response
         response_serializer = TodaySummaryResponseSerializer(data)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="timeline")
+    def timeline(self, request, pk=None):
+        """Get a child's unified timeline (feedings, diapers, naps) with pagination.
+
+        Query Parameters:
+            page: Page number (default 1)
+            page_size: Results per page (default 25, max 100)
+
+        Returns:
+            Paginated list of events, each with type, at (ISO datetime), and
+            a type-specific payload (feeding, diaper, or nap).
+        """
+        from django.core.paginator import Paginator
+
+        child = self.get_child(pk)
+        events = get_child_timeline_events(child.id)
+
+        page_size = min(max(int(request.query_params.get("page_size", 25)), 1), 100)
+        paginator = Paginator(events, page_size)
+        try:
+            page_number = max(int(request.query_params.get("page", 1)), 1)
+        except (ValueError, TypeError):
+            page_number = 1
+        page = paginator.get_page(page_number)
+
+        # Build next/previous URLs
+        base_url = request.build_absolute_uri(request.path)
+        next_url = (
+            f"{base_url}?page={page.next_page_number()}&page_size={page_size}"
+            if page.has_next()
+            else None
+        )
+        prev_url = (
+            f"{base_url}?page={page.previous_page_number()}&page_size={page_size}"
+            if page.has_previous()
+            else None
+        )
+
+        # Serialize events for JSON (DRF Response handles datetime/Decimal)
+        results = list(page.object_list)
+
+        return Response(
+            {
+                "count": paginator.count,
+                "next": next_url,
+                "previous": prev_url,
+                "results": results,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=True, methods=["get"], url_path="weekly-summary")
     def weekly_summary(self, request, pk=None):

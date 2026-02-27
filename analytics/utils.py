@@ -560,3 +560,57 @@ def get_weekly_summary(child_id: int) -> dict[str, Any]:
         "sleep": sleep_data,
         "last_updated": timezone.now().isoformat(),
     }
+
+
+# Timeline: fetch up to this many per type before merge (matches children.views)
+TIMELINE_FETCH_PER_TYPE = 100
+
+
+def get_child_timeline_events(
+    child_id: int, limit_per_type: int = TIMELINE_FETCH_PER_TYPE
+) -> list[dict[str, Any]]:
+    """Build a merged chronological timeline of feedings, diapers, and naps.
+
+    Fetches the most recent events per type, merges by timestamp, and returns
+    a single list sorted by time descending (newest first).
+
+    Args:
+        child_id: The child's ID
+        limit_per_type: Max events to fetch per type (default 100)
+
+    Returns:
+        List of event dicts, each with "type", "at" (datetime), and a type-keyed
+        payload ("feeding", "diaper", or "nap"). Datetimes are timezone-aware UTC.
+    """
+    feedings = list(
+        Feeding.objects.filter(child_id=child_id)
+        .order_by("-fed_at")[:limit_per_type]
+        .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes", "side")
+    )
+    diapers = list(
+        DiaperChange.objects.filter(child_id=child_id)
+        .order_by("-changed_at")[:limit_per_type]
+        .values("id", "changed_at", "change_type")
+    )
+    naps = list(
+        Nap.objects.filter(child_id=child_id)
+        .order_by("-napped_at")[:limit_per_type]
+        .values("id", "napped_at", "ended_at")
+    )
+    # Nap duration_minutes is a model property; compute for API payload
+    for n in naps:
+        if n["ended_at"] and n["napped_at"]:
+            total_sec = (n["ended_at"] - n["napped_at"]).total_seconds()
+            n["duration_minutes"] = int(round(total_sec / 60))
+        else:
+            n["duration_minutes"] = None
+
+    merged = []
+    for f in feedings:
+        merged.append({"type": "feeding", "at": f["fed_at"], "feeding": f})
+    for d in diapers:
+        merged.append({"type": "diaper", "at": d["changed_at"], "diaper": d})
+    for n in naps:
+        merged.append({"type": "nap", "at": n["napped_at"], "nap": n})
+    merged.sort(key=lambda x: x["at"], reverse=True)
+    return merged

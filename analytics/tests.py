@@ -573,6 +573,143 @@ class TodaySummaryTests(APITestCase):
         self.assertEqual(data["feedings"]["count"], 0)
 
 
+class TimelineTests(APITestCase):
+    """Test child timeline API endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data."""
+        cls.user = User.objects.create_user(
+            username="testuser",
+            email="user@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def setUp(self):
+        """Set up authentication."""
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def test_timeline_response_structure(self):
+        """Response should have count, next, previous, and results."""
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIn("count", data)
+        self.assertIn("next", data)
+        self.assertIn("previous", data)
+        self.assertIn("results", data)
+        self.assertIsInstance(data["results"], list)
+
+    def test_timeline_returns_merged_chronological_events(self):
+        """Timeline merges feedings, diapers, naps and sorts newest first."""
+        now = timezone.now()
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(hours=2),
+            amount_oz=4.0,
+        )
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now - timedelta(hours=1),
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=3),
+        )
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["count"], 3)
+        results = data["results"]
+        self.assertEqual(len(results), 3)
+        # Order: newest first → diaper (1h ago), feeding (2h ago), nap (3h ago)
+        self.assertEqual(results[0]["type"], "diaper")
+        self.assertIn("diaper", results[0])
+        self.assertEqual(results[1]["type"], "feeding")
+        self.assertIn("feeding", results[1])
+        self.assertEqual(results[1]["feeding"]["feeding_type"], "bottle")
+        self.assertEqual(results[2]["type"], "nap")
+        self.assertIn("nap", results[2])
+        self.assertIn("at", results[0])
+
+    def test_timeline_pagination(self):
+        """Timeline supports page and page_size query params."""
+        now = timezone.now()
+        for i in range(5):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type=Feeding.FeedingType.BOTTLE,
+                fed_at=now - timedelta(hours=i),
+                amount_oz=4.0,
+            )
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/",
+            {"page": "1", "page_size": "2"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["count"], 5)
+        self.assertEqual(len(data["results"]), 2)
+        self.assertIsNotNone(data["next"])
+        self.assertIsNone(data["previous"])
+
+    def test_timeline_empty_results(self):
+        """Timeline returns count=0 and empty results when child has no events."""
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["count"], 0)
+        self.assertEqual(data["results"], [])
+        self.assertIsNone(data["next"])
+        self.assertIsNone(data["previous"])
+
+    def test_timeline_404_for_nonexistent_child(self):
+        """Timeline returns 404 for non-existent child."""
+        response = self.client.get("/api/v1/analytics/children/99999/timeline/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_timeline_404_when_user_has_no_access_to_child(self):
+        """Timeline returns 404 when requesting another user's child (not 403)."""
+        other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="password123",
+        )
+        other_child = Child.objects.create(
+            parent=other_user,
+            name="Other Child",
+            date_of_birth="2024-01-01",
+        )
+        response = self.client.get(
+            f"/api/v1/analytics/children/{other_child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_timeline_requires_authentication(self):
+        """Timeline requires authentication."""
+        self.client.credentials()
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class WeeklySummaryTests(APITestCase):
     """Test weekly summary endpoint."""
 
