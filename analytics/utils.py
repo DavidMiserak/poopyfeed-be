@@ -7,6 +7,7 @@ aggregation functions for efficiency.
 
 from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from django.db.models import (
     Avg,
@@ -366,33 +367,78 @@ def get_sleep_summary(
     }
 
 
-def get_today_summary(child_id: int) -> dict[str, Any]:
+def _today_utc_range(user_timezone: str):
+    """Return (start_utc, end_utc) for the current calendar day in user's timezone.
+
+    Used so "today" in the summary matches what the user sees (e.g. EST midnight
+    boundary, not UTC). Uses module-level timezone so tests can patch
+    analytics.utils.timezone.now.
+    """
+    user_tz = ZoneInfo(user_timezone)
+    now_utc = timezone.now()
+    now_local = now_utc.astimezone(user_tz)
+    local_today = now_local.date()
+    start_of_day = datetime(
+        local_today.year,
+        local_today.month,
+        local_today.day,
+        0,
+        0,
+        0,
+        tzinfo=user_tz,
+    )
+    end_of_day = start_of_day + timedelta(days=1)
+    start_utc = start_of_day.astimezone(timezone.UTC)
+    end_utc = end_of_day.astimezone(timezone.UTC)
+    return start_utc, end_utc
+
+
+def get_today_summary(
+    child_id: int,
+    *,
+    user_timezone: str | None = None,
+) -> dict[str, Any]:
     """Get today's activity summary for a child.
 
-    Quickly summarizes today's feedings, diapers, and naps.
+    Quickly summarizes today's feedings, diapers, and naps. "Today" is the
+    current calendar day in the user's timezone when user_timezone is set;
+    otherwise UTC (for backward compatibility).
 
     Args:
         child_id: The child's ID
+        user_timezone: Optional IANA timezone (e.g. America/New_York). When set,
+            events are counted for the calendar day in this timezone.
 
     Returns:
         Dict with feedings, diapers, sleep counts and totals
     """
-    today = timezone.now().date()
+    if user_timezone:
+        start_utc, end_utc = _today_utc_range(user_timezone)
+        feeding_filter = Q(child_id=child_id, fed_at__gte=start_utc, fed_at__lt=end_utc)
+        diaper_filter = Q(
+            child_id=child_id,
+            changed_at__gte=start_utc,
+            changed_at__lt=end_utc,
+        )
+        nap_filter = Q(
+            child_id=child_id,
+            napped_at__gte=start_utc,
+            napped_at__lt=end_utc,
+        )
+    else:
+        today = timezone.now().date()
+        feeding_filter = Q(child_id=child_id, fed_at__date=today)
+        diaper_filter = Q(child_id=child_id, changed_at__date=today)
+        nap_filter = Q(child_id=child_id, napped_at__date=today)
 
     # Get today's feedings
-    feeding_stats = Feeding.objects.filter(
-        child_id=child_id,
-        fed_at__date=today,
-    ).aggregate(
+    feeding_stats = Feeding.objects.filter(feeding_filter).aggregate(
         count=Count("id"),
         total_oz=Sum("amount_oz"),
     )
 
     feeding_breakdown = (
-        Feeding.objects.filter(
-            child_id=child_id,
-            fed_at__date=today,
-        )
+        Feeding.objects.filter(feeding_filter)
         .values("feeding_type")
         .annotate(count=Count("id"))
     )
@@ -407,16 +453,12 @@ def get_today_summary(child_id: int) -> dict[str, Any]:
         feeding_data[item["feeding_type"]] = item["count"]
 
     # Get today's diaper changes
-    diaper_stats = DiaperChange.objects.filter(
-        child_id=child_id,
-        changed_at__date=today,
-    ).aggregate(count=Count("id"))
+    diaper_stats = DiaperChange.objects.filter(diaper_filter).aggregate(
+        count=Count("id")
+    )
 
     diaper_breakdown = (
-        DiaperChange.objects.filter(
-            child_id=child_id,
-            changed_at__date=today,
-        )
+        DiaperChange.objects.filter(diaper_filter)
         .values("change_type")
         .annotate(count=Count("id"))
     )
@@ -432,10 +474,7 @@ def get_today_summary(child_id: int) -> dict[str, Any]:
 
     # Get today's naps with duration stats
     duration_expr = _DURATION_EXPR
-    nap_stats = Nap.objects.filter(
-        child_id=child_id,
-        napped_at__date=today,
-    ).aggregate(
+    nap_stats = Nap.objects.filter(nap_filter).aggregate(
         count=Count("id"),
         total_minutes=Sum(duration_expr, filter=Q(ended_at__isnull=False)),
         avg_duration=Avg(duration_expr, filter=Q(ended_at__isnull=False)),

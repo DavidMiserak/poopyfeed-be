@@ -260,19 +260,25 @@ class AnalyticsViewSet(viewsets.ViewSet):
     def today_summary(self, request, pk=None):
         """Get today's activity summary for a child.
 
+        "Today" is the current calendar day in the authenticated user's timezone,
+        so the summary matches what the user considers "today" (e.g. EST boundary).
+
         Returns:
             Today's feedings, diapers, and naps counts
         """
         # Get and validate child
         child = self.get_child(pk)
 
-        # Get cached or compute data
-        cache_key = f"analytics:today-summary:{child.id}"
+        user_tz = getattr(request.user, "timezone", None) or "UTC"
+
+        # Get cached or compute data (cache key includes timezone)
+        cache_key = f"analytics:today-summary:{child.id}:{user_tz}"
         data = self._get_cached_data(
             cache_key,
             get_today_summary,
             child.id,
             cache_ttl=300,  # 5-minute TTL for today's data
+            user_timezone=user_tz,
         )
 
         # Validate response

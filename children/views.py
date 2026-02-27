@@ -198,7 +198,10 @@ class ChildDashboardView(ChildAccessMixin, DetailView):
         context = super().get_context_data(**kwargs)
         from analytics.utils import get_today_summary
 
-        context["today_summary"] = get_today_summary(self.object.id)
+        user_tz = getattr(self.request.user, "timezone", None) or "UTC"
+        context["today_summary"] = get_today_summary(
+            self.object.id, user_timezone=user_tz
+        )
         context["recent_activities"] = self._get_recent_activities()
         context["can_edit"] = self.object.can_edit(self.request.user)
         context["can_manage_sharing"] = self.object.can_manage_sharing(
