@@ -176,11 +176,96 @@ def generate_diaper_chart(diaper_data: dict[str, Any]) -> BytesIO:
     return img_buffer
 
 
-def generate_sleep_chart(sleep_data: dict[str, Any]) -> BytesIO:
-    """Generate a line chart of sleep (nap) patterns.
+def _format_duration(minutes: float) -> str:
+    """Format minutes as a human-readable duration string.
+
+    Examples: 45 → "45m", 90 → "1h 30m", 120 → "2h 0m"
+    """
+    minutes = round(minutes)
+    if minutes < 60:
+        return f"{minutes}m"
+    hours = minutes // 60
+    remaining = minutes % 60
+    return f"{hours}h {remaining}m"
+
+
+def _generate_sleep_duration_chart(
+    daily_data: list[dict],
+    value_key: str,
+    title: str,
+    ylabel: str,
+    color: str,
+) -> BytesIO:
+    """Generate a line chart of sleep duration data with h:m formatting.
 
     Args:
-        sleep_data: Dict with 'daily_data' containing date and count
+        daily_data: List of dicts with 'date' and the value_key field
+        value_key: Key in daily_data dicts to plot (e.g., 'total_minutes')
+        title: Chart title
+        ylabel: Y-axis label
+        color: Line/marker color hex string
+
+    Returns:
+        BytesIO object with PNG chart image
+    """
+    from matplotlib.ticker import FuncFormatter
+
+    dates = [_format_date(d["date"]) for d in daily_data]
+    values = [d.get(value_key) or 0 for d in daily_data]
+
+    fig, ax = plt.subplots(figsize=(8, 4), dpi=100)
+    ax.set_facecolor(COLORS["chart_bg"])
+    fig.patch.set_facecolor(COLORS["chart_bg"])
+
+    ax.plot(
+        dates,
+        values,
+        marker="o",
+        linewidth=2,
+        markersize=6,
+        color=color,
+        markerfacecolor=color,
+    )
+
+    ax.set_title(title, fontsize=14, fontweight="bold", color=COLORS["text"])
+    ax.set_xlabel("Date", fontsize=11, color=COLORS["text"])
+    ax.set_ylabel(ylabel, fontsize=11, color=COLORS["text"])
+    ax.grid(True, alpha=0.3, color=COLORS["grid"])
+    ax.set_axisbelow(True)
+
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: _format_duration(v)))
+
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+
+    max_val = max(values) if values and max(values) > 0 else 1
+    for i, (date, mins) in enumerate(zip(dates, values)):
+        if i % max(1, len(dates) // 6) == 0 and mins > 0:
+            ax.text(
+                i,
+                mins + max_val * 0.03,
+                _format_duration(mins),
+                ha="center",
+                va="bottom",
+                fontsize=9,
+            )
+
+    plt.tight_layout()
+
+    img_buffer = BytesIO()
+    fig.savefig(
+        img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"]
+    )
+    img_buffer.seek(0)
+    plt.close(fig)
+
+    return img_buffer
+
+
+def generate_avg_sleep_duration_chart(sleep_data: dict[str, Any]) -> BytesIO:
+    """Generate a line chart of average nap duration per day.
+
+    Args:
+        sleep_data: Dict with 'daily_data' containing date and average_duration
 
     Returns:
         BytesIO object with PNG chart image
@@ -190,54 +275,36 @@ def generate_sleep_chart(sleep_data: dict[str, Any]) -> BytesIO:
     if not daily_data:
         return _create_empty_chart("No sleep data available")
 
-    dates = [_format_date(d["date"]) for d in daily_data]
-    counts = [d["count"] for d in daily_data]
+    return _generate_sleep_duration_chart(
+        daily_data,
+        value_key="average_duration",
+        title="Average Nap Duration",
+        ylabel="Avg Duration",
+        color="#059669",  # Darker green
+    )
 
-    fig, ax = plt.subplots(figsize=(8, 4), dpi=100)
-    ax.set_facecolor(COLORS["chart_bg"])
-    fig.patch.set_facecolor(COLORS["chart_bg"])
 
-    # Plot line with markers
-    ax.plot(
-        dates,
-        counts,
-        marker="o",
-        linewidth=2,
-        markersize=6,
+def generate_total_sleep_chart(sleep_data: dict[str, Any]) -> BytesIO:
+    """Generate a line chart of total sleep time per day.
+
+    Args:
+        sleep_data: Dict with 'daily_data' containing date and total_minutes
+
+    Returns:
+        BytesIO object with PNG chart image
+    """
+    daily_data = sleep_data.get("daily_data", [])
+
+    if not daily_data:
+        return _create_empty_chart("No sleep data available")
+
+    return _generate_sleep_duration_chart(
+        daily_data,
+        value_key="total_minutes",
+        title="Daily Total Sleep",
+        ylabel="Total Sleep",
         color=COLORS["sleep"],
-        markerfacecolor=COLORS["sleep"],
     )
-
-    # Styling
-    ax.set_title(
-        "Sleep Summary (Naps)", fontsize=14, fontweight="bold", color=COLORS["text"]
-    )
-    ax.set_xlabel("Date", fontsize=11, color=COLORS["text"])
-    ax.set_ylabel("Count", fontsize=11, color=COLORS["text"])
-    ax.grid(True, alpha=0.3, color=COLORS["grid"])
-    ax.set_axisbelow(True)
-
-    # Rotate x labels for readability
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
-
-    # Add value labels on points
-    for i, (date, count) in enumerate(zip(dates, counts)):
-        if i % max(1, len(dates) // 6) == 0:
-            ax.text(
-                i, count + 0.1, str(int(count)), ha="center", va="bottom", fontsize=9
-            )
-
-    plt.tight_layout()
-
-    # Save to bytes
-    img_buffer = BytesIO()
-    fig.savefig(
-        img_buffer, format="png", bbox_inches="tight", facecolor=COLORS["chart_bg"]
-    )
-    img_buffer.seek(0)
-    plt.close(fig)
-
-    return img_buffer
 
 
 def _create_empty_chart(message: str) -> BytesIO:

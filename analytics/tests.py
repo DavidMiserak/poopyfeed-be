@@ -1966,33 +1966,61 @@ class PDFChartGenerationTests(TestCase):
         png_data = result.read()
         self.assertTrue(png_data.startswith(b"\x89PNG"))
 
-    def test_sleep_chart_with_empty_data(self):
-        """Sleep chart should handle empty daily_data gracefully."""
-        from analytics.pdf_charts import generate_sleep_chart
+    def test_avg_sleep_duration_chart_with_empty_data(self):
+        """Avg sleep duration chart should handle empty daily_data gracefully."""
+        from analytics.pdf_charts import generate_avg_sleep_duration_chart
 
         data = {"daily_data": []}
-        result = generate_sleep_chart(data)
+        result = generate_avg_sleep_duration_chart(data)
 
-        # Should return BytesIO object with PNG data
         self.assertIsInstance(result, BytesIO)
         result.seek(0)
         png_data = result.read()
         self.assertTrue(png_data.startswith(b"\x89PNG"))
 
-    def test_sleep_chart_with_data(self):
-        """Sleep chart should render correctly with data."""
-        from analytics.pdf_charts import generate_sleep_chart
+    def test_avg_sleep_duration_chart_with_data(self):
+        """Avg sleep duration chart should render correctly with data."""
+        from analytics.pdf_charts import generate_avg_sleep_duration_chart
 
         data = {
             "daily_data": [
-                {"date": date(2024, 1, 1), "count": 2},
-                {"date": date(2024, 1, 2), "count": 1},
-                {"date": date(2024, 1, 3), "count": 3},
+                {"date": date(2024, 1, 1), "average_duration": 45},
+                {"date": date(2024, 1, 2), "average_duration": 90},
+                {"date": date(2024, 1, 3), "average_duration": 120},
             ]
         }
-        result = generate_sleep_chart(data)
+        result = generate_avg_sleep_duration_chart(data)
 
-        # Should return valid PNG
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_total_sleep_chart_with_empty_data(self):
+        """Total sleep chart should handle empty daily_data gracefully."""
+        from analytics.pdf_charts import generate_total_sleep_chart
+
+        data = {"daily_data": []}
+        result = generate_total_sleep_chart(data)
+
+        self.assertIsInstance(result, BytesIO)
+        result.seek(0)
+        png_data = result.read()
+        self.assertTrue(png_data.startswith(b"\x89PNG"))
+
+    def test_total_sleep_chart_with_data(self):
+        """Total sleep chart should render correctly with data."""
+        from analytics.pdf_charts import generate_total_sleep_chart
+
+        data = {
+            "daily_data": [
+                {"date": date(2024, 1, 1), "total_minutes": 120},
+                {"date": date(2024, 1, 2), "total_minutes": 90},
+                {"date": date(2024, 1, 3), "total_minutes": 180},
+            ]
+        }
+        result = generate_total_sleep_chart(data)
+
         self.assertIsInstance(result, BytesIO)
         result.seek(0)
         png_data = result.read()
@@ -2175,15 +2203,19 @@ class GeneratePDFReportChartErrorHandlingTests(TestCase):
                 self.assertIn("filename", result)
 
     def test_generate_pdf_continues_on_sleep_chart_error(self):
-        """PDF generation should continue even if sleep chart fails."""
+        """PDF generation should continue even if sleep charts fail."""
         with patch("analytics.tasks.default_storage"):
             with (
-                patch("analytics.tasks.generate_sleep_chart") as mock_chart,
+                patch(
+                    "analytics.tasks.generate_avg_sleep_duration_chart"
+                ) as mock_avg_chart,
+                patch("analytics.tasks.generate_total_sleep_chart") as mock_total_chart,
                 patch("analytics.tasks.get_feeding_trends") as mock_trends,
                 patch("analytics.tasks.get_diaper_patterns") as mock_diapers,
                 patch("analytics.tasks.get_sleep_summary") as mock_sleep,
             ):
-                mock_chart.side_effect = Exception("Chart rendering error")
+                mock_avg_chart.side_effect = Exception("Chart rendering error")
+                mock_total_chart.side_effect = Exception("Chart rendering error")
                 mock_trends.return_value = {"daily_data": [], "weekly_summary": {}}
                 mock_diapers.return_value = {"daily_data": [], "breakdown": {}}
                 mock_sleep.return_value = {"daily_data": [], "weekly_summary": {}}

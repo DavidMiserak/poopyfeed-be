@@ -28,11 +28,25 @@ from accounts.models import CustomUser
 from children.models import Child
 
 from .pdf_charts import (
+    generate_avg_sleep_duration_chart,
     generate_diaper_chart,
     generate_feeding_chart,
-    generate_sleep_chart,
+    generate_total_sleep_chart,
 )
 from .utils import get_diaper_patterns, get_feeding_trends, get_sleep_summary
+
+
+def _format_duration(minutes: float) -> str:
+    """Format minutes as a human-readable duration string.
+
+    Examples: 45 → "45m", 90 → "1h 30m", 120 → "2h 0m"
+    """
+    minutes = round(minutes)
+    if minutes < 60:
+        return f"{minutes}m"
+    hours = minutes // 60
+    remaining = minutes % 60
+    return f"{hours}h {remaining}m"
 
 
 def _add_chart_to_story(story: list, chart_generator, data: dict, chart_name: str):
@@ -73,7 +87,7 @@ def _build_feeding_section(
                 str(day_data.get("date", "")),
                 str(day_data.get("count", 0)),
                 (
-                    f"{day_data.get('average_duration', 0):.1f}m"
+                    _format_duration(day_data.get("average_duration", 0))
                     if day_data.get("average_duration")
                     else "—"
                 ),
@@ -183,23 +197,26 @@ def _build_sleep_section(
     sleep_data = get_sleep_summary(child_id, days=days)
     story.append(Spacer(1, 0.1 * inch))
 
-    # Add chart
-    _add_chart_to_story(story, generate_sleep_chart, sleep_data, "sleep")
+    # Add charts
+    _add_chart_to_story(
+        story, generate_avg_sleep_duration_chart, sleep_data, "avg sleep duration"
+    )
+    _add_chart_to_story(story, generate_total_sleep_chart, sleep_data, "total sleep")
 
     # Build table
-    sleep_rows = [["Date", "Naps", "Avg Duration", "Total Minutes"]]
+    sleep_rows = [["Date", "Naps", "Avg Duration", "Total Sleep"]]
     for day_data in sleep_data.get("daily_data", []):
         sleep_rows.append(
             [
                 str(day_data.get("date", "")),
                 str(day_data.get("count", 0)),
                 (
-                    f"{day_data.get('average_duration', 0):.0f}m"
+                    _format_duration(day_data.get("average_duration", 0))
                     if day_data.get("average_duration")
                     else "—"
                 ),
                 (
-                    f"{day_data.get('total_minutes', 0):.0f}m"
+                    _format_duration(day_data.get("total_minutes", 0))
                     if day_data.get("total_minutes")
                     else "—"
                 ),
@@ -325,7 +342,7 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
 
         # Save to storage
         self.update_state(state="STARTED", meta={"progress": 90})
-        filename = f"analytics-{child.name.replace(' ', '_')}-{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filename = f"analytics-{child.name.replace(' ', '_')}-{int(timezone.now().timestamp())}.pdf"
         pdf_buffer.seek(0)
         default_storage.save(f"exports/{filename}", pdf_buffer)
 
