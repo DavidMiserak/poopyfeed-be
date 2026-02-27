@@ -26,6 +26,8 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_actor_name(self, obj):
+        if obj.actor is None:
+            return "System"
         return obj.actor.first_name or obj.actor.email.split("@")[0]
 
 

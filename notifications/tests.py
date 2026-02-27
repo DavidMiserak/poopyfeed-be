@@ -75,6 +75,52 @@ class NotificationModelTests(TestCase):
         self.assertEqual(notifications[0].message, "Second")
         self.assertEqual(notifications[1].message, "First")
 
+    def test_serializer_handles_null_actor(self):
+        """Serializer should return 'System' for notifications with no actor."""
+        from .serializers import NotificationSerializer
+
+        notif = Notification.objects.create(
+            recipient=self.owner,
+            actor=None,
+            child=self.child,
+            event_type=Notification.EventType.FEEDING_REMINDER,
+            message="Baby hasn't been fed for 3 hours",
+        )
+        serializer = NotificationSerializer(notif)
+        self.assertEqual(serializer.data["actor_name"], "System")
+
+    def test_serializer_returns_actor_first_name(self):
+        """Serializer should return actor's first name when available."""
+        from .serializers import NotificationSerializer
+
+        self.coparent.first_name = "Jane"
+        self.coparent.save()
+        notif = Notification.objects.create(
+            recipient=self.owner,
+            actor=self.coparent,
+            child=self.child,
+            event_type=Notification.EventType.FEEDING,
+            message="Jane logged a feeding",
+        )
+        serializer = NotificationSerializer(notif)
+        self.assertEqual(serializer.data["actor_name"], "Jane")
+
+    def test_serializer_falls_back_to_email(self):
+        """Serializer should use email prefix when first_name is empty."""
+        from .serializers import NotificationSerializer
+
+        self.coparent.first_name = ""
+        self.coparent.save()
+        notif = Notification.objects.create(
+            recipient=self.owner,
+            actor=self.coparent,
+            child=self.child,
+            event_type=Notification.EventType.FEEDING,
+            message="Someone logged a feeding",
+        )
+        serializer = NotificationSerializer(notif)
+        self.assertEqual(serializer.data["actor_name"], "coparent")
+
 
 class NotificationPreferenceModelTests(TestCase):
     @classmethod
