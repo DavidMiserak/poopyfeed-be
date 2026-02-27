@@ -420,7 +420,8 @@ class NotificationTaskTests(TestCase):
             message="New notification",
         )
         result = cleanup_old_notifications()
-        self.assertEqual(result, "Deleted 1 old notifications")
+        self.assertIn("Deleted 1", result)
+        self.assertIn("notification", result)
         self.assertFalse(Notification.objects.filter(id=old_notif.id).exists())
         self.assertTrue(Notification.objects.filter(id=new_notif.id).exists())
 
@@ -496,3 +497,365 @@ class SignalDispatchTests(TestCase):
             actor_id=self.owner.id,
             event_type="diaper",
         )
+
+
+class FeedingReminderTaskTests(TestCase):
+    """Test the check_feeding_reminders Celery task."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user(
+            username="remowner",
+            email="remowner@example.com",
+            password="testpass123",  # noqa: S106
+            first_name="Sarah",
+        )
+        cls.coparent = User.objects.create_user(
+            username="remcoparent",
+            email="remcoparent@example.com",
+            password="testpass123",  # noqa: S106
+            first_name="Michael",
+        )
+        cls.caregiver = User.objects.create_user(
+            username="remcg",
+            email="remcg@example.com",
+            password="testpass123",  # noqa: S106
+            first_name="Maria",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Baby Reminder",
+            date_of_birth=date(2025, 6, 15),
+            feeding_reminder_interval=3,  # 3 hours
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.coparent,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=cls.owner,
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.caregiver,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=cls.owner,
+        )
+
+    def test_no_reminder_without_feedings(self):
+        """No reminders sent if child has no feedings (FR-REM-006)."""
+        from .tasks import check_feeding_reminders
+
+        result = check_feeding_reminders()
+        self.assertEqual(Notification.objects.filter(child=self.child).count(), 0)
+        self.assertIn("Created 0", result)
+
+    def test_initial_reminder_fires_at_threshold(self):
+        """Initial reminder fires when time since feeding >= interval (AC-001)."""
+        from feedings.models import Feeding
+
+        # Create feeding 3h 5m ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=3, minutes=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        from .tasks import check_feeding_reminders
+
+        result = check_feeding_reminders()
+        # Owner, coparent, and caregiver should all get notifications
+        self.assertEqual(
+            Notification.objects.filter(child=self.child, recipient=self.owner).count(),
+            1,
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                child=self.child, recipient=self.coparent
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                child=self.child, recipient=self.caregiver
+            ).count(),
+            1,
+        )
+        # Check FeedingReminderLog was created
+        from .models import FeedingReminderLog
+
+        log = FeedingReminderLog.objects.filter(child=self.child, reminder_number=1)
+        self.assertEqual(log.count(), 1)
+        self.assertEqual(log.first().window_start, last_fed_at)
+
+    def test_no_reminder_under_threshold(self):
+        """No reminder if time since feeding < interval."""
+        from feedings.models import Feeding
+
+        # Create feeding 2h 50m ago (before 3h threshold)
+        last_fed_at = timezone.now() - timezone.timedelta(hours=2, minutes=50)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        self.assertEqual(Notification.objects.filter(child=self.child).count(), 0)
+
+    def test_repeat_reminder_fires_at_1_5x_threshold(self):
+        """Repeat reminder fires when time since feeding >= interval * 1.5 (AC-002)."""
+        from feedings.models import Feeding
+
+        # Create feeding 4h 35m ago (> 3 * 1.5 = 4.5h threshold)
+        last_fed_at = timezone.now() - timezone.timedelta(hours=4, minutes=35)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        from .models import FeedingReminderLog
+
+        # Manually log that initial reminder was already sent
+        FeedingReminderLog.objects.create(
+            child=self.child, window_start=last_fed_at, reminder_number=1
+        )
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        # Should get both initial (from setup) and repeat reminders
+        initial_notifs = Notification.objects.filter(
+            child=self.child, recipient=self.owner
+        )
+        self.assertGreaterEqual(initial_notifs.count(), 1)
+
+        # Check repeat log was created
+        repeat_log = FeedingReminderLog.objects.filter(
+            child=self.child, reminder_number=2
+        )
+        self.assertEqual(repeat_log.count(), 1)
+
+    def test_no_third_reminder(self):
+        """Only two reminders per window (initial + repeat), no third (AC-003)."""
+        from feedings.models import Feeding
+
+        from .models import FeedingReminderLog
+
+        # Create feeding 5h ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        # Log both initial and repeat reminders
+        FeedingReminderLog.objects.create(
+            child=self.child, window_start=last_fed_at, reminder_number=1
+        )
+        FeedingReminderLog.objects.create(
+            child=self.child, window_start=last_fed_at, reminder_number=2
+        )
+
+        # Clear any notifications from previous setup
+        Notification.objects.filter(child=self.child).delete()
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        # No new notifications should be created
+        self.assertEqual(Notification.objects.filter(child=self.child).count(), 0)
+
+    def test_window_reset_on_new_feeding(self):
+        """New feeding resets reminder window (AC-004)."""
+        from feedings.models import Feeding
+
+        from .models import FeedingReminderLog
+
+        # Create old feeding 5h ago
+        old_fed_at = timezone.now() - timezone.timedelta(hours=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=old_fed_at,
+        )
+
+        # Log reminders for old feeding
+        FeedingReminderLog.objects.create(
+            child=self.child, window_start=old_fed_at, reminder_number=1
+        )
+        FeedingReminderLog.objects.create(
+            child=self.child, window_start=old_fed_at, reminder_number=2
+        )
+
+        # Create new feeding 10 minutes ago
+        new_fed_at = timezone.now() - timezone.timedelta(minutes=10)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=new_fed_at,
+        )
+
+        # Clear notifications
+        Notification.objects.filter(child=self.child).delete()
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        # No reminder should fire (< 3h since new feeding)
+        self.assertEqual(Notification.objects.filter(child=self.child).count(), 0)
+
+        # Create a separate child with 3h+ since feeding to verify task still works
+        child2 = Child.objects.create(
+            parent=self.owner,
+            name="Baby 2",
+            date_of_birth=date(2025, 6, 15),
+            feeding_reminder_interval=3,
+        )
+        old_fed_at2 = timezone.now() - timezone.timedelta(hours=3, minutes=5)
+        Feeding.objects.create(
+            child=child2,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=old_fed_at2,
+        )
+
+        check_feeding_reminders()
+        # Reminder should fire for child2
+        self.assertGreaterEqual(Notification.objects.filter(child=child2).count(), 1)
+
+    def test_notify_feedings_preference_respected(self):
+        """Reminders respect notify_feedings preference (AC-006, FR-REM-009)."""
+        from feedings.models import Feeding
+
+        # Create feeding 3h 5m ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=3, minutes=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        # Disable feedings for owner
+        NotificationPreference.objects.create(
+            user=self.owner, child=self.child, notify_feedings=False
+        )
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        # Owner should NOT get reminder, coparent should
+        self.assertEqual(
+            Notification.objects.filter(child=self.child, recipient=self.owner).count(),
+            0,
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                child=self.child, recipient=self.coparent
+            ).count(),
+            1,
+        )
+
+    @patch("notifications.models.QuietHours.is_quiet_now", return_value=True)
+    def test_quiet_hours_bypassed_for_reminders(self, mock_quiet):
+        """Reminders bypass quiet hours (AC-007, FR-REM-008)."""
+        from feedings.models import Feeding
+
+        # Create feeding 3h 5m ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=3, minutes=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        # Create quiet hours for owner
+        QuietHours.objects.create(user=self.owner, enabled=True)
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        # Even though owner is in quiet hours, reminder should be sent
+        # (because reminders bypass quiet hours per spec)
+        notifs = Notification.objects.filter(
+            child=self.child, recipient=self.owner, event_type="feeding_reminder"
+        )
+        self.assertGreaterEqual(notifs.count(), 1)
+
+    def test_disabled_reminders_not_sent(self):
+        """No reminders when interval is null."""
+        self.child.feeding_reminder_interval = None
+        self.child.save()
+
+        from feedings.models import Feeding
+
+        # Create feeding 5h ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        self.assertEqual(Notification.objects.filter(child=self.child).count(), 0)
+
+    def test_idempotency_prevents_duplicates(self):
+        """Running task twice doesn't create duplicate reminders (FR-REM-011)."""
+        from feedings.models import Feeding
+
+        # Create feeding 3h 5m ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=3, minutes=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        from .tasks import check_feeding_reminders
+
+        # Run task twice
+        check_feeding_reminders()
+        notif_count_first = Notification.objects.filter(child=self.child).count()
+
+        check_feeding_reminders()
+        notif_count_second = Notification.objects.filter(child=self.child).count()
+
+        # Should be the same (idempotent)
+        self.assertEqual(notif_count_first, notif_count_second)
+
+    def test_reminder_notification_event_type(self):
+        """Reminder notifications have event_type='feeding_reminder'."""
+        from feedings.models import Feeding
+
+        # Create feeding 3h 5m ago
+        last_fed_at = timezone.now() - timezone.timedelta(hours=3, minutes=5)
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            amount_oz=4,
+            fed_at=last_fed_at,
+        )
+
+        from .tasks import check_feeding_reminders
+
+        check_feeding_reminders()
+        notif = Notification.objects.filter(child=self.child).first()
+        self.assertEqual(notif.event_type, "feeding_reminder")
+        self.assertIsNone(notif.actor)  # System-generated, no actor

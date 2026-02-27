@@ -147,6 +147,7 @@ class Child(models.Model):
         custom_bottle_low_oz (DecimalField): Custom bottle amount (oz) for low preset (0.1-50)
         custom_bottle_mid_oz (DecimalField): Custom bottle amount (oz) for mid preset (0.1-50)
         custom_bottle_high_oz (DecimalField): Custom bottle amount (oz) for high preset (0.1-50)
+        feeding_reminder_interval (PositiveSmallIntegerField): Interval (hours) for feeding reminders; null = disabled
         created_at (DateTimeField): When child was created
         updated_at (DateTimeField): When child was last modified
     """
@@ -191,6 +192,13 @@ class Child(models.Model):
         blank=True,
         validators=[MinValueValidator(0.1), MaxValueValidator(50)],
         help_text="Custom bottle feeding amount (oz) for high/recommended+1 button",
+    )
+    feeding_reminder_interval = models.PositiveSmallIntegerField(
+        choices=[(2, "2 hours"), (3, "3 hours"), (4, "4 hours"), (6, "6 hours")],
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Interval (hours) for feeding reminders; null = disabled",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

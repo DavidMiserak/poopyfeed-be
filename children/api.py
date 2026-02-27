@@ -41,6 +41,7 @@ class ChildSerializer(serializers.ModelSerializer):
             "custom_bottle_low_oz",
             "custom_bottle_mid_oz",
             "custom_bottle_high_oz",
+            "feeding_reminder_interval",
             "created_at",
             "updated_at",
             "user_role",
@@ -135,6 +136,32 @@ class ChildSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Custom bottle high amount must be between 0.1 and 50 oz."
             )
+        return value
+
+    def validate_feeding_reminder_interval(self, value):
+        """Validate feeding reminder interval.
+
+        Only owners and co-parents can change this field.
+        Caregivers must not have permission to modify it.
+        """
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return value
+
+        # If this is an update (not create), check permissions
+        if self.instance:
+            user_role = self.instance.get_user_role(request.user)
+            if user_role == "caregiver":
+                raise serializers.ValidationError(
+                    "Only owners and co-parents can configure feeding reminders."
+                )
+
+        # Validate value is one of allowed intervals or null
+        if value is not None and value not in [2, 3, 4, 6]:
+            raise serializers.ValidationError(
+                "Interval must be null (off) or one of: 2, 3, 4, 6 hours"
+            )
+
         return value
 
     def validate(self, data):

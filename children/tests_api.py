@@ -1,5 +1,6 @@
 """API tests for children app."""
 
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -977,3 +978,141 @@ class ChildSerializerDirectValidationTests(APITestCase):
         # This hits mid >= high
         with self.assertRaises(ValidationError):
             serializer.validate(data2)
+
+
+class FeedingReminderIntervalAPITests(APITestCase):
+    """Test feeding reminder interval field in ChildSerializer."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.owner = User.objects.create_user(
+            username="remowner",
+            email="remowner@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.coparent = User.objects.create_user(
+            username="remcoparent",
+            email="remcoparent@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.caregiver = User.objects.create_user(
+            username="remcg",
+            email="remcg@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Reminder Baby",
+            date_of_birth=date(2025, 6, 15),
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.coparent,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=cls.owner,
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.caregiver,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=cls.owner,
+        )
+
+    def setUp(self):
+        self.owner_token = Token.objects.create(user=self.owner)
+        self.coparent_token = Token.objects.create(user=self.coparent)
+        self.caregiver_token = Token.objects.create(user=self.caregiver)
+
+    def test_owner_can_set_interval(self):
+        """Owner can set feeding_reminder_interval."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.patch(
+            f"/api/v1/children/{self.child.id}/",
+            {"feeding_reminder_interval": 3},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["feeding_reminder_interval"], 3)
+        self.child.refresh_from_db()
+        self.assertEqual(self.child.feeding_reminder_interval, 3)
+
+    def test_coparent_can_set_interval(self):
+        """Co-parent can set feeding_reminder_interval."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
+        response = self.client.patch(
+            f"/api/v1/children/{self.child.id}/",
+            {"feeding_reminder_interval": 4},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["feeding_reminder_interval"], 4)
+        self.child.refresh_from_db()
+        self.assertEqual(self.child.feeding_reminder_interval, 4)
+
+    def test_caregiver_cannot_set_interval(self):
+        """Caregiver cannot set feeding_reminder_interval (403)."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.caregiver_token.key}")
+        response = self.client.patch(
+            f"/api/v1/children/{self.child.id}/",
+            {"feeding_reminder_interval": 2},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_valid_interval_values(self):
+        """Only 2, 3, 4, 6 or null are valid."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+
+        # Valid: 2, 3, 4, 6
+        for interval in [2, 3, 4, 6]:
+            response = self.client.patch(
+                f"/api/v1/children/{self.child.id}/",
+                {"feeding_reminder_interval": interval},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["feeding_reminder_interval"], interval)
+
+        # Valid: null (off)
+        response = self.client.patch(
+            f"/api/v1/children/{self.child.id}/",
+            {"feeding_reminder_interval": None},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data["feeding_reminder_interval"])
+
+    def test_invalid_interval_values(self):
+        """Invalid intervals rejected with 400."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+
+        # Invalid: 1, 5, 7, 8, 10, etc.
+        for interval in [1, 5, 7, 8, 10, 24]:
+            response = self.client.patch(
+                f"/api/v1/children/{self.child.id}/",
+                {"feeding_reminder_interval": interval},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("feeding_reminder_interval", response.data)
+
+    def test_interval_default_is_null(self):
+        """New children have feeding_reminder_interval = null."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.get(f"/api/v1/children/{self.child.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data["feeding_reminder_interval"])
+
+    def test_interval_exposed_in_list(self):
+        """feeding_reminder_interval is included in list view."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        self.child.feeding_reminder_interval = 3
+        self.child.save()
+
+        response = self.client.get("/api/v1/children/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        child_data = next(
+            c for c in response.data["results"] if c["id"] == self.child.id
+        )
+        self.assertEqual(child_data["feeding_reminder_interval"], 3)
