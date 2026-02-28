@@ -155,3 +155,24 @@ class TrackingViewSet(viewsets.ModelViewSet):
                 actor_id=self.request.user.id,
                 event_type=event_type,
             )
+
+    def perform_destroy(self, instance):
+        """Invalidate cache when tracking record is deleted.
+
+        When a tracking record is deleted, the child's last-activity timestamps
+        may change (if this was the most recent activity). Invalidate the cache
+        to ensure fresh timestamps are fetched on next request.
+
+        Args:
+            instance: The tracking record being deleted
+        """
+        from .cache_utils import invalidate_child_activities_cache
+
+        # Store child_id before deletion
+        child_id = instance.child_id
+
+        # Delete the instance
+        super().perform_destroy(instance)
+
+        # Invalidate cache after deletion
+        invalidate_child_activities_cache(child_id)
