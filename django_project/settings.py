@@ -105,6 +105,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # Disable browser caching of API responses (prevent stale data)
+    "django_project.middleware.NoCacheAPIMiddleware",
 ]
 
 # =============================================================================
