@@ -94,10 +94,10 @@ def get_child_last_activities(child_ids):
         missing_dict[child_id] = activities
         cache_to_set[f"child_activities_{child_id}"] = activities
 
-    # Cache the results (30 minute TTL - balance between freshness and performance)
+    # Cache the results (5 minute TTL - balance between freshness and performance)
     # Cache invalidates automatically when tracking records change via signals
     if cache_to_set:
-        cache.set_many(cache_to_set, 1800)
+        cache.set_many(cache_to_set, 300)
 
     # Merge cached and newly-fetched results
     result = {}
