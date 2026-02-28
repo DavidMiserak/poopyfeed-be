@@ -3,7 +3,7 @@
 Generates matplotlib charts embedded as PNG images for inclusion in PDFs.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from io import BytesIO
 from typing import Any
 
@@ -26,7 +26,7 @@ COLORS = {
 }
 
 
-def _format_date(date_obj: datetime) -> str:
+def _format_date(date_obj: date | datetime) -> str:
     """Format a date object for chart labels.
 
     Args:
@@ -36,8 +36,10 @@ def _format_date(date_obj: datetime) -> str:
         Formatted date string (e.g., "Jan 15")
     """
     if isinstance(date_obj, datetime):
-        date_obj = date_obj.date()
-    return date_obj.strftime("%b %d")
+        d = date_obj.date()
+    else:
+        d = date_obj
+    return d.strftime("%b %d")
 
 
 def generate_feeding_chart(feeding_data: dict[str, Any]) -> BytesIO:

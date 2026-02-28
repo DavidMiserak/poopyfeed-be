@@ -5,15 +5,24 @@ Provides efficient caching of expensive last-activity annotations
 but expensive to compute via database aggregations.
 """
 
+from __future__ import annotations
+
 import logging
+from datetime import datetime
+from typing import Any
 
 from django.core.cache import cache
 from django.db.models import Max
 
 logger = logging.getLogger(__name__)
 
+# Type for the activities dict returned per child
+ChildActivitiesDict = dict[str, datetime | None]
 
-def get_child_last_activities(child_ids):
+
+def get_child_last_activities(
+    child_ids: list[int],
+) -> dict[int, ChildActivitiesDict]:
     """Get last activity timestamps for multiple children from cache or database.
 
     Args:
@@ -118,7 +127,7 @@ def get_child_last_activities(child_ids):
     return result
 
 
-def invalidate_child_activities_cache(child_id):
+def invalidate_child_activities_cache(child_id: int) -> None:
     """Invalidate cached last-activity annotations for a child.
 
     Called when any tracking record (DiaperChange, Feeding, Nap) is created,

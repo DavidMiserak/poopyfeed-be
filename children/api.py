@@ -1,6 +1,12 @@
 """REST API for children app: Child, ChildShare, ShareInvite."""
 
+from __future__ import annotations
+
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, List
+
 from django.db import IntegrityError, transaction
+from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -12,6 +18,9 @@ from django_project.throttles import AcceptInviteThrottle
 
 from .api_permissions import CanEditChild, CanManageSharing, HasChildAccess
 from .models import Child, ChildShare, ShareInvite
+
+if TYPE_CHECKING:
+    from accounts.models import CustomUser
 
 # --- Serializers ---
 
@@ -53,7 +62,7 @@ class ChildSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def _get_user_share(self, obj, user):
+    def _get_user_share(self, obj: Child, user: CustomUser) -> ChildShare | None:
         """Find user's share in prefetched shares (avoids database query).
 
         Loops through obj.shares.all() which uses prefetched data when available,
@@ -65,7 +74,7 @@ class ChildSerializer(serializers.ModelSerializer):
                 return share
         return None
 
-    def get_user_role(self, obj):
+    def get_user_role(self, obj: Child) -> str | None:
         """Get user's role using prefetched share data.
 
         Returns 'owner', 'co-parent', 'caregiver', or None.
@@ -82,15 +91,12 @@ class ChildSerializer(serializers.ModelSerializer):
         # Use prefetched shares instead of calling obj.get_user_role()
         share = self._get_user_share(obj, request.user)
         if share:
-            role_map = {
-                ChildShare.Role.CO_PARENT: "co-parent",
-                ChildShare.Role.CAREGIVER: "caregiver",
-            }
+            role_map: dict[str, str] = {"CO": "co-parent", "CG": "caregiver"}
             return role_map.get(share.role)
 
         return None
 
-    def get_can_edit(self, obj):
+    def get_can_edit(self, obj: Child) -> bool:
         """Check if user can edit child or tracking records.
 
         Uses prefetched share data to avoid queries.
@@ -103,7 +109,7 @@ class ChildSerializer(serializers.ModelSerializer):
         user_role = self.get_user_role(obj)
         return user_role in ["owner", "co-parent"]
 
-    def get_can_manage_sharing(self, obj):
+    def get_can_manage_sharing(self, obj: Child) -> bool:
         """Check if user can manage sharing (owner only).
 
         This is always fast (no shares.filter() needed).
@@ -114,7 +120,7 @@ class ChildSerializer(serializers.ModelSerializer):
 
         return obj.parent_id == request.user.id
 
-    def validate_custom_bottle_low_oz(self, value):
+    def validate_custom_bottle_low_oz(self, value: Decimal | None) -> Decimal | None:
         """Validate custom bottle low amount is in range 0.1-50 oz."""
         if value is not None and (value < 0.1 or value > 50):
             raise serializers.ValidationError(
@@ -122,7 +128,7 @@ class ChildSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def validate_custom_bottle_mid_oz(self, value):
+    def validate_custom_bottle_mid_oz(self, value: Decimal | None) -> Decimal | None:
         """Validate custom bottle mid amount is in range 0.1-50 oz."""
         if value is not None and (value < 0.1 or value > 50):
             raise serializers.ValidationError(
@@ -130,7 +136,7 @@ class ChildSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def validate_custom_bottle_high_oz(self, value):
+    def validate_custom_bottle_high_oz(self, value: Decimal | None) -> Decimal | None:
         """Validate custom bottle high amount is in range 0.1-50 oz."""
         if value is not None and (value < 0.1 or value > 50):
             raise serializers.ValidationError(
@@ -138,7 +144,7 @@ class ChildSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def validate_feeding_reminder_interval(self, value):
+    def validate_feeding_reminder_interval(self, value: int | None) -> int | None:
         """Validate feeding reminder interval.
 
         Only owners and co-parents can change this field.
@@ -164,7 +170,7 @@ class ChildSerializer(serializers.ModelSerializer):
 
         return value
 
-    def validate(self, data):
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         """Validate custom bottle amounts: all set or all null.
 
         Rules:
@@ -188,7 +194,7 @@ class ChildSerializer(serializers.ModelSerializer):
                 "must be provided. Leave all blank to use age-based defaults."
             )
 
-        if set_count == 3:
+        if set_count == 3 and low is not None and mid is not None and high is not None:
             if low >= mid:
                 raise serializers.ValidationError(
                     "Low amount must be less than recommended amount."
@@ -219,12 +225,9 @@ class ChildShareSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "user_email", "role_display", "created_at"]
 
-    def get_role(self, obj):
+    def get_role(self, obj: ChildShare) -> str | None:
         """Return full role string for frontend compatibility."""
-        role_map = {
-            ChildShare.Role.CO_PARENT: "co-parent",
-            ChildShare.Role.CAREGIVER: "caregiver",
-        }
+        role_map: dict[str, str] = {"CO": "co-parent", "CG": "caregiver"}
         return role_map.get(obj.role)
 
 
@@ -248,29 +251,26 @@ class ShareInviteSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "token", "role_display", "created_at", "invite_url"]
 
-    def validate_role(self, value):
+    def validate_role(self, value: str) -> str:
         """Validate and transform role from API format to database format."""
-        role_map = {
+        role_map: dict[str, str] = {
             "co-parent": ChildShare.Role.CO_PARENT,
             "caregiver": ChildShare.Role.CAREGIVER,
         }
         if value not in role_map:
             raise serializers.ValidationError(
-                f"Invalid role. Must be 'co-parent' or 'caregiver'."
+                "Invalid role. Must be 'co-parent' or 'caregiver'."
             )
         return role_map[value]
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: ShareInvite) -> dict[str, Any]:
         """Transform role from database format to API format."""
         data = super().to_representation(instance)
-        role_map = {
-            ChildShare.Role.CO_PARENT: "co-parent",
-            ChildShare.Role.CAREGIVER: "caregiver",
-        }
+        role_map: dict[str, str] = {"CO": "co-parent", "CG": "caregiver"}
         data["role"] = role_map.get(instance.role)
         return data
 
-    def get_invite_url(self, obj):
+    def get_invite_url(self, obj: ShareInvite) -> str | None:
         request = self.context.get("request")
         if request:
             return request.build_absolute_uri(f"/children/accept-invite/{obj.token}/")
@@ -282,7 +282,7 @@ class AcceptInviteSerializer(serializers.Serializer):
 
     token = serializers.CharField(max_length=64)
 
-    def validate_token(self, value):
+    def validate_token(self, value: str) -> str:
         try:
             invite = ShareInvite.objects.get(token=value, is_active=True)
         except ShareInvite.DoesNotExist:
@@ -304,7 +304,7 @@ class ChildViewSet(viewsets.ModelViewSet):
     serializer_class = ChildSerializer
     permission_classes = [IsAuthenticated, HasChildAccess]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Child]:
         """Return children accessible to the current user without annotations.
 
         Annotations are applied via _apply_cached_annotations() method to use
@@ -317,7 +317,7 @@ class ChildViewSet(viewsets.ModelViewSet):
             .order_by("-date_of_birth")
         )
 
-    def _apply_cached_annotations(self, children):
+    def _apply_cached_annotations(self, children: List[Child]) -> List[Child]:
         """Apply cached last-activity annotations to child objects.
 
         This method is called after the queryset is evaluated (and paginated)
@@ -338,16 +338,16 @@ class ChildViewSet(viewsets.ModelViewSet):
         child_ids = [child.id for child in children]
         activities = get_child_last_activities(child_ids)
 
-        # Attach cached annotation values to each child
+        # Attach cached annotation values to each child (dynamic attributes)
         for child in children:
             activity = activities.get(child.id, {})
-            child.last_diaper_change = activity.get("last_diaper_change")
-            child.last_nap = activity.get("last_nap")
-            child.last_feeding = activity.get("last_feeding")
+            setattr(child, "last_diaper_change", activity.get("last_diaper_change"))
+            setattr(child, "last_nap", activity.get("last_nap"))
+            setattr(child, "last_feeding", activity.get("last_feeding"))
 
         return children
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """List children with cached annotations applied before serialization."""
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
@@ -364,7 +364,7 @@ class ChildViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    def retrieve(self, request, *args, **kwargs):
+    def retrieve(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """Retrieve single child with cached annotations."""
         instance = self.get_object()
         # Apply cached annotations for single object
@@ -372,7 +372,7 @@ class ChildViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[Any]:
         """Apply different permissions based on action."""
         if self.action in ["update", "partial_update"]:
             return [IsAuthenticated(), CanEditChild()]
@@ -380,14 +380,14 @@ class ChildViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), CanManageSharing()]
         return super().get_permissions()
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: ChildSerializer) -> None:
         """Set parent to current user when creating a child."""
         serializer.save(parent=self.request.user)
 
     # --- Sharing actions ---
 
     @action(detail=True, methods=["get"], permission_classes=[CanManageSharing])
-    def shares(self, request, pk=None):
+    def shares(self, request: Any, pk: int | None = None) -> Response:
         """List all shares for a child (owner only)."""
         child = self.get_object()
         shares = child.shares.select_related("user")
@@ -402,7 +402,9 @@ class ChildViewSet(viewsets.ModelViewSet):
         url_path="shares/(?P<share_pk>[^/.]+)",
         permission_classes=[CanManageSharing],
     )
-    def revoke_share(self, request, pk=None, share_pk=None):
+    def revoke_share(
+        self, request: Any, pk: int | None = None, share_pk: int | None = None
+    ) -> Response:
         """Revoke a user's access to child (owner only)."""
         child = self.get_object()
         share = get_object_or_404(ChildShare, pk=share_pk, child=child)
@@ -410,7 +412,7 @@ class ChildViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["get", "post"], permission_classes=[CanManageSharing])
-    def invites(self, request, pk=None):
+    def invites(self, request: Any, pk: int | None = None) -> Response:
         """List or create invites for a child (owner only)."""
         child = self.get_object()
 
@@ -433,7 +435,9 @@ class ChildViewSet(viewsets.ModelViewSet):
         url_path="invites/(?P<invite_pk>[^/.]+)",
         permission_classes=[CanManageSharing],
     )
-    def toggle_invite(self, request, pk=None, invite_pk=None):
+    def toggle_invite(
+        self, request: Any, pk: int | None = None, invite_pk: int | None = None
+    ) -> Response:
         """Toggle invite active status (owner only)."""
         child = self.get_object()
         invite = get_object_or_404(ShareInvite, pk=invite_pk, child=child)
@@ -448,7 +452,9 @@ class ChildViewSet(viewsets.ModelViewSet):
         url_path="invites/(?P<invite_pk>[^/.]+)/delete",
         permission_classes=[CanManageSharing],
     )
-    def delete_invite(self, request, pk=None, invite_pk=None):
+    def delete_invite(
+        self, request: Any, pk: int | None = None, invite_pk: int | None = None
+    ) -> Response:
         """Delete an invite (owner only)."""
         child = self.get_object()
         invite = get_object_or_404(ShareInvite, pk=invite_pk, child=child)
@@ -467,7 +473,7 @@ class AcceptInviteViewSet(viewsets.ViewSet):
     throttle_classes = [AcceptInviteThrottle]
 
     @action(detail=False, methods=["post"])
-    def accept(self, request):
+    def accept(self, request: Any) -> Response:
         """Accept an invite by token."""
         serializer = AcceptInviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

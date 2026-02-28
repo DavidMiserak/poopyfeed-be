@@ -4,6 +4,8 @@ These wrap the existing model permission methods to provide consistent
 authorization across both web UI and API.
 """
 
+from typing import Any
+
 from rest_framework.permissions import BasePermission
 
 from .models import Child
@@ -18,7 +20,7 @@ class HasChildAccess(BasePermission):
 
     message = "You do not have access to this child."
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Any, view: Any) -> bool:
         """Check permission for list/create actions.
 
         For list: queryset filters ensure only accessible children are returned.
@@ -28,13 +30,13 @@ class HasChildAccess(BasePermission):
         """
         return True
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Any, view: Any, obj: Any) -> bool:
         child = self._get_child(obj)
         if child is None:
             return False
         return child.has_access(request.user)
 
-    def _get_child(self, obj):
+    def _get_child(self, obj: Any) -> Child | None:
         """Extract Child from object (handles Child and tracking records)."""
         if isinstance(obj, Child):
             return obj
@@ -52,7 +54,7 @@ class CanEditChild(HasChildAccess):
 
     message = "You do not have permission to edit this child's data."
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Any, view: Any, obj: Any) -> bool:
         child = self._get_child(obj)
         if child is None:
             return False
@@ -68,7 +70,7 @@ class CanManageSharing(HasChildAccess):
 
     message = "Only the owner can manage this child."
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Any, view: Any, obj: Any) -> bool:
         child = self._get_child(obj)
         if child is None:
             return False

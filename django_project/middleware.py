@@ -1,13 +1,14 @@
 import re
 
 from django.conf import settings
+from django.http import HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
 
 class CSRFExemptMiddleware(MiddlewareMixin):
     """Middleware to exempt specific URLs from CSRF validation."""
 
-    def process_request(self, request):
+    def process_request(self, request: HttpRequest) -> None:
         """Exempt URLs matching patterns in CSRF_EXEMPT_URLS from CSRF."""
         if hasattr(settings, "CSRF_EXEMPT_URLS"):
             path = request.path_info.lstrip("/")
@@ -29,7 +30,9 @@ class NoCacheAPIMiddleware(MiddlewareMixin):
     content (activity feeds, notifications, etc.).
     """
 
-    def process_response(self, request, response):
+    def process_response(
+        self, request: HttpRequest, response: HttpResponse
+    ) -> HttpResponse:
         """Add Cache-Control headers to API responses."""
         if request.path_info.startswith("/api/"):
             response["Cache-Control"] = "no-cache, no-store, must-revalidate"

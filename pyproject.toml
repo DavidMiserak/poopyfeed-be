@@ -1,3 +1,50 @@
+[tool.mypy]
+python_version = "3.13"
+plugins = ["mypy_django_plugin.main"]
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+# Gradual adoption: do not require all defs to be typed yet
+disallow_untyped_defs = false
+
+[tool.django-stubs]
+django_settings_module = "django_project.settings"
+
+[[tool.mypy.overrides]]
+module = [
+  "celery",
+  "celery.*",
+  "allauth.*",
+  "rest_framework.*",
+  "crispy_forms.*",
+  "reportlab.*",
+  "psycopg2",
+  "psycopg2.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "django_project.celery"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "children.tests.*",
+  "accounts.tests.*",
+  "feedings.tests.*",
+  "diapers.tests.*",
+  "naps.tests.*",
+  "analytics.tests.*",
+  "notifications.tests.*",
+  "pages.tests.*",
+]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = ["accounts.forms", "children.forms"]
+ignore_missing_imports = true
+
 [tool.bandit]
 exclude_dirs = ["tests", "*/tests", "*/migrations"]
 skips = ["B101"]

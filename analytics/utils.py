@@ -6,7 +6,7 @@ aggregation functions for efficiency.
 """
 
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from django.db.models import (
@@ -388,8 +388,8 @@ def _today_utc_range(user_timezone: str):
         tzinfo=user_tz,
     )
     end_of_day = start_of_day + timedelta(days=1)
-    start_utc = start_of_day.astimezone(timezone.UTC)
-    end_utc = end_of_day.astimezone(timezone.UTC)
+    start_utc = start_of_day.astimezone(ZoneInfo("UTC"))
+    end_utc = end_of_day.astimezone(ZoneInfo("UTC"))
     return start_utc, end_utc
 
 
@@ -637,19 +637,20 @@ def get_child_timeline_events(
         .values("id", "napped_at", "ended_at")
     )
     # Nap duration_minutes is a model property; compute for API payload
-    for n in naps:
-        if n["ended_at"] and n["napped_at"]:
+    naps_list: list[dict[str, Any]] = cast(list[dict[str, Any]], list(naps))
+    for n in naps_list:
+        if n.get("ended_at") and n.get("napped_at"):
             total_sec = (n["ended_at"] - n["napped_at"]).total_seconds()
             n["duration_minutes"] = int(round(total_sec / 60))
         else:
             n["duration_minutes"] = None
 
-    merged = []
+    merged: list[dict[str, Any]] = []
     for f in feedings:
         merged.append({"type": "feeding", "at": f["fed_at"], "feeding": f})
     for d in diapers:
         merged.append({"type": "diaper", "at": d["changed_at"], "diaper": d})
-    for n in naps:
+    for n in naps_list:
         merged.append({"type": "nap", "at": n["napped_at"], "nap": n})
-    merged.sort(key=lambda x: x["at"], reverse=True)
+    merged.sort(key=lambda x: x["at"] or datetime.min, reverse=True)
     return merged

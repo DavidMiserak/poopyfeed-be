@@ -6,12 +6,14 @@ from zoneinfo import ZoneInfo
 from django.utils import timezone as django_tz
 
 
-def _user_tz(tz_name):
+def _user_tz(tz_name: str | None) -> ZoneInfo:
     """Return ZoneInfo for tz_name, defaulting to UTC."""
     return ZoneInfo(tz_name) if tz_name else ZoneInfo("UTC")
 
 
-def utc_to_local_datetime_local_str(utc_dt, tz_name):
+def utc_to_local_datetime_local_str(
+    utc_dt: datetime | None, tz_name: str | None
+) -> str:
     """Format an aware UTC datetime for HTML datetime-local input (YYYY-MM-DDTHH:mm).
 
     Args:
@@ -27,12 +29,14 @@ def utc_to_local_datetime_local_str(utc_dt, tz_name):
     return local.strftime("%Y-%m-%dT%H:%M")
 
 
-def now_in_user_tz_str(tz_name):
+def now_in_user_tz_str(tz_name: str | None) -> str:
     """Current time formatted for datetime-local input in the given timezone."""
     return utc_to_local_datetime_local_str(django_tz.now(), tz_name)
 
 
-def naive_local_to_utc(naive_dt, tz_name):
+def naive_local_to_utc(
+    naive_dt: datetime | None, tz_name: str | None
+) -> datetime | None:
     """Interpret a naive datetime as being in tz_name and return aware UTC.
 
     Args:
@@ -46,10 +50,14 @@ def naive_local_to_utc(naive_dt, tz_name):
         return None
     tz = _user_tz(tz_name)
     local = naive_dt.replace(tzinfo=tz)
-    return local.astimezone(django_tz.UTC)
+    return local.astimezone(ZoneInfo("UTC"))
 
 
-def format_datetime_user_tz(utc_dt, tz_name, fmt="%b %d, %I:%M %p"):
+def format_datetime_user_tz(
+    utc_dt: datetime | None,
+    tz_name: str | None,
+    fmt: str = "%b %d, %I:%M %p",
+) -> str:
     """Format an aware UTC datetime for display in the user's timezone.
 
     Args:
@@ -66,7 +74,7 @@ def format_datetime_user_tz(utc_dt, tz_name, fmt="%b %d, %I:%M %p"):
     return local.strftime(fmt)
 
 
-def format_relative(utc_dt):
+def format_relative(utc_dt: datetime | None) -> str:
     """Format an aware UTC datetime as relative time (e.g. '2 hours ago').
 
     Uses the same instant globally; wording is in English.
@@ -94,7 +102,7 @@ def format_relative(utc_dt):
     return f"{y} year{'s' if y != 1 else ''} ago"
 
 
-def format_child_age(dob, tz_name):
+def format_child_age(dob: date | datetime | None, tz_name: str | None) -> str:
     """Format a date of birth as age string (e.g. '(5 months old)').
 
     Uses 'today' in the user's timezone so the age is correct for their calendar day.

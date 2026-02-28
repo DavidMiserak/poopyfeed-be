@@ -36,7 +36,7 @@ class PostgreSQLPooledBackend(psycopg2_base.DatabaseWrapper):
     """
 
     # Class-level connection pools (shared across instances)
-    _pools = {}
+    _pools: dict = {}
     _pools_lock = RLock()
 
     def _get_pool_key(self):

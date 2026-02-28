@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import secrets
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.core.cache import cache
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, QuerySet
+
+if TYPE_CHECKING:
+    from accounts.models import CustomUser
 
 
 class ChildShare(models.Model):
@@ -54,10 +60,10 @@ class ChildShare(models.Model):
         unique_together = [["child", "user"]]
         ordering = ["-created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user.email} - {self.child.name} ({self.get_role_display()})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Invalidate shared user's cache when share is created/updated."""
         super().save(*args, **kwargs)
         # Invalidate cache for the shared user
@@ -65,14 +71,15 @@ class ChildShare(models.Model):
 
         Child.invalidate_user_cache(self.user)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         """Invalidate shared user's cache when share is deleted."""
         user = self.user
-        super().delete(*args, **kwargs)
+        result = super().delete(*args, **kwargs)
         # Invalidate cache for the shared user
         from .models import Child
 
         Child.invalidate_user_cache(user)
+        return result
 
 
 class ShareInvite(models.Model):
@@ -114,10 +121,10 @@ class ShareInvite(models.Model):
         db_table = "children_shareinvite"
         ordering = ["-created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Invite for {self.child.name} ({self.get_role_display()})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         if not self.token:
             self.token = secrets.token_urlsafe(32)
         super().save(*args, **kwargs)
@@ -210,24 +217,25 @@ class Child(models.Model):
             models.Index(fields=["parent", "-date_of_birth"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Invalidate parent's cache when child is created/updated."""
         super().save(*args, **kwargs)
         # Invalidate cache for the parent (owner)
         Child.invalidate_user_cache(self.parent)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         """Invalidate parent's cache when child is deleted."""
         parent = self.parent
-        super().delete(*args, **kwargs)
+        result = super().delete(*args, **kwargs)
         # Invalidate cache for the parent (owner)
         Child.invalidate_user_cache(parent)
+        return result
 
     @classmethod
-    def for_user(cls, user):
+    def for_user(cls, user: CustomUser) -> QuerySet[Child]:
         """Get all children the user has access to (owned or shared).
 
         Implements efficient query caching to prevent expensive multi-user lookups.
@@ -262,7 +270,7 @@ class Child(models.Model):
         return queryset
 
     @classmethod
-    def invalidate_user_cache(cls, user):
+    def invalidate_user_cache(cls, user: CustomUser) -> None:
         """Invalidate the cached accessible children for a user.
 
         Called automatically by Child/ChildShare save() and delete() methods.
@@ -274,7 +282,7 @@ class Child(models.Model):
         cache_key = f"accessible_children_{user.id}"
         cache.delete(cache_key)
 
-    def has_access(self, user):
+    def has_access(self, user: CustomUser) -> bool:
         """Check if user has any access to this child (view or manage).
 
         Args:
@@ -285,7 +293,7 @@ class Child(models.Model):
         """
         return self.parent == user or self.shares.filter(user=user).exists()
 
-    def get_user_role(self, user):
+    def get_user_role(self, user: CustomUser) -> str | None:
         """Get user's role for this child.
 
         Translates database role abbreviations (CO, CG) to frontend strings
@@ -302,14 +310,14 @@ class Child(models.Model):
         share = self.shares.filter(user=user).first()
         if share:
             # Map abbreviated roles to full strings for frontend compatibility
-            role_map = {
-                ChildShare.Role.CO_PARENT: "co-parent",
-                ChildShare.Role.CAREGIVER: "caregiver",
+            role_map: dict[str, str] = {
+                "CO": "co-parent",
+                "CG": "caregiver",
             }
             return role_map.get(share.role)
         return None
 
-    def can_edit(self, user):
+    def can_edit(self, user: CustomUser) -> bool:
         """Check if user can edit child profile or tracking records.
 
         Only owners and co-parents can edit. Caregivers can only view/add.
@@ -323,7 +331,7 @@ class Child(models.Model):
         role = self.get_user_role(user)
         return role in ["owner", "co-parent"]
 
-    def can_manage_sharing(self, user):
+    def can_manage_sharing(self, user: CustomUser) -> bool:
         """Check if user can manage sharing (create invites, revoke access).
 
         Only the owner can manage sharing for a child.

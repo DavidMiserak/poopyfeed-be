@@ -5,6 +5,9 @@ This base class consolidates common API patterns across all tracking apps
 and top-level routes (/tracking/).
 """
 
+from typing import Any, List
+
+from django.db.models import QuerySet
 from django.utils.dateparse import parse_datetime
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
@@ -47,10 +50,10 @@ class TrackingViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated, HasChildAccess]
-    nested_serializer_class = None  # Must be set by subclass
-    datetime_filter_field = None  # Set by subclass to enable date filtering
+    nested_serializer_class: type | None = None  # Must be set by subclass
+    datetime_filter_field: str | None = None  # Set by subclass to enable date filtering
 
-    def get_throttles(self):
+    def get_throttles(self) -> List[Any]:
         """Apply stricter rate limiting for create/update operations.
 
         Default throttle (1000/hour) applies to list and retrieve.
@@ -61,7 +64,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
             throttles.append(TrackingCreateThrottle())
         return throttles
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
         """Use nested serializer when child is in URL."""
         if "child_pk" in self.kwargs:
             if not self.nested_serializer_class:
@@ -69,7 +72,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
             return self.nested_serializer_class
         return self.serializer_class
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Any]:
         """Return records for the child, filtered by user access and optional date range."""
         child_pk = self.kwargs.get("child_pk")
         if child_pk:
@@ -90,7 +93,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
         qs = model.objects.filter(child__in=accessible_children).select_related("child")
         return self._apply_datetime_filters(qs)
 
-    def _apply_datetime_filters(self, queryset):
+    def _apply_datetime_filters(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
         """Apply date range filtering if datetime_filter_field is set.
 
         Reads query parameters {field}__gte and {field}__lt from the request
@@ -115,13 +118,13 @@ class TrackingViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[Any]:
         """Apply edit permission for update/delete actions."""
         if self.action in ["update", "partial_update", "destroy"]:
             return [IsAuthenticated(), CanEditChild()]
         return super().get_permissions()
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: Any) -> None:
         """Set child from URL parameter, invalidate cache, and dispatch notification signal."""
         from notifications.signals import tracking_created
 
@@ -156,7 +159,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
                 event_type=event_type,
             )
 
-    def perform_destroy(self, instance):
+    def perform_destroy(self, instance: Any) -> None:
         """Invalidate cache when tracking record is deleted.
 
         When a tracking record is deleted, the child's last-activity timestamps

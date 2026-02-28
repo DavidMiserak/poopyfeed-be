@@ -173,7 +173,7 @@ class TrackingCreateView(ChildAccessMixin, CreateView):
             success_url_name = "diapers:diaper_list"
     """
 
-    success_url_name = None  # Must be set by subclass
+    success_url_name: str | None = None  # Must be set by subclass
 
     def get_child_for_access_check(self):
         """Get child from URL kwargs (child_pk).
@@ -263,7 +263,7 @@ class TrackingUpdateView(TrackingEditQuerysetMixin, ChildEditMixin, UpdateView):
             success_url_name = "diapers:diaper_list"
     """
 
-    success_url_name = None  # Must be set by subclass
+    success_url_name: str | None = None  # Must be set by subclass
 
     def get_form_kwargs(self):
         """Pass request so the form can use user timezone for datetime."""
@@ -336,7 +336,7 @@ class TrackingDeleteView(TrackingEditQuerysetMixin, ChildEditMixin, DeleteView):
             success_url_name = "diapers:diaper_list"
     """
 
-    success_url_name = None  # Must be set by subclass
+    success_url_name: str | None = None  # Must be set by subclass
 
     def get_success_url(self):
         """Generate URL to list view after successful deletion.

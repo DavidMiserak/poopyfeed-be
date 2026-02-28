@@ -30,8 +30,8 @@ class BaseTrackingAPITests(ABC, APITestCase):
         create_test_record(): Create a test record and return it
     """
 
-    model = None  # Must be set by subclass
-    app_name = None  # Must be set by subclass
+    model: type | None = None  # Must be set by subclass
+    app_name: str | None = None  # Must be set by subclass
 
     @classmethod
     def __subclasshook__(cls, subclass):

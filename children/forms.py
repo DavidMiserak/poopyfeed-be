@@ -155,7 +155,7 @@ class LocalDateTimeFormMixin(forms.Form):
     datetime as user TZ and converts to UTC.
     """
 
-    datetime_field_name = None  # Subclasses MUST set this to field name
+    datetime_field_name: str | None = None  # Subclasses MUST set this to field name
 
     def __init__(self, *args, **kwargs):
         self._request = kwargs.pop("request", None)
