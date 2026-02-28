@@ -1,15 +1,15 @@
-# PoopyFeed
+# PoopyFeed Backend
 
 <p align="center">
   <img src="static/images/favicon.svg" width="128" alt="PoopyFeed logo" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/DavidMiserak/poopyfeed/actions/workflows/test.yml">
-    <img src="https://github.com/DavidMiserak/poopyfeed/actions/workflows/test.yml/badge.svg" alt="Tests" />
+  <a href="https://github.com/DavidMiserak/poopyfeed-be/actions/workflows/test.yml">
+    <img src="https://github.com/DavidMiserak/poopyfeed-be/actions/workflows/test.yml/badge.svg" alt="Tests" />
   </a>
-  <a href="https://codecov.io/gh/DavidMiserak/poopyfeed">
-    <img src="https://codecov.io/gh/DavidMiserak/poopyfeed/branch/main/graph/badge.svg" alt="codecov" />
+  <a href="https://codecov.io/gh/DavidMiserak/poopyfeed-be">
+    <img src="https://codecov.io/gh/DavidMiserak/poopyfeed-be/branch/main/graph/badge.svg" alt="codecov" />
   </a>
   <img src="https://img.shields.io/badge/python-3.13+-blue.svg" alt="Python 3.13+" />
   <img src="https://img.shields.io/badge/django-6.0-green.svg" alt="Django 6.0" />
@@ -40,15 +40,26 @@ for infants.
 
 ### Tracking
 
-- **Feedings**: Track bottle (amount in oz) and breast (duration, side) feedings
+- **Feedings**: Track bottle (amount in oz) and breast (duration, side) feedings with custom per-child bottle presets
 - **Diapers**: Log wet, dirty, or both diaper changes
 - **Naps**: Track sleep times
+- **Batch Entry**: Log multiple past events at once via catch-up mode
 
 <p align="center">
   <img src="docs/images/feeding-log.png" width="200" alt="Feeding log showing breast and bottle feedings" />
   <img src="docs/images/diaper-log.png" width="200" alt="Diaper change log" />
   <img src="docs/images/nap-log.png" width="200" alt="Nap log" />
 </p>
+
+### Analytics & Export
+
+- **Feeding Trends**: Daily aggregates with configurable time range (1–90 days)
+- **Diaper Patterns**: Wet/dirty distribution analysis
+- **Sleep Summary**: Nap duration and frequency insights
+- **Today & Weekly Summaries**: At-a-glance dashboards
+- **Timeline**: Merged chronological activity feed across all tracking types
+- **CSV Export**: Immediate download of tracking data
+- **PDF Export**: Async generation via Celery with progress polling
 
 ### Child Sharing
 
@@ -69,12 +80,21 @@ Share access to children with other accounts via invite links:
   <img src="docs/images/child-list-caregiver.png" width="200" alt="Child card - caregiver view" />
 </p>
 
+### Notifications
+
+- **In-app notifications**: Alerts when other users log feedings, diapers, or naps for shared children
+- **Feeding reminders**: Configurable interval-based reminders (2/3/4/6 hours) that bypass quiet hours
+- **Quiet hours**: Per-user schedule to suppress non-critical notifications
+- **Per-child preferences**: Toggle notification types (feedings, diapers, naps) per child
+
 ### Other Features
 
 - **Multi-Child Support**: Manage multiple children per account
-- **Email Authentication**: Secure email-based login via django-allauth
+- **Email Authentication**: Secure email-based login via django-allauth (headless mode for SPA)
 - **Progressive Web App**: Install on your phone's home screen for quick access
-- **REST API**: Token-authenticated API at `/api/v1/` via Django REST Framework + Djoser for mobile app integration
+- **REST API**: Token-authenticated API at `/api/v1/` via Django REST Framework
+- **Redis Caching**: Analytics and child access queries cached with automatic invalidation
+- **Background Tasks**: Celery worker for PDF export and scheduled notification tasks
 
 ### Planned
 
@@ -86,18 +106,22 @@ Share access to children with other accounts via invite links:
 ## Technology Stack
 
 - **Backend**: Django 6.0 (Python web framework)
-- **Database**: PostgreSQL (containers) or SQLite (local dev)
+- **Database**: PostgreSQL (containers/production) or SQLite (local dev)
+- **Cache & Sessions**: Redis 7
+- **Task Queue**: Celery with Redis broker (PDF export, notifications, scheduled tasks)
 - **Frontend**: Django Templates with Bootstrap 5 (via crispy-forms)
+- **SPA Frontend**: Angular 21 (separate submodule, connects via REST API)
 - **PWA**: Service worker with offline support
-- **Authentication**: django-allauth with email-based login
+- **Authentication**: django-allauth with email-based login (headless mode for SPA)
 - **Containers**: Podman (or Docker)
 
 ## Requirements
 
 ### System Dependencies
 
-- Python 3.13+ (3.14 recommended)
+- Python 3.13+
 - PostgreSQL 14+ (for container/production deployment)
+- Redis 7+ (for caching, sessions, and Celery)
 - Podman or Docker with compose support (for local container development)
 
 ### Python Dependencies
@@ -107,7 +131,9 @@ See `requirements.txt` for full list. Key packages:
 - Django 6.0
 - django-allauth (authentication)
 - django-crispy-forms + crispy-bootstrap5 (forms)
-- djangorestframework + djoser (REST API)
+- djangorestframework (REST API)
+- celery + django-redis (background tasks, caching)
+- reportlab + matplotlib (PDF export with charts)
 - psycopg2-binary (PostgreSQL)
 - whitenoise (static files)
 - gunicorn (production server)
@@ -119,8 +145,8 @@ See `requirements.txt` for full list. Key packages:
 1. Clone the repository:
 
    ```bash
-   git clone <repository-url>
-   cd poopyfeed
+   git clone https://github.com/DavidMiserak/poopyfeed-be.git
+   cd poopyfeed-be
    ```
 
 2. Set up pre-commit hooks:
@@ -129,7 +155,7 @@ See `requirements.txt` for full list. Key packages:
    make pre-commit-setup
    ```
 
-3. Start the containers (web + PostgreSQL):
+3. Start the containers (web + PostgreSQL + Redis):
 
    ```bash
    make run
@@ -146,9 +172,12 @@ See `requirements.txt` for full list. Key packages:
 Other useful commands:
 
 ```bash
-make test             # Run tests
-make logs             # View container logs
-make stop             # Stop containers
+make test                          # Run tests with coverage
+make test-backend-parallel-fast    # Fast parallel tests (~13-15s)
+make logs                          # View container logs
+make stop                          # Stop containers
+make celery-worker                 # Start Celery worker (for PDF export)
+make celery-beat                   # Start Celery beat (for feeding reminders)
 ```
 
 ### Local Development (without containers)
@@ -168,11 +197,14 @@ make stop             # Stop containers
    python manage.py runserver
    ```
 
-3. Run a single test:
+3. Run tests:
 
    ```bash
-   python manage.py test accounts.tests.CustomUserTests.test_create_user
+   make test-local                # Full suite with coverage (~25-35s)
+   python manage.py test accounts.tests.CustomUserTests.test_create_user  # Single test
    ```
+
+When running locally without Redis, caching degrades gracefully and sessions use database storage.
 
 ## Usage
 
@@ -212,6 +244,21 @@ To share a child's profile with a partner, family member, or caregiver:
 5. They click the link while logged into their account to gain access
 
 To revoke access, return to the Share page and click **Remove** next to the user.
+
+### REST API
+
+The backend exposes a full REST API at `/api/v1/` for the Angular SPA frontend:
+
+- **Children**: `/api/v1/children/` — CRUD with role-based access
+- **Tracking**: `/api/v1/children/{id}/feedings/`, `diapers/`, `naps/` — nested CRUD
+- **Batch**: `/api/v1/children/{id}/batch/` — bulk create up to 20 events
+- **Analytics**: `/api/v1/analytics/children/{id}/feeding-trends/`, `diaper-patterns/`, `sleep-summary/`, `today-summary/`, `weekly-summary/`
+- **Export**: CSV (synchronous) and PDF (async via Celery with status polling)
+- **Timeline**: `/api/v1/analytics/children/{id}/timeline/` — merged activity feed
+- **Notifications**: List, mark read, preferences, quiet hours, unread count
+- **Auth**: django-allauth headless endpoints at `/api/v1/browser/v1/auth/`
+
+Authentication: Token or Session. Rate limited (1000/hour default, stricter for invites and tracking creation).
 
 ### Admin Panel
 
@@ -301,6 +348,7 @@ For self-hosting on your own infrastructure:
 Required environment variables:
 
 - `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_URL`: Redis connection string (caching, sessions, Celery)
 - `DJANGO_SECRET_KEY`: Secret key for cryptographic signing
 - `DJANGO_DEBUG`: Set to `false` in production
 - `DJANGO_ALLOWED_HOSTS`: Comma-separated list of allowed hosts
@@ -310,9 +358,9 @@ Required environment variables:
 When contributing to PoopyFeed:
 
 1. Run `make pre-commit-setup` to install pre-commit hooks
-2. Follow conventional commit format for all commits (enforced by hooks)
+2. Follow [conventional commit](https://www.conventionalcommits.org/) format for all commits (enforced by hooks)
 3. Run `pre-commit run --all-files` before committing
-4. Ensure tests pass with `make test`
+4. Ensure tests pass with `make test` (98% coverage, 555+ tests)
 
 ---
 
