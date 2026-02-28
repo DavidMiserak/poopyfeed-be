@@ -122,8 +122,10 @@ class TrackingViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        """Set child from URL parameter and dispatch notification signal."""
+        """Set child from URL parameter, invalidate cache, and dispatch notification signal."""
         from notifications.signals import tracking_created
+
+        from .cache_utils import invalidate_child_activities_cache
 
         child_pk = self.kwargs.get("child_pk")
         if child_pk:
@@ -134,6 +136,10 @@ class TrackingViewSet(viewsets.ModelViewSet):
         else:
             # Top-level route: child must be in request data
             instance = serializer.save()
+
+        # Invalidate child activities cache immediately (belt and suspenders: not relying on signals)
+        # This ensures last_activity timestamps are fresh for the child list
+        invalidate_child_activities_cache(instance.child_id)
 
         # Dispatch notification signal for shared users
         event_type_map = {
