@@ -1,0 +1,25 @@
+{% comment %}
+  Activity title and details by type (feeding / diaper / nap).
+  Requires: activity (with activity.type and activity.obj).
+  Uses duration_display or duration_minutes for feeding; get_change_type_display|default:change_type for diaper.
+{% endcomment %}
+{% if activity.type == "feeding" %}
+  <div class="fw-semibold small">
+    {% if activity.obj.feeding_type == "bottle" %}Bottle{% else %}Breast{% endif %} Feeding
+  </div>
+  <div class="text-body-secondary small">
+    {% if activity.obj.amount_oz %}{{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes or activity.obj.duration_display %}{% if activity.obj.duration_display %}{{ activity.obj.duration_display }}{% else %}{{ activity.obj.duration_minutes }} min{% endif %}{% endif %}{% if activity.obj.side %} &middot; {{ activity.obj.get_side_display }}{% endif %}
+  </div>
+{% elif activity.type == "diaper" %}
+  <div class="fw-semibold small">Diaper Change</div>
+  <div class="text-body-secondary small">{{ activity.obj.get_change_type_display|default:activity.obj.change_type }}</div>
+{% else %}
+  <div class="fw-semibold small">Nap</div>
+  <div class="small">
+    {% if activity.obj.ended_at %}
+      <span class="badge bg-primary-subtle text-primary rounded-pill">{{ activity.obj.duration_display }}</span>
+    {% else %}
+      <span class="badge bg-info-subtle text-info rounded-pill"><i class="fa-solid fa-circle small me-1"></i>Ongoing</span>
+    {% endif %}
+  </div>
+{% endif %}

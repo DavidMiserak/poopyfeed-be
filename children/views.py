@@ -1,6 +1,3 @@
-import csv
-from io import StringIO
-
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
@@ -399,56 +396,15 @@ class ChildExportView(ChildAccessMixin, View):
             days = 30
 
         if export_format == "csv":
+            from analytics.utils import build_analytics_csv
+
             feeding_data = get_feeding_trends(child.id, days=days)
             diaper_data = get_diaper_patterns(child.id, days=days)
             sleep_data = get_sleep_summary(child.id, days=days)
-
-            csv_buffer = StringIO()
-            writer = csv.writer(csv_buffer)
-            writer.writerow(
-                [
-                    "Date",
-                    "Feedings (count)",
-                    "Feedings (avg duration min)",
-                    "Feedings (total oz)",
-                    "Diaper Changes (count)",
-                    "Diaper Changes (wet)",
-                    "Diaper Changes (dirty)",
-                    "Diaper Changes (both)",
-                    "Naps (count)",
-                    "Naps (avg duration min)",
-                    "Naps (total minutes)",
-                ]
+            content, filename = build_analytics_csv(
+                feeding_data, diaper_data, sleep_data, child.name, days
             )
-            feeding_by_date = {d["date"]: d for d in feeding_data.get("daily_data", [])}
-            diaper_by_date = {d["date"]: d for d in diaper_data.get("daily_data", [])}
-            sleep_by_date = {d["date"]: d for d in sleep_data.get("daily_data", [])}
-            all_dates = sorted(
-                set(feeding_by_date.keys())
-                | set(diaper_by_date.keys())
-                | set(sleep_by_date.keys())
-            )
-            for d in all_dates:
-                f = feeding_by_date.get(d, {})
-                di = diaper_by_date.get(d, {})
-                s = sleep_by_date.get(d, {})
-                writer.writerow(
-                    [
-                        d,
-                        f.get("count", 0),
-                        f.get("average_duration") or "",
-                        f.get("total_oz") or "",
-                        di.get("count", 0),
-                        di.get("wet_count", 0),
-                        di.get("dirty_count", 0),
-                        di.get("both_count", 0),
-                        s.get("count", 0),
-                        s.get("average_duration") or "",
-                        s.get("total_minutes") or "",
-                    ]
-                )
-            response = HttpResponse(csv_buffer.getvalue(), content_type="text/csv")
-            filename = f"analytics-{child.name.replace(' ', '_')}-{days}days.csv"
+            response = HttpResponse(content, content_type="text/csv")
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 

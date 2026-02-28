@@ -1,0 +1,11 @@
+{% comment %}
+  Date section header: badge with date + horizontal rule.
+  Requires: date_display (e.g. activity.at|date:"l, M j").
+  Optional: first (forloop.first; when False, adds mt-4).
+{% endcomment %}
+<div class="d-flex align-items-center gap-2 mb-3 {% if not first %}mt-4{% endif %}">
+  <span class="badge bg-body-secondary text-body-secondary rounded-pill px-3 py-2 fw-semibold small">
+    <i class="fa-solid fa-calendar-day me-1"></i>{{ date_display }}
+  </span>
+  <hr class="flex-grow-1 m-0">
+</div>

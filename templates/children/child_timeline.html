@@ -29,66 +29,11 @@
       {% for activity in page_obj %}
         {% ifchanged activity.at|date:"Y-m-d" %}
           {% if not forloop.first %}</div></div>{% endif %}
-          <!-- Date header (user's local date, not UTC) -->
-          <div class="d-flex align-items-center gap-2 mb-3 {% if not forloop.first %}mt-4{% endif %}">
-            <span class="badge bg-body-secondary text-body-secondary rounded-pill px-3 py-2 fw-semibold small">
-              <i class="fa-solid fa-calendar-day me-1"></i>{{ activity.at|date:"l, M j" }}
-            </span>
-            <hr class="flex-grow-1 m-0">
-          </div>
+          {% include "children/_activity_date_header.html" with date_display=activity.at|date:"l, M j" first=forloop.first %}
           <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-0">
         {% endifchanged %}
 
-        <div class="d-flex gap-3 px-4 py-3 border-bottom">
-          <!-- Icon -->
-          {% if activity.type == "feeding" %}
-            <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
-              <i class="fa-solid fa-bottle-water"></i>
-            </span>
-          {% elif activity.type == "diaper" %}
-            <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
-              <i class="fa-solid fa-poo"></i>
-            </span>
-          {% else %}
-            <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
-              <i class="fa-solid fa-moon"></i>
-            </span>
-          {% endif %}
-
-          <!-- Content -->
-          <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                {% if activity.type == "feeding" %}
-                  <div class="fw-semibold small">
-                    {% if activity.obj.feeding_type == "bottle" %}Bottle{% else %}Breast{% endif %} Feeding
-                  </div>
-                  <div class="text-body-secondary small">
-                    {% if activity.obj.amount_oz %}{{ activity.obj.amount_oz }} oz{% endif %}{% if activity.obj.duration_minutes %}{{ activity.obj.duration_display }}{% endif %}{% if activity.obj.side %} &middot; {{ activity.obj.get_side_display }}{% endif %}
-                  </div>
-                {% elif activity.type == "diaper" %}
-                  <div class="fw-semibold small">Diaper Change</div>
-                  <div class="text-body-secondary small">{{ activity.obj.get_change_type_display }}</div>
-                {% else %}
-                  <div class="fw-semibold small">Nap</div>
-                  <div class="small">
-                    {% if activity.obj.ended_at %}
-                      <span class="badge bg-primary-subtle text-primary rounded-pill">{{ activity.obj.duration_display }}</span>
-                    {% else %}
-                      <span class="badge bg-info-subtle text-info rounded-pill"><i class="fa-solid fa-circle small me-1"></i>Ongoing</span>
-                    {% endif %}
-                  </div>
-                {% endif %}
-              </div>
-              {% if can_edit %}
-                <a href="{% if activity.type == 'feeding' %}{% url 'feedings:feeding_edit' child_pk=child.pk pk=activity.obj.id %}{% elif activity.type == 'diaper' %}{% url 'diapers:diaper_edit' child_pk=child.pk pk=activity.obj.id %}{% else %}{% url 'naps:nap_edit' child_pk=child.pk pk=activity.obj.id %}{% endif %}" class="btn btn-link btn-sm text-body-tertiary p-0 flex-shrink-0">
-                  <i class="fa-solid fa-pen small"></i>
-                </a>
-              {% endif %}
-            </div>
-            <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small">{{ activity.at|format_relative_tz:user_timezone }}</time>
-          </div>
-        </div>
+        {% include "children/_activity_row.html" with activity=activity child=child can_edit=can_edit time_display=activity.at|format_relative_tz:user_timezone row_class="px-4 py-3 border-bottom" %}
 
       {% endfor %}
       {% endtimezone %}

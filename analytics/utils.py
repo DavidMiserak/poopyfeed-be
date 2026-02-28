@@ -5,7 +5,9 @@ All aggregations are performed at the database level using Django ORM
 aggregation functions for efficiency.
 """
 
+import csv
 from datetime import date, datetime, timedelta
+from io import StringIO
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
@@ -152,6 +154,17 @@ def _calculate_variance(values: list[int | float]) -> float:
     return round(variance, 2)
 
 
+def _weekly_summary_from_daily(daily_data: list[dict]) -> dict[str, Any]:
+    """Build weekly_summary dict from daily_data (counts, avg, trend, variance)."""
+    counts = [d["count"] for d in daily_data]
+    avg_per_day = sum(counts) / len(counts) if counts else 0
+    return {
+        "avg_per_day": round(avg_per_day, 2),
+        "trend": _calculate_trend(counts),
+        "variance": _calculate_variance(counts),
+    }
+
+
 def get_feeding_trends(
     child_id: int,
     days: int = 30,
@@ -192,21 +205,11 @@ def get_feeding_trends(
     # Fill gaps for dates with no data
     daily_data = _fill_date_gaps(daily_data, days)
 
-    # Calculate weekly summary
-    counts = [d["count"] for d in daily_data]
-    avg_per_day = sum(counts) / len(counts) if counts else 0
-    trend = _calculate_trend(counts)
-    variance = _calculate_variance(counts)
-
     return {
         "period": f"{start_date} to {end_date}",
         "child_id": child_id,
         "daily_data": daily_data,
-        "weekly_summary": {
-            "avg_per_day": round(avg_per_day, 2),
-            "trend": trend,
-            "variance": variance,
-        },
+        "weekly_summary": _weekly_summary_from_daily(daily_data),
         "last_updated": timezone.now().isoformat(),
     }
 
@@ -279,24 +282,15 @@ def get_diaper_patterns(
     daily_data = sorted(daily_by_date.values(), key=lambda x: x["date"])
     daily_data = _fill_date_gaps(daily_data, days)
 
-    # Calculate weekly summary
-    counts = [d["count"] for d in daily_data]
-    avg_per_day = sum(counts) / len(counts) if counts else 0
-    trend = _calculate_trend(counts)
-    variance = _calculate_variance(counts)
-
-    return {
+    result = {
         "period": f"{start_date} to {end_date}",
         "child_id": child_id,
         "daily_data": daily_data,
-        "weekly_summary": {
-            "avg_per_day": round(avg_per_day, 2),
-            "trend": trend,
-            "variance": variance,
-        },
-        "breakdown": period_breakdown,
+        "weekly_summary": _weekly_summary_from_daily(daily_data),
         "last_updated": timezone.now().isoformat(),
     }
+    result["breakdown"] = period_breakdown
+    return result
 
 
 def get_sleep_summary(
@@ -348,22 +342,66 @@ def get_sleep_summary(
 
     daily_data = _fill_date_gaps(daily_data, days)
 
-    # Calculate weekly summary
-    counts = [d["count"] for d in daily_data]
-    avg_per_day = sum(counts) / len(counts) if counts else 0
-    trend = _calculate_trend(counts)
-    variance = _calculate_variance(counts)
-
     return {
         "period": f"{start_date} to {end_date}",
         "child_id": child_id,
         "daily_data": daily_data,
-        "weekly_summary": {
-            "avg_per_day": round(avg_per_day, 2),
-            "trend": trend,
-            "variance": variance,
-        },
+        "weekly_summary": _weekly_summary_from_daily(daily_data),
         "last_updated": timezone.now().isoformat(),
+    }
+
+
+def _aggregate_feedings(feeding_filter: Q) -> dict[str, Any]:
+    """Aggregate feeding count, total_oz, and breakdown by feeding_type. Shared by today/weekly summary."""
+    stats = Feeding.objects.filter(feeding_filter).aggregate(
+        count=Count("id"),
+        total_oz=Sum("amount_oz"),
+    )
+    breakdown = (
+        Feeding.objects.filter(feeding_filter)
+        .values("feeding_type")
+        .annotate(count=Count("id"))
+    )
+    data = {
+        "count": stats["count"] or 0,
+        "total_oz": float(stats["total_oz"] or 0),
+        "bottle": 0,
+        "breast": 0,
+    }
+    for item in breakdown:
+        data[item["feeding_type"]] = item["count"]
+    return data
+
+
+def _aggregate_diapers(diaper_filter: Q) -> dict[str, Any]:
+    """Aggregate diaper count and breakdown by change_type. Shared by today/weekly summary."""
+    stats = DiaperChange.objects.filter(diaper_filter).aggregate(count=Count("id"))
+    breakdown = (
+        DiaperChange.objects.filter(diaper_filter)
+        .values("change_type")
+        .annotate(count=Count("id"))
+    )
+    data = {"count": stats["count"] or 0, "wet": 0, "dirty": 0, "both": 0}
+    for item in breakdown:
+        data[item["change_type"]] = item["count"]
+    return data
+
+
+def _aggregate_naps(nap_filter: Q) -> dict[str, Any]:
+    """Aggregate nap count and duration stats. Shared by today/weekly summary."""
+    nap_stats = Nap.objects.filter(nap_filter).aggregate(
+        count=Count("id"),
+        total_minutes=Sum(_DURATION_EXPR, filter=Q(ended_at__isnull=False)),
+        avg_duration=Avg(_DURATION_EXPR, filter=Q(ended_at__isnull=False)),
+    )
+    return {
+        "naps": nap_stats["count"] or 0,
+        "total_minutes": (
+            int(round(nap_stats["total_minutes"])) if nap_stats["total_minutes"] else 0
+        ),
+        "avg_duration": (
+            int(round(nap_stats["avg_duration"])) if nap_stats["avg_duration"] else 0
+        ),
     }
 
 
@@ -431,64 +469,9 @@ def get_today_summary(
         diaper_filter = Q(child_id=child_id, changed_at__date=today)
         nap_filter = Q(child_id=child_id, napped_at__date=today)
 
-    # Get today's feedings
-    feeding_stats = Feeding.objects.filter(feeding_filter).aggregate(
-        count=Count("id"),
-        total_oz=Sum("amount_oz"),
-    )
-
-    feeding_breakdown = (
-        Feeding.objects.filter(feeding_filter)
-        .values("feeding_type")
-        .annotate(count=Count("id"))
-    )
-
-    feeding_data = {
-        "count": feeding_stats["count"] or 0,
-        "total_oz": float(feeding_stats["total_oz"] or 0),
-        "bottle": 0,
-        "breast": 0,
-    }
-    for item in feeding_breakdown:
-        feeding_data[item["feeding_type"]] = item["count"]
-
-    # Get today's diaper changes
-    diaper_stats = DiaperChange.objects.filter(diaper_filter).aggregate(
-        count=Count("id")
-    )
-
-    diaper_breakdown = (
-        DiaperChange.objects.filter(diaper_filter)
-        .values("change_type")
-        .annotate(count=Count("id"))
-    )
-
-    diaper_data = {
-        "count": diaper_stats["count"] or 0,
-        "wet": 0,
-        "dirty": 0,
-        "both": 0,
-    }
-    for item in diaper_breakdown:
-        diaper_data[item["change_type"]] = item["count"]
-
-    # Get today's naps with duration stats
-    duration_expr = _DURATION_EXPR
-    nap_stats = Nap.objects.filter(nap_filter).aggregate(
-        count=Count("id"),
-        total_minutes=Sum(duration_expr, filter=Q(ended_at__isnull=False)),
-        avg_duration=Avg(duration_expr, filter=Q(ended_at__isnull=False)),
-    )
-
-    sleep_data = {
-        "naps": nap_stats["count"] or 0,
-        "total_minutes": (
-            int(round(nap_stats["total_minutes"])) if nap_stats["total_minutes"] else 0
-        ),
-        "avg_duration": (
-            int(round(nap_stats["avg_duration"])) if nap_stats["avg_duration"] else 0
-        ),
-    }
+    feeding_data = _aggregate_feedings(feeding_filter)
+    diaper_data = _aggregate_diapers(diaper_filter)
+    sleep_data = _aggregate_naps(nap_filter)
 
     return {
         "child_id": child_id,
@@ -513,83 +496,25 @@ def get_weekly_summary(child_id: int) -> dict[str, Any]:
     """
     today = timezone.now().date()
     week_start = today - timedelta(days=6)
-
-    # Get week's feedings
-    feeding_stats = Feeding.objects.filter(
+    week_filter = Q(
         child_id=child_id,
         fed_at__date__gte=week_start,
         fed_at__date__lte=today,
-    ).aggregate(
-        count=Count("id"),
-        total_oz=Sum("amount_oz"),
     )
-
-    feeding_breakdown = (
-        Feeding.objects.filter(
-            child_id=child_id,
-            fed_at__date__gte=week_start,
-            fed_at__date__lte=today,
-        )
-        .values("feeding_type")
-        .annotate(count=Count("id"))
-    )
-
-    feeding_data = {
-        "count": feeding_stats["count"] or 0,
-        "total_oz": float(feeding_stats["total_oz"] or 0),
-        "bottle": 0,
-        "breast": 0,
-    }
-    for item in feeding_breakdown:
-        feeding_data[item["feeding_type"]] = item["count"]
-
-    # Get week's diaper changes
-    diaper_stats = DiaperChange.objects.filter(
+    diaper_week_filter = Q(
         child_id=child_id,
         changed_at__date__gte=week_start,
         changed_at__date__lte=today,
-    ).aggregate(count=Count("id"))
-
-    diaper_breakdown = (
-        DiaperChange.objects.filter(
-            child_id=child_id,
-            changed_at__date__gte=week_start,
-            changed_at__date__lte=today,
-        )
-        .values("change_type")
-        .annotate(count=Count("id"))
     )
-
-    diaper_data = {
-        "count": diaper_stats["count"] or 0,
-        "wet": 0,
-        "dirty": 0,
-        "both": 0,
-    }
-    for item in diaper_breakdown:
-        diaper_data[item["change_type"]] = item["count"]
-
-    # Get week's naps with duration stats
-    duration_expr = _DURATION_EXPR
-    nap_stats = Nap.objects.filter(
+    nap_week_filter = Q(
         child_id=child_id,
         napped_at__date__gte=week_start,
         napped_at__date__lte=today,
-    ).aggregate(
-        count=Count("id"),
-        total_minutes=Sum(duration_expr, filter=Q(ended_at__isnull=False)),
-        avg_duration=Avg(duration_expr, filter=Q(ended_at__isnull=False)),
     )
 
-    sleep_data = {
-        "naps": nap_stats["count"] or 0,
-        "total_minutes": (
-            int(round(nap_stats["total_minutes"])) if nap_stats["total_minutes"] else 0
-        ),
-        "avg_duration": (
-            int(round(nap_stats["avg_duration"])) if nap_stats["avg_duration"] else 0
-        ),
-    }
+    feeding_data = _aggregate_feedings(week_filter)
+    diaper_data = _aggregate_diapers(diaper_week_filter)
+    sleep_data = _aggregate_naps(nap_week_filter)
 
     return {
         "child_id": child_id,
@@ -599,6 +524,66 @@ def get_weekly_summary(child_id: int) -> dict[str, Any]:
         "sleep": sleep_data,
         "last_updated": timezone.now().isoformat(),
     }
+
+
+def build_analytics_csv(
+    feeding_data: dict,
+    diaper_data: dict,
+    sleep_data: dict,
+    child_name: str,
+    days: int,
+) -> tuple[str, str]:
+    """Build analytics CSV content and filename. Shared by children.views and analytics.views.
+
+    Returns:
+        (csv_content, suggested_filename)
+    """
+    feeding_by_date = {d["date"]: d for d in feeding_data.get("daily_data", [])}
+    diaper_by_date = {d["date"]: d for d in diaper_data.get("daily_data", [])}
+    sleep_by_date = {d["date"]: d for d in sleep_data.get("daily_data", [])}
+    all_dates = sorted(
+        set(feeding_by_date.keys())
+        | set(diaper_by_date.keys())
+        | set(sleep_by_date.keys())
+    )
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "Date",
+            "Feedings (count)",
+            "Feedings (avg duration min)",
+            "Feedings (total oz)",
+            "Diaper Changes (count)",
+            "Diaper Changes (wet)",
+            "Diaper Changes (dirty)",
+            "Diaper Changes (both)",
+            "Naps (count)",
+            "Naps (avg duration min)",
+            "Naps (total minutes)",
+        ]
+    )
+    for d in all_dates:
+        feeding = feeding_by_date.get(d, {})
+        diaper = diaper_by_date.get(d, {})
+        sleep = sleep_by_date.get(d, {})
+        writer.writerow(
+            [
+                d,
+                feeding.get("count", 0),
+                feeding.get("average_duration") or "",
+                feeding.get("total_oz") or "",
+                diaper.get("count", 0),
+                diaper.get("wet_count", 0),
+                diaper.get("dirty_count", 0),
+                diaper.get("both_count", 0),
+                sleep.get("count", 0),
+                sleep.get("average_duration") or "",
+                sleep.get("total_minutes") or "",
+            ]
+        )
+    filename = f"analytics-{child_name.replace(' ', '_')}-{days}days.csv"
+    return buffer.getvalue(), filename
 
 
 # Timeline: fetch up to this many per type before merge (matches children.views)

@@ -1,0 +1,17 @@
+{% comment %}
+  Full activity row: icon, content, edit link, time.
+  Requires: activity, child, can_edit, time_display (formatted time string).
+  Optional: edit_pk (defaults to activity.obj.id), content_class (default "flex-grow-1").
+{% endcomment %}
+<div class="d-flex gap-3 {% if row_class %}{{ row_class }}{% else %}px-4 py-3 border-bottom{% endif %}">
+  {% include "children/_activity_icon.html" with activity=activity %}
+  <div class="{% if content_class %}{{ content_class }}{% else %}flex-grow-1{% endif %}">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        {% include "children/_activity_content.html" with activity=activity %}
+      </div>
+      {% include "children/_activity_edit_link.html" with activity=activity child=child can_edit=can_edit edit_pk=edit_pk %}
+    </div>
+    <time datetime="{{ activity.at|date:'c' }}" class="text-body-tertiary small">{{ time_display }}</time>
+  </div>
+</div>

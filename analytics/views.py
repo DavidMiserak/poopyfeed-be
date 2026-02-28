@@ -4,9 +4,7 @@ Provides trend visualization and data insights for tracked activities
 (feedings, diapers, naps).
 """
 
-import csv
 import os
-from io import StringIO
 from pathlib import Path
 
 from celery.result import AsyncResult
@@ -37,6 +35,7 @@ from .serializers import (
 )
 from .tasks import generate_pdf_report
 from .utils import (
+    build_analytics_csv,
     get_child_timeline_events,
     get_diaper_patterns,
     get_feeding_trends,
@@ -163,98 +162,50 @@ class AnalyticsViewSet(viewsets.ViewSet):
         # Use default progress for status
         return PROGRESS_BY_STATUS.get(frontend_status, 50)
 
-    @action(detail=True, methods=["get"], url_path="feeding-trends")
-    def feeding_trends(self, request, pk=None):
-        """Get feeding trends for a child.
-
-        Query Parameters:
-            days: Number of days (1-90, default 30)
-
-        Returns:
-            Feeding trends with daily data and weekly summary
-        """
-        # Get and validate child
+    def _trend_response(
+        self, request, pk, cache_prefix, get_func, response_serializer_class
+    ):
+        """Shared logic for feeding_trends, diaper_patterns, sleep_summary."""
         child = self.get_child(pk)
-
-        # Parse days parameter
         serializer = DaysQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         days = serializer.validated_data["days"]
+        cache_key = f"analytics:{cache_prefix}:{child.id}:{days}"
+        data = self._get_cached_data(cache_key, get_func, child.id, days)
+        return Response(response_serializer_class(data).data, status=status.HTTP_200_OK)
 
-        # Get cached or compute data
-        cache_key = f"analytics:feeding-trends:{child.id}:{days}"
-        data = self._get_cached_data(
-            cache_key,
+    @action(detail=True, methods=["get"], url_path="feeding-trends")
+    def feeding_trends(self, request, pk=None):
+        """Get feeding trends for a child. Query params: days (1-90, default 30)."""
+        return self._trend_response(
+            request,
+            pk,
+            "feeding-trends",
             get_feeding_trends,
-            child.id,
-            days,
+            FeedingTrendsResponseSerializer,
         )
-
-        # Validate response
-        response_serializer = FeedingTrendsResponseSerializer(data)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="diaper-patterns")
     def diaper_patterns(self, request, pk=None):
-        """Get diaper change patterns for a child.
-
-        Query Parameters:
-            days: Number of days (1-90, default 30)
-
-        Returns:
-            Diaper patterns with daily data and type breakdown
-        """
-        # Get and validate child
-        child = self.get_child(pk)
-
-        # Parse days parameter
-        serializer = DaysQuerySerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        days = serializer.validated_data["days"]
-
-        # Get cached or compute data
-        cache_key = f"analytics:diaper-patterns:{child.id}:{days}"
-        data = self._get_cached_data(
-            cache_key,
+        """Get diaper change patterns for a child. Query params: days (1-90, default 30)."""
+        return self._trend_response(
+            request,
+            pk,
+            "diaper-patterns",
             get_diaper_patterns,
-            child.id,
-            days,
+            DiaperPatternsResponseSerializer,
         )
-
-        # Validate response
-        response_serializer = DiaperPatternsResponseSerializer(data)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="sleep-summary")
     def sleep_summary(self, request, pk=None):
-        """Get sleep summary for a child.
-
-        Query Parameters:
-            days: Number of days (1-90, default 30)
-
-        Returns:
-            Sleep trends with daily data and weekly summary
-        """
-        # Get and validate child
-        child = self.get_child(pk)
-
-        # Parse days parameter
-        serializer = DaysQuerySerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        days = serializer.validated_data["days"]
-
-        # Get cached or compute data
-        cache_key = f"analytics:sleep-summary:{child.id}:{days}"
-        data = self._get_cached_data(
-            cache_key,
+        """Get sleep summary for a child. Query params: days (1-90, default 30)."""
+        return self._trend_response(
+            request,
+            pk,
+            "sleep-summary",
             get_sleep_summary,
-            child.id,
-            days,
+            SleepSummaryResponseSerializer,
         )
-
-        # Validate response
-        response_serializer = SleepSummaryResponseSerializer(data)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="today-summary")
     def today_summary(self, request, pk=None):
@@ -366,77 +317,17 @@ class AnalyticsViewSet(viewsets.ViewSet):
         Returns:
             CSV file attachment with feeding, diaper, and sleep data
         """
-        # Get and validate child
         child = self.get_child(pk)
-
-        # Parse days parameter (optional)
         serializer = DaysQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         days = serializer.validated_data["days"]
-
-        # Get analytics data
         feeding_data = get_feeding_trends(child.id, days=days)
         diaper_data = get_diaper_patterns(child.id, days=days)
         sleep_data = get_sleep_summary(child.id, days=days)
-
-        # Generate CSV in memory
-        csv_buffer = StringIO()
-        writer = csv.writer(csv_buffer)
-
-        # Write header
-        writer.writerow(
-            [
-                "Date",
-                "Feedings (count)",
-                "Feedings (avg duration min)",
-                "Feedings (total oz)",
-                "Diaper Changes (count)",
-                "Diaper Changes (wet)",
-                "Diaper Changes (dirty)",
-                "Diaper Changes (both)",
-                "Naps (count)",
-                "Naps (avg duration min)",
-                "Naps (total minutes)",
-            ]
+        content, filename = build_analytics_csv(
+            feeding_data, diaper_data, sleep_data, child.name, days
         )
-
-        # Create lookup dicts for diaper and sleep data
-        feeding_by_date = {d["date"]: d for d in feeding_data.get("daily_data", [])}
-        diaper_by_date = {d["date"]: d for d in diaper_data.get("daily_data", [])}
-        sleep_by_date = {d["date"]: d for d in sleep_data.get("daily_data", [])}
-
-        # Get all dates
-        all_dates = (
-            set(feeding_by_date.keys())
-            | set(diaper_by_date.keys())
-            | set(sleep_by_date.keys())
-        )
-
-        # Write data rows
-        for date in sorted(all_dates):
-            feeding = feeding_by_date.get(date, {})
-            diaper = diaper_by_date.get(date, {})
-            sleep = sleep_by_date.get(date, {})
-
-            writer.writerow(
-                [
-                    date,
-                    feeding.get("count", 0),
-                    feeding.get("average_duration") or "",
-                    feeding.get("total_oz") or "",
-                    diaper.get("count", 0),
-                    diaper.get("wet_count", 0),
-                    diaper.get("dirty_count", 0),
-                    diaper.get("both_count", 0),
-                    sleep.get("count", 0),
-                    sleep.get("average_duration") or "",
-                    sleep.get("total_minutes") or "",
-                ]
-            )
-
-        # Create HTTP response with CSV attachment
-        response = HttpResponse(csv_buffer.getvalue(), content_type="text/csv")
-        filename = f"analytics-{child.name.replace(' ', '_')}-{days}days.csv"
+        response = HttpResponse(content, content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 

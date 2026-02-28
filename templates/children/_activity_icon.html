@@ -1,0 +1,17 @@
+{% comment %}
+  Renders the activity type icon (feeding / diaper / nap).
+  Requires: activity (with activity.type)
+{% endcomment %}
+{% if activity.type == "feeding" %}
+  <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+    <i class="fa-solid fa-bottle-water"></i>
+  </span>
+{% elif activity.type == "diaper" %}
+  <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+    <i class="fa-solid fa-poo"></i>
+  </span>
+{% else %}
+  <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 36px; height: 36px;">
+    <i class="fa-solid fa-moon"></i>
+  </span>
+{% endif %}

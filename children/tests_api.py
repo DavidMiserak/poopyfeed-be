@@ -17,6 +17,12 @@ from .models import Child, ChildShare, ShareInvite
 TEST_COPARENT_EMAIL = "coparent@example.com"
 TEST_BABY_NAME = "Test Baby"
 API_CHILDREN_URL = "/api/v1/children/"
+API_CHILD_DETAIL = "/api/v1/children/{pk}/"
+API_CHILD_SHARES = "/api/v1/children/{pk}/shares/"
+API_CHILD_SHARE_DETAIL = "/api/v1/children/{pk}/shares/{share_pk}/"
+API_CHILD_INVITES = "/api/v1/children/{pk}/invites/"
+API_CHILD_INVITE_DETAIL = "/api/v1/children/{pk}/invites/{invite_pk}/"
+API_CHILD_INVITE_DELETE = "/api/v1/children/{pk}/invites/{invite_pk}/delete/"
 API_ACCEPT_INVITE_URL = "/api/v1/invites/accept/"
 
 
@@ -123,21 +129,21 @@ class ChildAPITests(APITestCase):
     def test_retrieve_child_owner(self):
         """Owner can retrieve child details."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.pk}/")
+        response = self.client.get(API_CHILD_DETAIL.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], TEST_BABY_NAME)
 
     def test_retrieve_child_stranger_denied(self):
         """Stranger cannot retrieve child details."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.stranger_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.pk}/")
+        response = self.client.get(API_CHILD_DETAIL.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_update_child_owner(self):
         """Owner can update child."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         data = {"name": "Updated Baby", "date_of_birth": "2025-01-01"}
-        response = self.client.put(f"/api/v1/children/{self.child.pk}/", data)
+        response = self.client.put(API_CHILD_DETAIL.format(pk=self.child.pk), data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Updated Baby")
 
@@ -145,14 +151,14 @@ class ChildAPITests(APITestCase):
         """Co-parent can update child."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         data = {"name": "Coparent Updated", "date_of_birth": "2025-01-01"}
-        response = self.client.put(f"/api/v1/children/{self.child.pk}/", data)
+        response = self.client.put(API_CHILD_DETAIL.format(pk=self.child.pk), data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_update_child_caregiver_denied(self):
         """Caregiver cannot update child."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.caregiver_token.key}")
         data = {"name": "Caregiver Updated", "date_of_birth": "2025-01-01"}
-        response = self.client.put(f"/api/v1/children/{self.child.pk}/", data)
+        response = self.client.put(API_CHILD_DETAIL.format(pk=self.child.pk), data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_delete_child_owner(self):
@@ -163,13 +169,13 @@ class ChildAPITests(APITestCase):
             date_of_birth="2025-01-01",
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.delete(f"/api/v1/children/{child.pk}/")
+        response = self.client.delete(API_CHILD_DETAIL.format(pk=child.pk))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_delete_child_coparent_denied(self):
         """Co-parent cannot delete child."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
-        response = self.client.delete(f"/api/v1/children/{self.child.pk}/")
+        response = self.client.delete(API_CHILD_DETAIL.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
@@ -214,7 +220,7 @@ class SharingAPITests(APITestCase):
     def test_list_shares_owner(self):
         """Owner can list shares."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.pk}/shares/")
+        response = self.client.get(API_CHILD_SHARES.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["user_email"], TEST_COPARENT_EMAIL)
@@ -222,14 +228,14 @@ class SharingAPITests(APITestCase):
     def test_list_shares_coparent_denied(self):
         """Co-parent cannot list shares."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.pk}/shares/")
+        response = self.client.get(API_CHILD_SHARES.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_revoke_share_owner(self):
         """Owner can revoke shares."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.delete(
-            f"/api/v1/children/{self.child.pk}/shares/{self.share.pk}/"
+            API_CHILD_SHARE_DETAIL.format(pk=self.child.pk, share_pk=self.share.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(ChildShare.objects.filter(pk=self.share.pk).exists())
@@ -242,7 +248,7 @@ class SharingAPITests(APITestCase):
             created_by=self.owner,
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.pk}/invites/")
+        response = self.client.get(API_CHILD_INVITES.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertIn("invite_url", response.data[0])
@@ -251,7 +257,7 @@ class SharingAPITests(APITestCase):
         """Owner can create invites."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         data = {"role": "caregiver"}
-        response = self.client.post(f"/api/v1/children/{self.child.pk}/invites/", data)
+        response = self.client.post(API_CHILD_INVITES.format(pk=self.child.pk), data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["role"], "caregiver")
         self.assertIn("token", response.data)
@@ -309,14 +315,14 @@ class SharingAPITests(APITestCase):
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.patch(
-            f"/api/v1/children/{self.child.pk}/invites/{invite.pk}/"
+            API_CHILD_INVITE_DETAIL.format(pk=self.child.pk, invite_pk=invite.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["is_active"])
 
         # Toggle back
         response = self.client.patch(
-            f"/api/v1/children/{self.child.pk}/invites/{invite.pk}/"
+            API_CHILD_INVITE_DETAIL.format(pk=self.child.pk, invite_pk=invite.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["is_active"])
@@ -330,7 +336,7 @@ class SharingAPITests(APITestCase):
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         response = self.client.patch(
-            f"/api/v1/children/{self.child.pk}/invites/{invite.pk}/"
+            API_CHILD_INVITE_DETAIL.format(pk=self.child.pk, invite_pk=invite.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -343,7 +349,7 @@ class SharingAPITests(APITestCase):
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.delete(
-            f"/api/v1/children/{self.child.pk}/invites/{invite.pk}/delete/"
+            API_CHILD_INVITE_DELETE.format(pk=self.child.pk, invite_pk=invite.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(ShareInvite.objects.filter(pk=invite.pk).exists())
@@ -357,21 +363,21 @@ class SharingAPITests(APITestCase):
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         response = self.client.delete(
-            f"/api/v1/children/{self.child.pk}/invites/{invite.pk}/delete/"
+            API_CHILD_INVITE_DELETE.format(pk=self.child.pk, invite_pk=invite.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invites_coparent_denied(self):
         """Co-parent cannot list invites."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.pk}/invites/")
+        response = self.client.get(API_CHILD_INVITES.format(pk=self.child.pk))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_invite_coparent_denied(self):
         """Co-parent cannot create invites."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         response = self.client.post(
-            f"/api/v1/children/{self.child.pk}/invites/", {"role": "CG"}
+            API_CHILD_INVITES.format(pk=self.child.pk), {"role": "CG"}
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -379,7 +385,7 @@ class SharingAPITests(APITestCase):
         """Co-parent cannot revoke shares."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         response = self.client.delete(
-            f"/api/v1/children/{self.child.pk}/shares/{self.share.pk}/"
+            API_CHILD_SHARE_DETAIL.format(pk=self.child.pk, share_pk=self.share.pk)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -387,7 +393,7 @@ class SharingAPITests(APITestCase):
         """Owner can partial update child."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.patch(
-            f"/api/v1/children/{self.child.pk}/", {"name": "Patched Baby"}
+            API_CHILD_DETAIL.format(pk=self.child.pk), {"name": "Patched Baby"}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Patched Baby")
@@ -395,7 +401,7 @@ class SharingAPITests(APITestCase):
     def test_child_nonexistent(self):
         """Accessing nonexistent child returns 404."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.get("/api/v1/children/99999/")
+        response = self.client.get(API_CHILD_DETAIL.format(pk=99999))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -422,20 +428,24 @@ class PermissionEdgeCaseTests(APITestCase):
     def test_share_nonexistent_returns_404(self):
         """Revoking nonexistent share returns 404."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
-        response = self.client.delete(f"/api/v1/children/{self.child.pk}/shares/99999/")
+        response = self.client.delete(
+            API_CHILD_SHARE_DETAIL.format(pk=self.child.pk, share_pk=99999)
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_toggle_nonexistent_invite_returns_404(self):
         """Toggling nonexistent invite returns 404."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
-        response = self.client.patch(f"/api/v1/children/{self.child.pk}/invites/99999/")
+        response = self.client.patch(
+            API_CHILD_INVITE_DETAIL.format(pk=self.child.pk, invite_pk=99999)
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete_nonexistent_invite_returns_404(self):
         """Deleting nonexistent invite returns 404."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
         response = self.client.delete(
-            f"/api/v1/children/{self.child.pk}/invites/99999/delete/"
+            API_CHILD_INVITE_DELETE.format(pk=self.child.pk, invite_pk=99999)
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -755,7 +765,7 @@ class CustomBottleValidationAdditionalTests(APITestCase):
             date_of_birth="2025-01-01",
         )
         response = self.client.post(
-            f"/api/v1/children/{child.pk}/invites/",
+            API_CHILD_INVITES.format(pk=child.pk),
             {"role": "admin"},  # Invalid role
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1028,7 +1038,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
         """Owner can set feeding_reminder_interval."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
         response = self.client.patch(
-            f"/api/v1/children/{self.child.id}/",
+            API_CHILD_DETAIL.format(pk=self.child.id),
             {"feeding_reminder_interval": 3},
             format="json",
         )
@@ -1041,7 +1051,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
         """Co-parent can set feeding_reminder_interval."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.coparent_token.key}")
         response = self.client.patch(
-            f"/api/v1/children/{self.child.id}/",
+            API_CHILD_DETAIL.format(pk=self.child.id),
             {"feeding_reminder_interval": 4},
             format="json",
         )
@@ -1054,7 +1064,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
         """Caregiver cannot set feeding_reminder_interval (403)."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.caregiver_token.key}")
         response = self.client.patch(
-            f"/api/v1/children/{self.child.id}/",
+            API_CHILD_DETAIL.format(pk=self.child.id),
             {"feeding_reminder_interval": 2},
             format="json",
         )
@@ -1067,7 +1077,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
         # Valid: 2, 3, 4, 6
         for interval in [2, 3, 4, 6]:
             response = self.client.patch(
-                f"/api/v1/children/{self.child.id}/",
+                API_CHILD_DETAIL.format(pk=self.child.id),
                 {"feeding_reminder_interval": interval},
                 format="json",
             )
@@ -1076,7 +1086,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
 
         # Valid: null (off)
         response = self.client.patch(
-            f"/api/v1/children/{self.child.id}/",
+            API_CHILD_DETAIL.format(pk=self.child.id),
             {"feeding_reminder_interval": None},
             format="json",
         )
@@ -1090,7 +1100,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
         # Invalid: 1, 5, 7, 8, 10, etc.
         for interval in [1, 5, 7, 8, 10, 24]:
             response = self.client.patch(
-                f"/api/v1/children/{self.child.id}/",
+                API_CHILD_DETAIL.format(pk=self.child.id),
                 {"feeding_reminder_interval": interval},
                 format="json",
             )
@@ -1100,7 +1110,7 @@ class FeedingReminderIntervalAPITests(APITestCase):
     def test_interval_default_is_null(self):
         """New children have feeding_reminder_interval = null."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
-        response = self.client.get(f"/api/v1/children/{self.child.id}/")
+        response = self.client.get(API_CHILD_DETAIL.format(pk=self.child.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data["feeding_reminder_interval"])
 
