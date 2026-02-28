@@ -37,6 +37,7 @@ def _get_analytics_cache_keys(child_id: int) -> list[str]:
         [
             f"analytics:today-summary:{child_id}",
             f"analytics:weekly-summary:{child_id}",
+            f"analytics:pattern-alerts:{child_id}",
         ]
     )
 

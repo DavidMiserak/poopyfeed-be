@@ -36,6 +36,7 @@ from .serializers import (
 from .tasks import generate_pdf_report
 from .utils import (
     build_analytics_csv,
+    compute_pattern_alerts,
     get_child_timeline_events,
     get_diaper_patterns,
     get_feeding_trends,
@@ -309,6 +310,27 @@ class AnalyticsViewSet(viewsets.ViewSet):
         # Validate response
         response_serializer = WeeklySummaryFullResponseSerializer(data)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="pattern-alerts")
+    def pattern_alerts(self, request, pk=None):
+        """Get pattern-based alerts for a child.
+
+        Computes feeding interval and nap wake-window alerts based on
+        the child's last 7 days of history. Alerts fire when the current
+        gap exceeds 1.1x the child's average.
+
+        Returns:
+            JSON with feeding and nap alert data
+        """
+        child = self.get_child(pk)
+        cache_key = f"analytics:pattern-alerts:{child.id}"
+        data = self._get_cached_data(
+            cache_key,
+            compute_pattern_alerts,
+            child.id,
+            cache_ttl=120,
+        )
+        return Response(data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="export-csv")
     def export_csv(self, request, pk=None):

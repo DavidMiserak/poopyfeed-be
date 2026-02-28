@@ -163,6 +163,11 @@ urlpatterns = [
         AnalyticsViewSet.as_view({"get": "weekly_summary"}),
         name="analytics-weekly-summary",
     ),
+    path(
+        "analytics/children/<int:pk>/pattern-alerts/",
+        AnalyticsViewSet.as_view({"get": "pattern_alerts"}),
+        name="analytics-pattern-alerts",
+    ),
     # Analytics export endpoints
     path(
         "analytics/children/<int:pk>/export-csv/",

@@ -639,3 +639,180 @@ def get_child_timeline_events(
         merged.append({"type": "nap", "at": n["napped_at"], "nap": n})
     merged.sort(key=lambda x: x["at"] or datetime.min, reverse=True)
     return merged
+
+
+# --- Pattern Alerts ---
+
+# Minimum data points before alerts can fire
+_MIN_FEEDINGS_FOR_ALERT = 4  # need 3+ intervals
+_MIN_COMPLETED_NAPS_FOR_ALERT = 3  # need 2+ wake windows
+
+# Alert fires at 1.1x the average (10% buffer)
+_ALERT_THRESHOLD_MULTIPLIER = 1.1
+
+
+def _format_hours_minutes(total_minutes: float) -> str:
+    """Format minutes as '{X}h {Y}m' string, omitting zero parts."""
+    hours = int(total_minutes // 60)
+    minutes = int(round(total_minutes % 60))
+    if hours and minutes:
+        return f"{hours}h {minutes}m"
+    if hours:
+        return f"{hours}h"
+    return f"{minutes}m"
+
+
+def _compute_interval_alert(child_id: int, now: datetime) -> dict[str, Any]:
+    """Compute feeding interval alert for a child.
+
+    Returns a dict with alert status, message, avg_interval_minutes,
+    minutes_since_last, last_fed_at, and data_points.
+    """
+    seven_days_ago = now - timedelta(days=7)
+
+    feedings = list(
+        Feeding.objects.filter(
+            child_id=child_id,
+            fed_at__gte=seven_days_ago,
+        )
+        .order_by("fed_at")
+        .values_list("fed_at", flat=True)
+    )
+
+    data_points = len(feedings)
+
+    no_alert = {
+        "alert": False,
+        "message": None,
+        "avg_interval_minutes": None,
+        "minutes_since_last": None,
+        "last_fed_at": None,
+        "data_points": data_points,
+    }
+
+    if data_points < _MIN_FEEDINGS_FOR_ALERT:
+        return no_alert
+
+    # Calculate intervals between consecutive feedings
+    intervals = []
+    for i in range(1, len(feedings)):
+        delta = (feedings[i] - feedings[i - 1]).total_seconds() / 60
+        intervals.append(delta)
+
+    avg_interval = sum(intervals) / len(intervals)
+    last_fed_at = feedings[-1]
+    minutes_since = (now - last_fed_at).total_seconds() / 60
+    threshold = avg_interval * _ALERT_THRESHOLD_MULTIPLIER
+
+    result = {
+        "alert": False,
+        "message": None,
+        "avg_interval_minutes": round(avg_interval),
+        "minutes_since_last": round(minutes_since),
+        "last_fed_at": last_fed_at.isoformat(),
+        "data_points": data_points,
+    }
+
+    if minutes_since > threshold:
+        avg_fmt = _format_hours_minutes(avg_interval)
+        elapsed_fmt = _format_hours_minutes(minutes_since)
+        result["alert"] = True
+        result["message"] = (
+            f"Baby usually feeds every {avg_fmt} — it's been {elapsed_fmt}"
+        )
+
+    return result
+
+
+def _compute_wake_alert(child_id: int, now: datetime) -> dict[str, Any]:
+    """Compute nap wake-window alert for a child.
+
+    Returns a dict with alert status, message, avg_wake_window_minutes,
+    minutes_awake, last_nap_ended_at, and data_points.
+    """
+    seven_days_ago = now - timedelta(days=7)
+
+    completed_naps = list(
+        Nap.objects.filter(
+            child_id=child_id,
+            napped_at__gte=seven_days_ago,
+            ended_at__isnull=False,
+        )
+        .order_by("napped_at")
+        .values_list("napped_at", "ended_at")
+    )
+
+    data_points = len(completed_naps)
+
+    no_alert = {
+        "alert": False,
+        "message": None,
+        "avg_wake_window_minutes": None,
+        "minutes_awake": None,
+        "last_nap_ended_at": None,
+        "data_points": data_points,
+    }
+
+    if data_points < _MIN_COMPLETED_NAPS_FOR_ALERT:
+        return no_alert
+
+    # Calculate wake windows: time from nap end to next nap start
+    wake_windows = []
+    for i in range(1, len(completed_naps)):
+        prev_ended = completed_naps[i - 1][1]  # ended_at
+        curr_started = completed_naps[i][0]  # napped_at
+        wake_min = (curr_started - prev_ended).total_seconds() / 60
+        if wake_min > 0:
+            wake_windows.append(wake_min)
+
+    if not wake_windows:
+        return no_alert
+
+    avg_wake = sum(wake_windows) / len(wake_windows)
+    last_ended = completed_naps[-1][1]  # ended_at of most recent
+    minutes_awake = (now - last_ended).total_seconds() / 60
+    threshold = avg_wake * _ALERT_THRESHOLD_MULTIPLIER
+
+    result = {
+        "alert": False,
+        "message": None,
+        "avg_wake_window_minutes": round(avg_wake),
+        "minutes_awake": round(minutes_awake),
+        "last_nap_ended_at": last_ended.isoformat(),
+        "data_points": data_points,
+    }
+
+    if minutes_awake > threshold:
+        avg_fmt = _format_hours_minutes(avg_wake)
+        awake_fmt = _format_hours_minutes(minutes_awake)
+        result["alert"] = True
+        result["message"] = (
+            f"Baby usually naps after ~{avg_fmt} awake — awake for {awake_fmt}"
+        )
+
+    return result
+
+
+def compute_pattern_alerts(
+    child_id: int, now: datetime | None = None
+) -> dict[str, Any]:
+    """Compute pattern alerts for a child based on feeding and nap history.
+
+    Analyzes the last 7 days of data to detect when current gaps exceed
+    the child's own historical patterns (with 10% buffer).
+
+    Args:
+        child_id: The child's ID
+        now: Optional override for current time (for testing)
+
+    Returns:
+        Dict with child_id, feeding alert data, and nap alert data
+    """
+    if now is None:
+        now = timezone.now()
+
+    return {
+        "child_id": child_id,
+        "feeding": _compute_interval_alert(child_id, now),
+        "nap": _compute_wake_alert(child_id, now),
+    }

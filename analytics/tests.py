@@ -2323,3 +2323,401 @@ class GeneratePDFReportEmptyDataTests(TestCase):
                 actual_diff = expires - created
                 # Allow 1 second tolerance for execution time
                 self.assertLess(abs((expected_diff - actual_diff).total_seconds()), 1)
+
+
+# --- Pattern Alerts Tests ---
+
+
+class PatternAlertsAPITests(APITestCase):
+    """Test the pattern-alerts endpoint (FR-PAL-008, AC-001 through AC-008)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user(
+            username="pa_owner",
+            email="pa_owner@example.com",
+            password="password123",
+        )
+        cls.other_user = User.objects.create_user(
+            username="pa_other",
+            email="pa_other@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Pattern Child",
+            date_of_birth="2024-06-01",
+        )
+
+    def setUp(self):
+        self.token = Token.objects.create(user=self.owner)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        cache.clear()
+
+    def _url(self, child_id=None):
+        cid = child_id or self.child.id
+        return f"/api/v1/analytics/children/{cid}/pattern-alerts/"
+
+    # --- AC-001: Feeding alert fires when overdue ---
+    def test_feeding_alert_fires_when_overdue(self):
+        """AC-001: Alert fires when elapsed > 1.1x average interval."""
+        now = timezone.now()
+        # Create 6 feedings with 3h intervals (avg = 180 min)
+        for i in range(6):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type="bottle",
+                amount_oz=4,
+                fed_at=now - timedelta(hours=18) + timedelta(hours=3 * i),
+            )
+        # Last feeding was at now - 18h + 15h = now - 3h
+        # But we want last feeding 3h25m ago, so adjust
+        Feeding.objects.all().delete()
+        base = now - timedelta(hours=3 * 5 + 3, minutes=25)
+        for i in range(6):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type="bottle",
+                amount_oz=4,
+                fed_at=base + timedelta(hours=3 * i),
+            )
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["feeding"]["alert"])
+        self.assertIn("3h", data["feeding"]["message"])
+        self.assertEqual(data["feeding"]["data_points"], 6)
+
+    # --- AC-002: Feeding alert does not fire when not overdue ---
+    def test_feeding_alert_no_fire_when_not_overdue(self):
+        """AC-002: No alert when elapsed < 1.1x average."""
+        now = timezone.now()
+        Feeding.objects.filter(child=self.child).delete()
+        # 6 feedings, avg 3h interval, last feeding 2h50m ago
+        base = now - timedelta(hours=3 * 5 + 2, minutes=50)
+        for i in range(6):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type="bottle",
+                amount_oz=4,
+                fed_at=base + timedelta(hours=3 * i),
+            )
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["feeding"]["alert"])
+
+    # --- AC-003: Feeding alert suppressed with insufficient data ---
+    def test_feeding_alert_suppressed_insufficient_data(self):
+        """AC-003: No alert with only 2 feedings."""
+        Feeding.objects.filter(child=self.child).delete()
+        now = timezone.now()
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type="bottle",
+            amount_oz=4,
+            fed_at=now - timedelta(hours=6),
+        )
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type="bottle",
+            amount_oz=4,
+            fed_at=now - timedelta(hours=12),
+        )
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["feeding"]["alert"])
+        self.assertEqual(data["feeding"]["data_points"], 2)
+
+    # --- AC-004: Feeding alert suppressed with no feedings ---
+    def test_feeding_alert_suppressed_no_feedings(self):
+        """AC-004: No alert with no feedings at all."""
+        Feeding.objects.filter(child=self.child).delete()
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["feeding"]["alert"])
+        self.assertEqual(data["feeding"]["data_points"], 0)
+
+    # --- AC-005: Nap alert fires when wake window exceeded ---
+    def test_nap_alert_fires_when_wake_window_exceeded(self):
+        """AC-005: Alert fires when awake time > 1.1x average wake window."""
+        now = timezone.now()
+        Nap.objects.filter(child=self.child).delete()
+        # 4 completed naps with ~2h wake windows between them
+        # nap1: ended 10h ago, nap2 started 8h ago (2h wake), ended 7h ago
+        # nap3: started 5h ago (2h wake), ended 4h ago
+        # nap4: started 2h ago (2h wake), ended 45m ago -> still within window
+        # Instead let's make last nap end 2h15m ago
+        nap_schedule = [
+            # (start_offset_hours, end_offset_hours)
+            (12, 11),  # nap1
+            (9, 8),  # nap2 - wake window 2h (11h-9h)
+            (6, 5),  # nap3 - wake window 2h (8h-6h)
+            (3, 2.25),  # nap4 - wake window 1h (5h-3h)... hmm
+        ]
+        # Let me be more precise about wake windows averaging 2h
+        # nap1 ends at -8h15m, nap2 starts at -6h15m (wake=2h)
+        # nap2 ends at -5h15m, nap3 starts at -3h15m (wake=2h)
+        # nap3 ends at -2h15m => awake for 2h15m now
+        naps_data = [
+            (
+                now - timedelta(hours=9, minutes=15),
+                now - timedelta(hours=8, minutes=15),
+            ),
+            (
+                now - timedelta(hours=6, minutes=15),
+                now - timedelta(hours=5, minutes=15),
+            ),
+            (
+                now - timedelta(hours=3, minutes=15),
+                now - timedelta(hours=2, minutes=15),
+            ),
+        ]
+        for start, end in naps_data:
+            Nap.objects.create(child=self.child, napped_at=start, ended_at=end)
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["nap"]["alert"])
+        self.assertIn("2h", data["nap"]["message"])
+        self.assertIn("2h 15m", data["nap"]["message"])
+
+    # --- AC-006: Nap alert suppressed with insufficient naps ---
+    def test_nap_alert_suppressed_insufficient_naps(self):
+        """AC-006: No alert with only 2 completed naps."""
+        Nap.objects.filter(child=self.child).delete()
+        now = timezone.now()
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=6),
+            ended_at=now - timedelta(hours=5),
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=3),
+            ended_at=now - timedelta(hours=2),
+        )
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["nap"]["alert"])
+        self.assertEqual(response.json()["nap"]["data_points"], 2)
+
+    # --- AC-007: Incomplete naps excluded ---
+    def test_incomplete_naps_excluded_from_computation(self):
+        """AC-007: Naps without ended_at are excluded."""
+        Nap.objects.filter(child=self.child).delete()
+        now = timezone.now()
+        # 3 completed naps
+        for i in range(3):
+            Nap.objects.create(
+                child=self.child,
+                napped_at=now - timedelta(hours=12 - i * 3),
+                ended_at=now - timedelta(hours=11 - i * 3),
+            )
+        # 1 incomplete nap (no ended_at) — only one, because creating
+        # a second nap auto-closes the first via signal
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(minutes=30),
+        )
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        # Only 3 completed naps counted (the incomplete one is excluded)
+        self.assertEqual(response.json()["nap"]["data_points"], 3)
+
+    # --- AC-008: Access control ---
+    def test_access_control_returns_404(self):
+        """AC-008: User without access gets 404."""
+        other_token = Token.objects.create(user=self.other_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {other_token.key}")
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 404)
+
+    def test_unauthenticated_returns_401(self):
+        """Unauthenticated request returns 401."""
+        self.client.credentials()
+        response = self.client.get(self._url())
+        self.assertIn(response.status_code, [401, 403])
+
+    def test_nonexistent_child_returns_404(self):
+        """Request for nonexistent child returns 404."""
+        response = self.client.get(self._url(child_id=99999))
+        self.assertEqual(response.status_code, 404)
+
+    # --- Response shape ---
+    def test_response_shape(self):
+        """Response matches the documented JSON shape."""
+        Feeding.objects.filter(child=self.child).delete()
+        Nap.objects.filter(child=self.child).delete()
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Top-level keys
+        self.assertIn("child_id", data)
+        self.assertIn("feeding", data)
+        self.assertIn("nap", data)
+        self.assertEqual(data["child_id"], self.child.id)
+
+        # Feeding sub-keys
+        for key in [
+            "alert",
+            "message",
+            "avg_interval_minutes",
+            "minutes_since_last",
+            "last_fed_at",
+            "data_points",
+        ]:
+            self.assertIn(key, data["feeding"])
+
+        # Nap sub-keys
+        for key in [
+            "alert",
+            "message",
+            "avg_wake_window_minutes",
+            "minutes_awake",
+            "last_nap_ended_at",
+            "data_points",
+        ]:
+            self.assertIn(key, data["nap"])
+
+    # --- Caching ---
+    def test_response_is_cached(self):
+        """Pattern alerts use 120s cache."""
+        Feeding.objects.filter(child=self.child).delete()
+        # First request
+        response1 = self.client.get(self._url())
+        self.assertEqual(response1.status_code, 200)
+
+        # Verify cache key exists
+        cache_key = f"analytics:pattern-alerts:{self.child.id}"
+        self.assertIsNotNone(cache.get(cache_key))
+
+    def test_cache_invalidated_on_feeding_create(self):
+        """Cache is cleared when a new feeding is created."""
+        # Prime the cache
+        self.client.get(self._url())
+        cache_key = f"analytics:pattern-alerts:{self.child.id}"
+        self.assertIsNotNone(cache.get(cache_key))
+
+        # Invalidate (same mechanism as other analytics)
+        invalidate_child_analytics(self.child.id)
+        self.assertIsNone(cache.get(cache_key))
+
+
+class PatternAlertsUtilsTests(TestCase):
+    """Unit tests for pattern alert computation logic."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="pa_util_user",
+            email="pa_util@example.com",
+            password="password123",
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Utils Child",
+            date_of_birth="2024-06-01",
+        )
+
+    def test_format_hours_minutes_both(self):
+        from .utils import _format_hours_minutes
+
+        self.assertEqual(_format_hours_minutes(195), "3h 15m")
+
+    def test_format_hours_minutes_hours_only(self):
+        from .utils import _format_hours_minutes
+
+        self.assertEqual(_format_hours_minutes(120), "2h")
+
+    def test_format_hours_minutes_minutes_only(self):
+        from .utils import _format_hours_minutes
+
+        self.assertEqual(_format_hours_minutes(45), "45m")
+
+    def test_feeding_alert_exact_threshold_no_fire(self):
+        """At exactly 1.1x, alert should not fire (needs to exceed)."""
+        from .utils import compute_pattern_alerts
+
+        now = timezone.now()
+        Feeding.objects.filter(child=self.child).delete()
+        # 4 feedings at exactly 2h intervals, last one at exactly 2h12m ago
+        # avg = 120 min, threshold = 132 min, elapsed = 132 min => not >
+        base = now - timedelta(hours=8, minutes=12)
+        for i in range(4):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type="breast",
+                duration_minutes=10,
+                side="left",
+                fed_at=base + timedelta(hours=2 * i),
+            )
+
+        result = compute_pattern_alerts(self.child.id, now=now)
+        self.assertFalse(result["feeding"]["alert"])
+
+    def test_nap_no_completed_naps(self):
+        """FR-PAL-007: No alert with no completed naps."""
+        from .utils import compute_pattern_alerts
+
+        Nap.objects.filter(child=self.child).delete()
+        now = timezone.now()
+        # Only incomplete naps
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=2),
+        )
+        result = compute_pattern_alerts(self.child.id, now=now)
+        self.assertFalse(result["nap"]["alert"])
+        self.assertEqual(result["nap"]["data_points"], 0)
+
+    def test_feedings_older_than_7_days_excluded(self):
+        """Only feedings in the last 7 days are considered."""
+        from .utils import compute_pattern_alerts
+
+        now = timezone.now()
+        Feeding.objects.filter(child=self.child).delete()
+        # 10 feedings but all older than 7 days
+        for i in range(10):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type="bottle",
+                amount_oz=4,
+                fed_at=now - timedelta(days=8, hours=i),
+            )
+
+        result = compute_pattern_alerts(self.child.id, now=now)
+        self.assertFalse(result["feeding"]["alert"])
+        self.assertEqual(result["feeding"]["data_points"], 0)
+
+    def test_coparent_can_access_pattern_alerts(self):
+        """Co-parents should have access to pattern alerts."""
+        coparent = User.objects.create_user(
+            username="pa_coparent",
+            email="pa_coparent@example.com",
+            password="password123",
+        )
+        ChildShare.objects.create(child=self.child, user=coparent, role="CO")
+        # Clear accessible children cache
+        cache.clear()
+
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        token = Token.objects.create(user=coparent)
+        client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        url = f"/api/v1/analytics/children/{self.child.id}/pattern-alerts/"
+        response = client.get(url)
+        self.assertEqual(response.status_code, 200)
