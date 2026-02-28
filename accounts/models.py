@@ -8,7 +8,8 @@ class CustomUser(AbstractUser):
     timezone = models.CharField(
         max_length=63,
         default="UTC",
-        help_text="IANA timezone identifier (e.g. America/New_York)",
+        help_text="IANA timezone identifier (e.g. America/New_York). "
+        "No DB index by design; add one if timezone-based queries are introduced.",
     )
 
     @staticmethod

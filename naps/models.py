@@ -31,6 +31,9 @@ class Nap(models.Model):
     class Meta:
         db_table = "children_nap"
         ordering = ["-napped_at"]
+        indexes = [
+            models.Index(fields=["child", "napped_at"]),
+        ]
         constraints = [
             CheckConstraint(
                 condition=Q(ended_at__isnull=True)

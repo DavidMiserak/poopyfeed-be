@@ -35,6 +35,9 @@ class DiaperChange(models.Model):
     class Meta:
         db_table = "children_diaperchange"
         ordering = ["-changed_at"]
+        indexes = [
+            models.Index(fields=["child", "changed_at"]),
+        ]
 
     def __str__(self):
         return f"{self.child.name} - {self.get_change_type_display()}"

@@ -89,6 +89,9 @@ class Feeding(models.Model):
     class Meta:
         db_table = "children_feeding"
         ordering = ["-fed_at"]
+        indexes = [
+            models.Index(fields=["child", "fed_at"]),
+        ]
         constraints = [
             # Bottle feedings must have amount_oz and no breast fields
             CheckConstraint(

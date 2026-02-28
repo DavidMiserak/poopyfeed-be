@@ -3,6 +3,8 @@
 Handles asynchronous export jobs (PDF generation, etc.).
 """
 
+import re
+import secrets
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -342,7 +344,13 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
 
         # Save to storage
         self.update_state(state="STARTED", meta={"progress": 90})
-        filename = f"analytics-{child.name.replace(' ', '_')}-{int(timezone.now().timestamp())}.pdf"
+        # Sanitize child name for filesystem: keep alphanumeric, underscore, hyphen only
+        safe_name = re.sub(r"[^\w\-]", "_", child.name).strip("_") or "child"
+        # Random segment makes download URL non-guessable (time-limited, unauthenticated endpoint)
+        token = secrets.token_urlsafe(8)
+        filename = (
+            f"analytics-{safe_name}-{int(timezone.now().timestamp())}-{token}.pdf"
+        )
         pdf_buffer.seek(0)
         default_storage.save(f"exports/{filename}", pdf_buffer)
 

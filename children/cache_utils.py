@@ -87,6 +87,7 @@ def get_child_last_activities(
             "last_nap",
             "last_feeding",
         )
+        .order_by("id")
     )
 
     # Convert query results to dict and cache each child's activities
