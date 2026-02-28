@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
@@ -181,7 +182,7 @@ class Child(models.Model):
         decimal_places=1,
         null=True,
         blank=True,
-        validators=[MinValueValidator(0.1), MaxValueValidator(50)],
+        validators=[MinValueValidator(Decimal("0.1")), MaxValueValidator(50)],
         help_text="Custom bottle feeding amount (oz) for low/recommended-1 button",
     )
     custom_bottle_mid_oz = models.DecimalField(
@@ -189,7 +190,7 @@ class Child(models.Model):
         decimal_places=1,
         null=True,
         blank=True,
-        validators=[MinValueValidator(0.1), MaxValueValidator(50)],
+        validators=[MinValueValidator(Decimal("0.1")), MaxValueValidator(50)],
         help_text="Custom bottle feeding amount (oz) for mid/recommended button",
     )
     custom_bottle_high_oz = models.DecimalField(
@@ -197,7 +198,7 @@ class Child(models.Model):
         decimal_places=1,
         null=True,
         blank=True,
-        validators=[MinValueValidator(0.1), MaxValueValidator(50)],
+        validators=[MinValueValidator(Decimal("0.1")), MaxValueValidator(50)],
         help_text="Custom bottle feeding amount (oz) for high/recommended+1 button",
     )
     feeding_reminder_interval = models.PositiveSmallIntegerField(

@@ -15,6 +15,8 @@ from django_project.settings import *  # noqa: F401, F403
 # Execute Celery tasks synchronously in tests
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+# Store task results when eager so tests that check .get() on AsyncResult don't warn
+CELERY_TASK_STORE_EAGER_RESULT = True
 
 # Disable signal handlers during tests to reduce overhead
 # (cache invalidation happens naturally from test cleanup)
