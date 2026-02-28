@@ -534,14 +534,14 @@ class TodaySummaryTests(APITestCase):
         self.user.timezone = "UTC"
         self.user.save(update_fields=["timezone"])
 
-        # 2026-02-26 05:00 UTC → "today" is 2026-02-26 in UTC
-        mock_now.return_value = datetime(2026, 2, 26, 5, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # 2024-02-26 05:00 UTC → "today" is 2024-02-26 in UTC
+        mock_now.return_value = datetime(2024, 2, 26, 5, 0, 0, tzinfo=ZoneInfo("UTC"))
         cache.delete(f"analytics:today-summary:{self.child.id}:UTC")
         # Feeding at 01:00 UTC same calendar day (UTC) → counted as today
         Feeding.objects.create(
             child=self.child,
             feeding_type=Feeding.FeedingType.BOTTLE,
-            fed_at=datetime(2026, 2, 26, 1, 0, 0, tzinfo=ZoneInfo("UTC")),
+            fed_at=datetime(2024, 2, 26, 1, 0, 0, tzinfo=ZoneInfo("UTC")),
             amount_oz=4.0,
         )
 
@@ -558,14 +558,14 @@ class TodaySummaryTests(APITestCase):
         self.user.timezone = "UTC"
         self.user.save(update_fields=["timezone"])
 
-        # 2026-02-26 01:00 UTC → "today" is 2026-02-26
-        mock_now.return_value = datetime(2026, 2, 26, 1, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # 2024-02-26 01:00 UTC → "today" is 2024-02-26
+        mock_now.return_value = datetime(2024, 2, 26, 1, 0, 0, tzinfo=ZoneInfo("UTC"))
         cache.delete(f"analytics:today-summary:{self.child.id}:UTC")
-        # Feeding at 23:00 UTC on 2026-02-25 → yesterday in UTC, not counted
+        # Feeding at 23:00 UTC on 2024-02-25 → yesterday in UTC, not counted
         Feeding.objects.create(
             child=self.child,
             feeding_type=Feeding.FeedingType.BOTTLE,
-            fed_at=datetime(2026, 2, 25, 23, 0, 0, tzinfo=ZoneInfo("UTC")),
+            fed_at=datetime(2024, 2, 25, 23, 0, 0, tzinfo=ZoneInfo("UTC")),
             amount_oz=4.0,
         )
 
@@ -586,15 +586,15 @@ class TodaySummaryTests(APITestCase):
         self.user.timezone = "America/New_York"
         self.user.save(update_fields=["timezone"])
 
-        # 2026-02-26 15:00 UTC = 10:00 ET → "today" in ET is 2026-02-26
-        mock_now.return_value = datetime(2026, 2, 26, 15, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # 2024-02-26 15:00 UTC = 10:00 ET → "today" in ET is 2024-02-26
+        mock_now.return_value = datetime(2024, 2, 26, 15, 0, 0, tzinfo=ZoneInfo("UTC"))
         cache.delete(f"analytics:today-summary:{self.child.id}:America/New_York")
 
-        # 04:00 UTC on 2026-02-26 = 23:00 ET on 2026-02-25 → yesterday in ET, not counted
+        # 04:00 UTC on 2024-02-26 = 23:00 ET on 2024-02-25 → yesterday in ET, not counted
         Feeding.objects.create(
             child=self.child,
             feeding_type=Feeding.FeedingType.BOTTLE,
-            fed_at=datetime(2026, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC")),
+            fed_at=datetime(2024, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC")),
             amount_oz=4.0,
         )
 
@@ -611,15 +611,15 @@ class TodaySummaryTests(APITestCase):
         self.user.timezone = "America/New_York"
         self.user.save(update_fields=["timezone"])
 
-        # 2026-02-26 15:00 UTC = 10:00 ET → "today" in ET is 2026-02-26
-        mock_now.return_value = datetime(2026, 2, 26, 15, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # 2024-02-26 15:00 UTC = 10:00 ET → "today" in ET is 2024-02-26
+        mock_now.return_value = datetime(2024, 2, 26, 15, 0, 0, tzinfo=ZoneInfo("UTC"))
         cache.delete(f"analytics:today-summary:{self.child.id}:America/New_York")
 
-        # 05:00 UTC = 00:00 ET on 2026-02-26 → today in ET, counted
+        # 05:00 UTC = 00:00 ET on 2024-02-26 → today in ET, counted
         Feeding.objects.create(
             child=self.child,
             feeding_type=Feeding.FeedingType.BOTTLE,
-            fed_at=datetime(2026, 2, 26, 5, 0, 0, tzinfo=ZoneInfo("UTC")),
+            fed_at=datetime(2024, 2, 26, 5, 0, 0, tzinfo=ZoneInfo("UTC")),
             amount_oz=4.0,
         )
 

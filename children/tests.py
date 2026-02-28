@@ -1168,7 +1168,7 @@ class ChildTimelineViewTests(TestCase):
         """Timeline date headers use the user's timezone, not UTC (midnight boundary).
 
         An event at 04:00 UTC is 23:00 previous day in America/New_York. It must
-        appear under the user's local date (e.g. Wednesday, Feb 25), not UTC date
+        appear under the user's local date (e.g. Sunday, Feb 25), not UTC date
         (Thursday, Feb 26).
         """
         from feedings.models import Feeding
@@ -1176,8 +1176,8 @@ class ChildTimelineViewTests(TestCase):
         self.user.timezone = "America/New_York"
         self.user.save(update_fields=["timezone"])
 
-        # 04:00 UTC on 2026-02-26 = 23:00 ET on 2026-02-25 (Wednesday)
-        fed_at_utc = datetime(2026, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC"))
+        # 04:00 UTC on 2024-02-26 = 23:00 ET on 2024-02-25 (Sunday)
+        fed_at_utc = datetime(2024, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC"))
         Feeding.objects.create(
             child=self.child,
             feeding_type=Feeding.FeedingType.BOTTLE,
@@ -1192,8 +1192,8 @@ class ChildTimelineViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         content = response.content.decode()
-        # User's local date: Wednesday, Feb 25 (not UTC Thursday, Feb 26)
-        self.assertIn("Wednesday, Feb 25", content)
+        # User's local date: Sunday, Feb 25 (not UTC Thursday, Feb 26)
+        self.assertIn("Sunday, Feb 25", content)
         self.assertNotIn("Thursday, Feb 26", content)
 
 

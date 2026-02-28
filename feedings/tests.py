@@ -14,7 +14,7 @@ from .forms import FeedingForm
 from .models import Feeding
 
 TEST_PARENT_EMAIL = "parent@example.com"
-TEST_DATETIME = "2026-02-01T10:30"
+TEST_DATETIME = "2024-02-01T10:30"
 URL_FEEDING_LIST = "feedings:feeding_list"
 URL_FEEDING_ADD = "feedings:feeding_add"
 URL_FEEDING_EDIT = "feedings:feeding_edit"
@@ -513,7 +513,7 @@ class FeedingViewTests(TestCase):
             reverse(URL_FEEDING_ADD, kwargs={"child_pk": self.child.pk}),
             {
                 "feeding_type": "breast",
-                "fed_at": "2026-02-01T11:00",
+                "fed_at": "2024-02-01T11:00",
                 "duration_minutes": "20",
                 "side": "left",
             },
@@ -562,7 +562,7 @@ class FeedingViewTests(TestCase):
             ),
             {
                 "feeding_type": "bottle",
-                "fed_at": "2026-02-01T15:00",
+                "fed_at": "2024-02-01T15:00",
                 "amount_oz": "6.0",
             },
         )
@@ -645,7 +645,7 @@ class FeedingViewTests(TestCase):
             ),
             {
                 "feeding_type": "bottle",
-                "fed_at": "2026-02-01T12:00",
+                "fed_at": "2024-02-01T12:00",
                 "amount_oz": "7.0",
             },
         )

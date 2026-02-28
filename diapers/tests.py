@@ -13,7 +13,7 @@ from .forms import DiaperChangeForm
 from .models import DiaperChange
 
 TEST_PARENT_EMAIL = "parent@example.com"
-TEST_DATETIME = "2026-02-01T10:30"
+TEST_DATETIME = "2024-02-01T10:30"
 URL_DIAPER_LIST = "diapers:diaper_list"
 URL_DIAPER_EDIT = "diapers:diaper_edit"
 URL_DIAPER_DELETE = "diapers:diaper_delete"
@@ -247,7 +247,7 @@ class DiaperChangeViewTests(TestCase):
                 URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.change.pk},
             ),
-            {"change_type": "dirty", "changed_at": "2026-02-01T11:00"},
+            {"change_type": "dirty", "changed_at": "2024-02-01T11:00"},
         )
         self.assertRedirects(
             response,
@@ -300,7 +300,7 @@ class DiaperChangeViewTests(TestCase):
                 URL_DIAPER_EDIT,
                 kwargs={"child_pk": self.child.pk, "pk": self.change.pk},
             ),
-            {"change_type": "both", "changed_at": "2026-02-01T12:00"},
+            {"change_type": "both", "changed_at": "2024-02-01T12:00"},
         )
         self.assertRedirects(
             response,

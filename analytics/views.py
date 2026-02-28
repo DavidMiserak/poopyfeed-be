@@ -510,7 +510,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
         """Download a generated PDF export file.
 
         Args:
-            filename: The filename to download (e.g., analytics-Child_Name-20260212_151408.pdf)
+            filename: The filename to download (e.g., analytics-Child_Name-20240212_151408.pdf)
 
         Returns:
             PDF file as attachment or 404 if not found

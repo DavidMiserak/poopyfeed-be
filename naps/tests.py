@@ -136,7 +136,7 @@ class NapFormTests(TestCase):
     def test_valid_form(self):
         form = NapForm(
             data={
-                "napped_at": "2026-02-01T10:30",
+                "napped_at": "2024-02-01T10:30",
             }
         )
         self.assertTrue(form.is_valid())
@@ -165,7 +165,7 @@ class NapFormTests(TestCase):
         form = NapForm(
             request=request,
             data={
-                "napped_at": "2026-02-01T14:00",
+                "napped_at": "2024-02-01T14:00",
             },
         )
         self.assertTrue(form.is_valid())
@@ -176,8 +176,8 @@ class NapFormTests(TestCase):
     def test_valid_form_with_ended_at(self):
         form = NapForm(
             data={
-                "napped_at": "2026-02-01T10:00",
-                "ended_at": "2026-02-01T11:30",
+                "napped_at": "2024-02-01T10:00",
+                "ended_at": "2024-02-01T11:30",
             }
         )
         self.assertTrue(form.is_valid())
@@ -185,7 +185,7 @@ class NapFormTests(TestCase):
     def test_form_ended_at_optional(self):
         form = NapForm(
             data={
-                "napped_at": "2026-02-01T10:00",
+                "napped_at": "2024-02-01T10:00",
             }
         )
         self.assertTrue(form.is_valid())
@@ -194,8 +194,8 @@ class NapFormTests(TestCase):
     def test_form_ended_at_before_napped_at_invalid(self):
         form = NapForm(
             data={
-                "napped_at": "2026-02-01T12:00",
-                "ended_at": "2026-02-01T10:00",
+                "napped_at": "2024-02-01T12:00",
+                "ended_at": "2024-02-01T10:00",
             }
         )
         self.assertFalse(form.is_valid())
@@ -216,8 +216,8 @@ class NapFormTests(TestCase):
         form = NapForm(
             request=request,
             data={
-                "napped_at": "2026-02-01T14:00",
-                "ended_at": "2026-02-01T15:30",
+                "napped_at": "2024-02-01T14:00",
+                "ended_at": "2024-02-01T15:30",
             },
         )
         self.assertTrue(form.is_valid())
@@ -240,8 +240,8 @@ class NapFormTests(TestCase):
         form = NapForm(
             request=request,
             data={
-                "napped_at": "2026-02-01T10:00",
-                "ended_at": "2026-02-01T11:30",
+                "napped_at": "2024-02-01T10:00",
+                "ended_at": "2024-02-01T11:30",
             },
         )
         self.assertTrue(form.is_valid())
@@ -254,7 +254,7 @@ class NapFormTests(TestCase):
         """When request is omitted, form uses UTC for conversion."""
         form = NapForm(
             data={
-                "napped_at": "2026-02-01T14:00",
+                "napped_at": "2024-02-01T14:00",
             }
         )
         self.assertTrue(form.is_valid())
@@ -328,7 +328,7 @@ class NapViewTests(TestCase):
         self.client.login(email=TEST_PARENT_EMAIL, password=TEST_PASSWORD)
         response = self.client.post(
             reverse(URL_NAP_ADD, kwargs={"child_pk": self.child.pk}),
-            {"napped_at": "2026-02-01T14:00"},
+            {"napped_at": "2024-02-01T14:00"},
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Nap.objects.filter(child=self.child).count(), 2)
@@ -359,7 +359,7 @@ class NapViewTests(TestCase):
             reverse(
                 URL_NAP_EDIT, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
             ),
-            {"napped_at": "2026-02-01T15:00"},
+            {"napped_at": "2024-02-01T15:00"},
         )
         self.assertEqual(response.status_code, 302)
         self.nap.refresh_from_db()
@@ -421,7 +421,7 @@ class NapViewTests(TestCase):
             reverse(
                 URL_NAP_EDIT, kwargs={"child_pk": self.child.pk, "pk": self.nap.pk}
             ),
-            {"napped_at": "2026-02-01T16:00"},
+            {"napped_at": "2024-02-01T16:00"},
         )
         self.assertRedirects(
             response,

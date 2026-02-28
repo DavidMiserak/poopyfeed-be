@@ -179,7 +179,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 23:00 ET = 04:00 UTC next day
-        mock_now.return_value = datetime(2026, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 4, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -195,7 +195,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 12:00 ET = 17:00 UTC
-        mock_now.return_value = datetime(2026, 2, 26, 17, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 17, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -210,7 +210,7 @@ class QuietHoursModelTests(TestCase):
         from datetime import datetime
         from zoneinfo import ZoneInfo
 
-        mock_now.return_value = datetime(2026, 2, 26, 17, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 17, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -226,7 +226,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 20:00 ET = 01:00 UTC next day
-        mock_now.return_value = datetime(2026, 2, 27, 1, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 27, 1, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -242,7 +242,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 22:00 ET = 03:00 UTC next day
-        mock_now.return_value = datetime(2026, 2, 27, 3, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 27, 3, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -258,7 +258,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 07:00 ET = 12:00 UTC
-        mock_now.return_value = datetime(2026, 2, 26, 12, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 12, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -274,7 +274,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 09:00 ET = 14:00 UTC
-        mock_now.return_value = datetime(2026, 2, 26, 14, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 14, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -290,7 +290,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 17:00 ET = 22:00 UTC
-        mock_now.return_value = datetime(2026, 2, 26, 22, 0, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 22, 0, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,
@@ -306,7 +306,7 @@ class QuietHoursModelTests(TestCase):
         from zoneinfo import ZoneInfo
 
         # 17:01 ET = 22:01 UTC
-        mock_now.return_value = datetime(2026, 2, 26, 22, 1, 0, tzinfo=ZoneInfo("UTC"))
+        mock_now.return_value = datetime(2024, 2, 26, 22, 1, 0, tzinfo=ZoneInfo("UTC"))
         qh = QuietHours.objects.create(
             user=self.user,
             enabled=True,

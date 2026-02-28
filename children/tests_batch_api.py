@@ -14,7 +14,7 @@ from .models import Child, ChildShare
 User = get_user_model()
 
 # Test timestamp constants
-TEST_DATE = "2026-02-17"
+TEST_DATE = "2024-02-17"
 TEST_TIME_1000 = f"{TEST_DATE}T10:00:00Z"
 TEST_TIME_1025 = f"{TEST_DATE}T10:25:00Z"
 TEST_TIME_1030 = f"{TEST_DATE}T10:30:00Z"
@@ -264,7 +264,7 @@ class BatchCreateAPITest(TestCase):
                 "type": "feeding",
                 "data": {
                     "feeding_type": "bottle",
-                    "fed_at": f"2026-02-17T{10 + (i % 14):02d}:{(i * 5) % 60:02d}:00Z",
+                    "fed_at": f"2024-02-17T{10 + (i % 14):02d}:{(i * 5) % 60:02d}:00Z",
                     "amount_oz": 4.0,
                 },
             }
@@ -301,7 +301,7 @@ class BatchCreateAPITest(TestCase):
                 "type": "feeding",
                 "data": {
                     "feeding_type": "bottle",
-                    "fed_at": f"2026-02-17T{10 + i:02d}:00:00Z",
+                    "fed_at": f"2024-02-17T{10 + i:02d}:00:00Z",
                     "amount_oz": 4.0,
                 },
             }
@@ -378,7 +378,7 @@ class BatchCreateAPITest(TestCase):
                     {
                         "type": "nap",
                         "data": {
-                            "napped_at": "2026-02-17T10:30:00Z",
+                            "napped_at": "2024-02-17T10:30:00Z",
                             "ended_at": TEST_TIME_1000,
                         },
                     },
@@ -403,7 +403,7 @@ class BatchCreateAPITest(TestCase):
                         "type": "feeding",
                         "data": {
                             "feeding_type": "bottle",
-                            "fed_at": "2026-02-17T10:25:00Z",
+                            "fed_at": "2024-02-17T10:25:00Z",
                         },
                     },
                 ]
