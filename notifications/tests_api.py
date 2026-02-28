@@ -15,6 +15,11 @@ User = get_user_model()
 
 TEST_PASSWORD = "testpass123"  # noqa: S105
 
+# API URL paths (avoid string duplication for Sonar)
+URL_NOTIFICATIONS = "/api/v1/notifications/"
+URL_NOTIFICATIONS_PREFERENCES = "/api/v1/notifications/preferences/"
+URL_NOTIFICATIONS_QUIET_HOURS = "/api/v1/notifications/quiet-hours/"
+
 
 class NotificationAPITests(APITestCase):
     """Tests for GET /api/v1/notifications/ and related actions."""
@@ -54,7 +59,7 @@ class NotificationAPITests(APITestCase):
     def test_list_returns_own_notifications(self):
         self._create_notification(message="For me")
         self._create_notification(recipient=self.other_user, message="For other")
-        response = self.client.get("/api/v1/notifications/")
+        response = self.client.get(URL_NOTIFICATIONS)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["message"], "For me")
@@ -62,13 +67,13 @@ class NotificationAPITests(APITestCase):
     def test_list_ordered_newest_first(self):
         self._create_notification(message="First")
         self._create_notification(message="Second")
-        response = self.client.get("/api/v1/notifications/")
+        response = self.client.get(URL_NOTIFICATIONS)
         self.assertEqual(response.data["results"][0]["message"], "Second")
         self.assertEqual(response.data["results"][1]["message"], "First")
 
     def test_list_includes_actor_name_and_child_name(self):
         self._create_notification()
-        response = self.client.get("/api/v1/notifications/")
+        response = self.client.get(URL_NOTIFICATIONS)
         result = response.data["results"][0]
         self.assertIn("actor_name", result)
         self.assertIn("child_name", result)
@@ -76,28 +81,28 @@ class NotificationAPITests(APITestCase):
 
     def test_list_unauthenticated(self):
         self.client.credentials()
-        response = self.client.get("/api/v1/notifications/")
+        response = self.client.get(URL_NOTIFICATIONS)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_unread_count(self):
         self._create_notification(is_read=False)
         self._create_notification(is_read=False)
         self._create_notification(is_read=True)
-        response = self.client.get("/api/v1/notifications/unread-count/")
+        response = self.client.get(f"{URL_NOTIFICATIONS}unread-count/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 2)
 
     def test_unread_count_excludes_other_users(self):
         self._create_notification(is_read=False)
         self._create_notification(recipient=self.other_user, is_read=False)
-        response = self.client.get("/api/v1/notifications/unread-count/")
+        response = self.client.get(f"{URL_NOTIFICATIONS}unread-count/")
         self.assertEqual(response.data["count"], 1)
 
     def test_mark_all_read(self):
         self._create_notification(is_read=False)
         self._create_notification(is_read=False)
         self._create_notification(is_read=True)
-        response = self.client.post("/api/v1/notifications/mark-all-read/")
+        response = self.client.post(f"{URL_NOTIFICATIONS}mark-all-read/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["updated"], 2)
         # Verify all are now read
@@ -107,7 +112,7 @@ class NotificationAPITests(APITestCase):
 
     def test_mark_single_read(self):
         notif = self._create_notification(is_read=False)
-        response = self.client.patch(f"/api/v1/notifications/{notif.id}/")
+        response = self.client.patch(f"{URL_NOTIFICATIONS}{notif.id}/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["is_read"])
         notif.refresh_from_db()
@@ -115,12 +120,12 @@ class NotificationAPITests(APITestCase):
 
     def test_cannot_access_other_users_notification(self):
         notif = self._create_notification(recipient=self.other_user)
-        response = self.client.patch(f"/api/v1/notifications/{notif.id}/")
+        response = self.client.patch(f"{URL_NOTIFICATIONS}{notif.id}/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_create_disabled(self):
         response = self.client.post(
-            "/api/v1/notifications/",
+            URL_NOTIFICATIONS,
             {"event_type": "feeding", "message": "hack"},
         )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -161,7 +166,7 @@ class NotificationPreferenceAPITests(APITestCase):
         self.assertEqual(
             NotificationPreference.objects.filter(user=self.user).count(), 0
         )
-        response = self.client.get("/api/v1/notifications/preferences/")
+        response = self.client.get(URL_NOTIFICATIONS_PREFERENCES)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data["results"]
         self.assertEqual(len(results), 1)
@@ -170,9 +175,9 @@ class NotificationPreferenceAPITests(APITestCase):
 
     def test_list_shows_only_own_preferences(self):
         """Each user sees only their own preferences."""
-        self.client.get("/api/v1/notifications/preferences/")  # auto-create for user
+        self.client.get(URL_NOTIFICATIONS_PREFERENCES)  # auto-create for user
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.other_token.key}")
-        response = self.client.get("/api/v1/notifications/preferences/")
+        response = self.client.get(URL_NOTIFICATIONS_PREFERENCES)
         results = response.data["results"]
         # other_user also has access via ChildShare, so should see 1 pref
         self.assertEqual(len(results), 1)
@@ -185,7 +190,7 @@ class NotificationPreferenceAPITests(APITestCase):
     def test_update_preference(self):
         pref = NotificationPreference.objects.create(user=self.user, child=self.child)
         response = self.client.patch(
-            f"/api/v1/notifications/preferences/{pref.id}/",
+            f"{URL_NOTIFICATIONS_PREFERENCES}{pref.id}/",
             {"notify_feedings": False},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -198,14 +203,14 @@ class NotificationPreferenceAPITests(APITestCase):
             user=self.other_user, child=self.child
         )
         response = self.client.patch(
-            f"/api/v1/notifications/preferences/{pref.id}/",
+            f"{URL_NOTIFICATIONS_PREFERENCES}{pref.id}/",
             {"notify_feedings": False},
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_preferences_unauthenticated(self):
         self.client.credentials()
-        response = self.client.get("/api/v1/notifications/preferences/")
+        response = self.client.get(URL_NOTIFICATIONS_PREFERENCES)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
@@ -226,7 +231,7 @@ class QuietHoursAPITests(APITestCase):
 
     def test_get_auto_creates_quiet_hours(self):
         self.assertFalse(QuietHours.objects.filter(user=self.user).exists())
-        response = self.client.get("/api/v1/notifications/quiet-hours/")
+        response = self.client.get(URL_NOTIFICATIONS_QUIET_HOURS)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["enabled"])
         self.assertTrue(QuietHours.objects.filter(user=self.user).exists())
@@ -234,7 +239,7 @@ class QuietHoursAPITests(APITestCase):
     def test_patch_quiet_hours(self):
         QuietHours.objects.create(user=self.user)
         response = self.client.patch(
-            "/api/v1/notifications/quiet-hours/",
+            URL_NOTIFICATIONS_QUIET_HOURS,
             {"enabled": True, "start_time": "23:00", "end_time": "06:00"},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -246,7 +251,7 @@ class QuietHoursAPITests(APITestCase):
         """Can update just enabled without changing times."""
         QuietHours.objects.create(user=self.user)
         response = self.client.patch(
-            "/api/v1/notifications/quiet-hours/",
+            URL_NOTIFICATIONS_QUIET_HOURS,
             {"enabled": True},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -254,5 +259,5 @@ class QuietHoursAPITests(APITestCase):
 
     def test_quiet_hours_unauthenticated(self):
         self.client.credentials()
-        response = self.client.get("/api/v1/notifications/quiet-hours/")
+        response = self.client.get(URL_NOTIFICATIONS_QUIET_HOURS)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

@@ -498,38 +498,41 @@ class ChildExportStatusView(ChildAccessMixin, View):
         return render(request, self.template_name, context)
 
 
+def _parse_catchup_date_range(request):
+    """Parse start/end from request GET; return (start_date, end_date) with defaults."""
+    from datetime import datetime, timedelta
+
+    from django.utils import timezone
+
+    today = timezone.now().date()
+    start_s = request.GET.get("start")
+    end_s = request.GET.get("end")
+    start_date = end_date = None
+    if start_s and end_s:
+        try:
+            start_date = datetime.strptime(start_s, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_s, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
+    if not start_date or not end_date or start_date > end_date:
+        end_date = today
+        start_date = today - timedelta(days=6)
+    return start_date, end_date
+
+
 class ChildCatchUpView(ChildAccessMixin, View):
     """Catch-up: time window selector and event timeline (FR-11, FR-12)."""
 
     template_name = "children/child_catchup.html"
 
     def get(self, request, pk):
-        from datetime import timedelta
-
-        from django.utils import timezone
-
         from diapers.models import DiaperChange
         from feedings.models import Feeding
         from naps.models import Nap
 
         child = self.child
-        today = timezone.now().date()
-        start_s = request.GET.get("start")
-        end_s = request.GET.get("end")
+        start_date, end_date = _parse_catchup_date_range(request)
         events = []
-        start_date = end_date = None
-
-        if start_s and end_s:
-            try:
-                from datetime import datetime
-
-                start_date = datetime.strptime(start_s, "%Y-%m-%d").date()
-                end_date = datetime.strptime(end_s, "%Y-%m-%d").date()
-            except (ValueError, TypeError):
-                pass
-        if not start_date or not end_date or start_date > end_date:
-            end_date = today
-            start_date = today - timedelta(days=6)
 
         feedings = list(
             Feeding.objects.filter(

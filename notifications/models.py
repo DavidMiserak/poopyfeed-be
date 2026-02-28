@@ -11,6 +11,9 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+# Lazy reference to Child model (used by ForeignKeys below)
+CHILD_MODEL = "children.Child"
+
 
 class Notification(models.Model):
     """In-app notification for shared activity alerts."""
@@ -34,7 +37,7 @@ class Notification(models.Model):
         blank=True,
     )
     child = models.ForeignKey(
-        "children.Child",
+        CHILD_MODEL,
         on_delete=models.CASCADE,
         related_name="notifications",
     )
@@ -76,7 +79,7 @@ class NotificationPreference(models.Model):
         related_name="notification_preferences",
     )
     child = models.ForeignKey(
-        "children.Child",
+        CHILD_MODEL,
         on_delete=models.CASCADE,
         related_name="notification_preferences",
     )
@@ -154,7 +157,7 @@ class FeedingReminderLog(models.Model):
     """
 
     child = models.ForeignKey(
-        "children.Child",
+        CHILD_MODEL,
         on_delete=models.CASCADE,
         related_name="feeding_reminder_logs",
     )
