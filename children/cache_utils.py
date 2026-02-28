@@ -136,11 +136,24 @@ def invalidate_child_activities_cache(child_id):
 
     def clear_cache():
         cache_key = f"child_activities_{child_id}"
-        cache.delete(cache_key)
-        logger.info(
-            f"Invalidated child activities cache",
-            extra={"child_id": child_id, "cache_key": cache_key},
-        )
+        try:
+            cache.delete(cache_key)
+            logger.info(
+                f"Invalidated child activities cache",
+                extra={"child_id": child_id, "cache_key": cache_key},
+            )
+        except Exception as e:
+            # Log cache deletion failures (e.g., Redis connection issues)
+            # This prevents silent failures where stale cache persists
+            logger.error(
+                f"Failed to invalidate child activities cache: {e}",
+                extra={
+                    "child_id": child_id,
+                    "cache_key": cache_key,
+                    "error": str(e),
+                },
+                exc_info=True,
+            )
 
     # Schedule invalidation to run after transaction commits
     transaction.on_commit(clear_cache)
