@@ -40,7 +40,7 @@
           </div>
           <h1 class="h5 fw-bold mb-2">Generating PDF</h1>
           <p class="text-body-secondary small mb-0">This may take a moment. The page will refresh automatically.</p>
-          <meta http-equiv="refresh" content="{{ poll_interval_sec }}">
+          <script>setTimeout(function(){ window.location.reload(); }, {{ poll_interval_sec }} * 1000);</script>
         {% endif %}
       </div>
     </div>

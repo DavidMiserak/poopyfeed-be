@@ -60,7 +60,7 @@ class TrackingViewSetTopLevelRouteTests(TestCase):
             email="toplevel@example.com",
             password=TEST_PASSWORD,
         )
-        child = Child.objects.create(
+        Child.objects.create(
             parent=user, name="TopLevel Baby", date_of_birth="2025-01-01"
         )
 

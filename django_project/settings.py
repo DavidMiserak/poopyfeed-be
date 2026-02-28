@@ -139,11 +139,6 @@ def _get_database_config():
 
     Includes connection pooling and health checks for production stability.
     """
-    # Connection pool settings (for PostgreSQL)
-    # Min pool size: minimum connections to maintain
-    # Max pool size: maximum connections in the pool
-    min_pool_size = int(os.environ.get("DB_POOL_MIN_SIZE", "2"))
-    max_pool_size = int(os.environ.get("DB_POOL_MAX_SIZE", "10"))
     # Connection lifetime: reuse connections for this many seconds
     conn_max_age = int(os.environ.get("DB_CONN_MAX_AGE", "600"))
 
