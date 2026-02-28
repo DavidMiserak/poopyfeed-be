@@ -26,15 +26,13 @@
     <div id="tz-banner" class="d-none w-100 border-bottom border-2 border-warning px-3 py-2" style="background: linear-gradient(to right, #fffbeb, #fff7ed);" data-profile-timezone="{{ user_timezone|default:'UTC' }}" role="status" aria-live="polite">
       <div class="container">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <p class="text-dark small mb-0 me-2">
-            Your device timezone is <strong id="tz-banner-browser"></strong> but your account is set to <strong id="tz-banner-profile"></strong>.
-          </p>
+          <p class="text-dark small mb-0 me-2" id="tz-banner-message"></p>
           <div class="d-flex align-items-center gap-2">
             <form id="tz-banner-form" method="post" action="{% url 'account_settings_timezone' %}" class="d-inline">
               {% csrf_token %}
               <input type="hidden" name="timezone" id="tz-banner-timezone-value" value="">
               <button type="submit" id="tz-banner-update-btn" class="btn btn-warning btn-sm fw-semibold" aria-busy="false">
-                Update to <span id="tz-banner-update-label"></span>
+                <span id="tz-banner-update-label"></span>
               </button>
             </form>
             <button type="button" id="tz-banner-dismiss-btn" class="btn btn-outline-secondary btn-sm fw-semibold" aria-label="Dismiss timezone mismatch banner">
@@ -159,9 +157,14 @@
         var browserTz = getBrowserTz();
         if (browserTz && browserTz !== profileTz && !wasDismissed()) {
           banner.classList.remove('d-none');
-          document.getElementById('tz-banner-browser').textContent = browserTz;
-          document.getElementById('tz-banner-profile').textContent = profileTz;
-          document.getElementById('tz-banner-update-label').textContent = browserTz;
+          var msgEl = document.getElementById('tz-banner-message');
+          if (profileTz === 'UTC') {
+            msgEl.innerHTML = 'Your device timezone is <strong>' + browserTz + '</strong>. Set it as your preference so times display correctly.';
+            document.getElementById('tz-banner-update-label').textContent = 'Set to ' + browserTz;
+          } else {
+            msgEl.innerHTML = 'Your device timezone is <strong>' + browserTz + '</strong> but your account is set to <strong>' + profileTz + '</strong>.';
+            document.getElementById('tz-banner-update-label').textContent = 'Update to ' + browserTz;
+          }
           document.getElementById('tz-banner-timezone-value').value = browserTz;
         }
         document.getElementById('tz-banner-dismiss-btn').addEventListener('click', function() {

@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load tz %}
 
 {% block title %}Delete Nap | {{ object.child.name }}{% endblock title %}
 
@@ -15,7 +16,7 @@
       <div class="card-body p-4">
         <p class="mb-2">Delete this nap for <strong>{{ object.child.name }}</strong>?</p>
         <p class="text-body-secondary small mb-4">
-          Nap at {{ object.napped_at|date:"M j, Y g:i A T" }}
+          {% timezone user_timezone %}Nap at {{ object.napped_at|date:"M j, Y g:i A" }}{% endtimezone %}
         </p>
         <form method="post">
           {% csrf_token %}

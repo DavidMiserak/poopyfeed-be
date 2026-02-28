@@ -1,4 +1,5 @@
 {% extends "_base.html" %}
+{% load tz %}
 
 {% block title %}Share {{ child.name }} | PoopyFeed{% endblock title %}
 
@@ -80,7 +81,7 @@
               <i class="fa-solid fa-pause me-1"></i>Paused
             </span>
             {% endif %}
-            <span class="text-body-tertiary small ms-auto">{{ invite.created_at|date:"M j" }}</span>
+            <span class="text-body-tertiary small ms-auto">{% timezone user_timezone %}{{ invite.created_at|date:"M j" }}{% endtimezone %}</span>
           </div>
 
           {% if invite.is_active %}
@@ -142,7 +143,7 @@
               <span class="badge {% if share.role == 'CO' %}bg-primary{% else %}bg-success{% endif %} bg-opacity-10 {% if share.role == 'CO' %}text-primary{% else %}text-success{% endif %} rounded-pill small">
                 {{ share.get_role_display }}
               </span>
-              <span class="text-body-tertiary small">{{ share.created_at|date:"M j" }}</span>
+              <span class="text-body-tertiary small">{% timezone user_timezone %}{{ share.created_at|date:"M j" }}{% endtimezone %}</span>
             </div>
           </div>
           <form method="post" action="{% url 'children:revoke_access' child.pk share.pk %}"

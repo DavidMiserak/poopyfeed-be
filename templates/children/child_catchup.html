@@ -81,6 +81,7 @@
 
         {% if events %}
           {% load tz %}
+          {% timezone user_timezone %}
           {% for activity in events %}
             {% ifchanged activity.at|date:"Y-m-d" %}
               {% if not forloop.first %}</div></div>{% endif %}
@@ -143,6 +144,7 @@
             </div>
 
           {% endfor %}
+          {% endtimezone %}
           </div></div>
         {% else %}
           <div class="card border-0 shadow-sm rounded-4">
