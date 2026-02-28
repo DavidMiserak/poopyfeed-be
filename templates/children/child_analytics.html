@@ -41,7 +41,8 @@
       </div>
       <div class="card-body px-4 overflow-auto">
         {% if feeding_trends.daily_data %}
-          <table class="table table-sm table-hover align-middle mb-0">
+          <table class="table table-sm table-hover align-middle mb-0" aria-describedby="feeding-desc">
+            <caption id="feeding-desc" class="visually-hidden">Daily feeding counts, total ounces, and average duration per day for the selected period.</caption>
             <thead class="table-light">
               <tr>
                 <th class="fw-semibold small text-body-secondary">Date</th>
@@ -79,7 +80,8 @@
       </div>
       <div class="card-body px-4 overflow-auto">
         {% if diaper_patterns.daily_data %}
-          <table class="table table-sm table-hover align-middle mb-0">
+          <table class="table table-sm table-hover align-middle mb-0" aria-describedby="diaper-desc">
+            <caption id="diaper-desc" class="visually-hidden">Daily diaper changes by type (wet, dirty, or both) for the selected period.</caption>
             <thead class="table-light">
               <tr>
                 <th class="fw-semibold small text-body-secondary">Date</th>
@@ -119,7 +121,8 @@
       </div>
       <div class="card-body px-4 overflow-auto">
         {% if sleep_summary.daily_data %}
-          <table class="table table-sm table-hover align-middle mb-0">
+          <table class="table table-sm table-hover align-middle mb-0" aria-describedby="sleep-desc">
+            <caption id="sleep-desc" class="visually-hidden">Daily nap counts, total sleep time, and average nap duration for the selected period.</caption>
             <thead class="table-light">
               <tr>
                 <th class="fw-semibold small text-body-secondary">Date</th>
