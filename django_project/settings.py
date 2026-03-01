@@ -432,10 +432,19 @@ REST_FRAMEWORK = {
         # Suitable for normal app usage, aggressive automation, and testing
         "user": "1000/hour",
         # Accept invite: 20 per hour (strict, due to race conditions and transactions)
-        "accept_invite": "20/hour",
-        # Tracking creation: strict in production; relaxed when DEBUG so E2E pagination
-        # tests (and local dev) can create 51+ items without 429
-        "tracking_create": "10000/hour" if DEBUG else "120/hour",
+        # Relaxed when DEBUG or RELAX_E2E_THROTTLES=1 so E2E suite can run without 429s
+        "accept_invite": (
+            "100/hour"
+            if (DEBUG or env_bool("RELAX_E2E_THROTTLES", False))
+            else "20/hour"
+        ),
+        # Tracking creation: strict in production; relaxed when DEBUG or RELAX_E2E_THROTTLES
+        # so E2E (pagination, pattern-alerts, quick-log, etc.) can create 51+ items
+        "tracking_create": (
+            "10000/hour"
+            if (DEBUG or env_bool("RELAX_E2E_THROTTLES", False))
+            else "120/hour"
+        ),
     },
 }
 
