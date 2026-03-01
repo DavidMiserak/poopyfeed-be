@@ -44,7 +44,29 @@ repos:
       rev: "1.29.1"
       hooks:
           - id: django-upgrade
-            args: ["--target-version=5.0"]
+            args: ["--target-version=6.0"]
+
+    # Type checking with mypy (mirrors-mypy + project deps so Django plugin can load settings)
+    - repo: https://github.com/pre-commit/mirrors-mypy
+      rev: v1.13.0
+      hooks:
+          - id: mypy
+            additional_dependencies:
+              - django-stubs[django]==5.2.9
+              - Django==6.0
+              - dj-database-url==2.3.0
+              - django-allauth==65.13.1
+              - django-cors-headers==4.9.0
+              - django-crispy-forms==2.5
+              - crispy-bootstrap5==2025.6
+              - djangorestframework==3.16.1
+              - celery==5.6.2
+              - django-redis==6.0.0
+              - psycopg2-binary==2.9.11
+              - reportlab==4.4.9
+              - matplotlib==3.10.1
+            args: [--config-file=pyproject.toml, .]
+            pass_filenames: false
 
     # Security checks with bandit
     - repo: https://github.com/PyCQA/bandit

@@ -2,6 +2,7 @@
 python_version = "3.13"
 plugins = ["mypy_django_plugin.main"]
 strict_optional = true
+exclude = [".*/migrations/.*"]
 warn_redundant_casts = true
 warn_unused_ignores = true
 # Gradual adoption: do not require all defs to be typed yet
