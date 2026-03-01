@@ -433,8 +433,9 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         # Accept invite: 20 per hour (strict, due to race conditions and transactions)
         "accept_invite": "20/hour",
-        # Tracking creation: 120 per hour (strict, prevent mass-insertion abuse)
-        "tracking_create": "120/hour",
+        # Tracking creation: strict in production; relaxed when DEBUG so E2E pagination
+        # tests (and local dev) can create 51+ items without 429
+        "tracking_create": "10000/hour" if DEBUG else "120/hour",
     },
 }
 
