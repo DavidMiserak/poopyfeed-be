@@ -169,8 +169,8 @@ class FeedingAPITests(BaseTrackingAPITests):
         self.assertEqual(len(response.data["results"]), 2)
 
     def test_pagination_applied(self):
-        """Verify pagination is applied to list endpoints (PAGE_SIZE=50)."""
-        for _ in range(60):
+        """Verify pagination is applied to list endpoints (PAGE_SIZE=20)."""
+        for _ in range(30):
             Feeding.objects.create(
                 child=self.child,
                 feeding_type=Feeding.FeedingType.BOTTLE,
@@ -186,8 +186,8 @@ class FeedingAPITests(BaseTrackingAPITests):
         self.assertIn("results", response.data)
         self.assertIn("next", response.data)
         self.assertIn("previous", response.data)
-        self.assertEqual(len(response.data["results"]), 50)
-        self.assertEqual(response.data["count"], 60)
+        self.assertEqual(len(response.data["results"]), 20)
+        self.assertEqual(response.data["count"], 30)
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
 

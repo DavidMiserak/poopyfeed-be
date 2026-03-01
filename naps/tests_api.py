@@ -119,8 +119,8 @@ class NapAPITests(BaseTrackingAPITests):
         self.assertAlmostEqual(nap_data["duration_minutes"], 90.0)
 
     def test_pagination_applied(self):
-        """Verify pagination is applied to list endpoints (PAGE_SIZE=50)."""
-        for _ in range(60):
+        """Verify pagination is applied to list endpoints (PAGE_SIZE=20)."""
+        for _ in range(30):
             Nap.objects.create(
                 child=self.child,
                 napped_at=TEST_NAPPED_AT,
@@ -134,8 +134,8 @@ class NapAPITests(BaseTrackingAPITests):
         self.assertIn("results", response.data)
         self.assertIn("next", response.data)
         self.assertIn("previous", response.data)
-        self.assertEqual(len(response.data["results"]), 50)
-        self.assertEqual(response.data["count"], 60)
+        self.assertEqual(len(response.data["results"]), 20)
+        self.assertEqual(response.data["count"], 30)
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
 

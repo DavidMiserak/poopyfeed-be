@@ -419,7 +419,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 50,
+    "PAGE_SIZE": 20,
     # Rate limiting: Throttle API requests to prevent abuse and ensure stability
     # Uses user ID for authenticated users, IP address for anonymous
     # Cache backend required (in-memory by default for development)

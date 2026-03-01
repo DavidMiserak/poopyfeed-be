@@ -91,9 +91,9 @@ class DiaperChangeAPITests(BaseTrackingAPITests):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_pagination_applied(self):
-        """Verify pagination is applied to list endpoints (PAGE_SIZE=50)."""
-        # Create 60 diapers to exceed PAGE_SIZE (50)
-        for _ in range(60):
+        """Verify pagination is applied to list endpoints (PAGE_SIZE=20)."""
+        # Create 30 diapers to exceed PAGE_SIZE (20)
+        for _ in range(30):
             DiaperChange.objects.create(
                 child=self.child,
                 change_type=DiaperChange.ChangeType.WET,
@@ -110,9 +110,9 @@ class DiaperChangeAPITests(BaseTrackingAPITests):
         self.assertIn("next", response.data)
         self.assertIn("previous", response.data)
 
-        # Verify PAGE_SIZE limit (should be 50)
-        self.assertEqual(len(response.data["results"]), 50)
-        self.assertEqual(response.data["count"], 60)
+        # Verify PAGE_SIZE limit (should be 20)
+        self.assertEqual(len(response.data["results"]), 20)
+        self.assertEqual(response.data["count"], 30)
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
 
