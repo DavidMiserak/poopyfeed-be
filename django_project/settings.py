@@ -427,9 +427,13 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        # Authenticated users: 1000 requests per hour (allows ~16 per minute)
-        # Suitable for normal app usage, aggressive automation, and testing
-        "user": "1000/hour",
+        # Authenticated users: 1000/hour normally; relaxed when DEBUG or RELAX_E2E_THROTTLES
+        # so E2E (many requests per run) does not hit 429
+        "user": (
+            "100000/hour"
+            if (DEBUG or env_bool("RELAX_E2E_THROTTLES", False))
+            else "1000/hour"
+        ),
         # Accept invite: 20 per hour (strict, due to race conditions and transactions)
         # Relaxed when DEBUG or RELAX_E2E_THROTTLES=1 so E2E suite can run without 429s
         "accept_invite": (
