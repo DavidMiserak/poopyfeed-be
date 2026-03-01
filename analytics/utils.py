@@ -116,9 +116,6 @@ def _calculate_trend(values: list[int | float]) -> str:
     first_half = values[:mid]
     second_half = values[mid:]
 
-    if not first_half or not second_half:
-        return "stable"
-
     first_avg = sum(first_half) / len(first_half)
     second_avg = sum(second_half) / len(second_half)
 
