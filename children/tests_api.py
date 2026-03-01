@@ -430,6 +430,17 @@ class SharingAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["feeding_reminder_interval"], 2)
 
+    def test_child_partial_update_feeding_reminder_interval_six(self):
+        """Owner can set feeding_reminder_interval to 6 via PATCH (covers return value path)."""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.patch(
+            API_CHILD_DETAIL.format(pk=self.child.pk),
+            {"feeding_reminder_interval": 6},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["feeding_reminder_interval"], 6)
+
     def test_child_nonexistent(self):
         """Accessing nonexistent child returns 404."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")

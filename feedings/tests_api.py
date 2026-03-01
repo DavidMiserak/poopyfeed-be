@@ -38,6 +38,12 @@ class FeedingAPITests(BaseTrackingAPITests):
         """Base get_update_data() returns get_create_data() when not overridden."""
         self.assertEqual(self.get_update_data(), self.get_create_data())
 
+    def test_base_get_create_data_raises_not_implemented(self):
+        """Base get_create_data() raises NotImplementedError when called on base."""
+        with self.assertRaises(NotImplementedError) as ctx:
+            BaseTrackingAPITests.get_create_data(self)
+        self.assertIn("get_create_data", str(ctx.exception))
+
     def test_base_create_test_record_raises_not_implemented(self):
         """Base create_test_record() raises NotImplementedError when called on base."""
         with self.assertRaises(NotImplementedError) as ctx:
