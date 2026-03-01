@@ -78,6 +78,9 @@ class CeleryTaskDefinitionTests(TestCase):
         self.assertIsNotNone(test_shared_task)
         self.assertTrue(hasattr(test_shared_task, "delay"))
         self.assertTrue(hasattr(test_shared_task, "apply_async"))
+        # Execute task so decorated function body is covered
+        result = test_shared_task.delay(1, 2)
+        self.assertEqual(result.get(), 3)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)

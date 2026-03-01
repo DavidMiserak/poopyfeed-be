@@ -21,6 +21,7 @@ from rest_framework.test import APITestCase
 
 from children.models import Child, ChildShare
 from diapers.models import DiaperChange
+from django_project.test_constants import TEST_PASSWORD
 from feedings.models import Feeding
 from naps.models import Nap
 
@@ -49,22 +50,22 @@ class AnalyticsPermissionTests(APITestCase):
         cls.owner = User.objects.create_user(
             username="owner",
             email="owner@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.coparent = User.objects.create_user(
             username="coparent",
             email="coparent@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.caregiver = User.objects.create_user(
             username="caregiver",
             email="caregiver@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.unauthorized = User.objects.create_user(
             username="unauthorized",
             email="unauthorized@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
 
         # Child owned by owner
@@ -160,7 +161,7 @@ class FeedingTrendsTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -322,7 +323,7 @@ class DiaperPatternsTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -401,7 +402,7 @@ class SleepSummaryTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -466,7 +467,7 @@ class TodaySummaryTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -651,7 +652,7 @@ class TimelineTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -768,7 +769,7 @@ class TimelineTests(APITestCase):
         other_user = User.objects.create_user(
             username="other",
             email="other@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         other_child = Child.objects.create(
             parent=other_user,
@@ -798,7 +799,7 @@ class WeeklySummaryTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -858,7 +859,7 @@ class CachingTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -964,7 +965,7 @@ class EmptyDataTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -1028,7 +1029,7 @@ class ExportCSVTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -1098,7 +1099,7 @@ class ExportCSVTests(APITestCase):
         other_user = User.objects.create_user(
             username="otheruser",
             email="other@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         token = Token.objects.create(user=other_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -1114,7 +1115,7 @@ class ExportCSVTests(APITestCase):
         coparent = User.objects.create_user(
             username="coparent",
             email="coparent@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         ChildShare.objects.create(
             child=self.child,
@@ -1149,7 +1150,7 @@ class ExportPDFTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -1191,7 +1192,7 @@ class ExportPDFTests(APITestCase):
         other_user = User.objects.create_user(
             username="otheruser",
             email="other@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         token = Token.objects.create(user=other_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -1276,7 +1277,7 @@ class GeneratePDFReportTaskTests(TestCase):
         cls.user = User.objects.create_user(
             username="pdftestuser",
             email="pdftest@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -1475,7 +1476,7 @@ class ExportStatusProgressExtractionTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -1614,7 +1615,7 @@ class PDFDownloadTests(APITestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="user@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
 
     def test_download_pdf_invalid_filename_with_slashes(self):
@@ -1657,6 +1658,7 @@ class PDFDownloadTests(APITestCase):
                 response = self.client.get("/api/v1/analytics/download/test123.pdf/")
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response["Content-Type"], "application/pdf")
+            self.assertEqual(response.content, b"PDF test content")
         finally:
             if test_file.exists():
                 test_file.unlink()
@@ -1672,7 +1674,7 @@ class ExportStatusUnknownStateTests(APITestCase):
         cls.user = User.objects.create_user(
             username="unknownstate",
             email="unknownstate@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -1811,6 +1813,12 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
 
         self.assertEqual(_calculate_trend([5]), "stable")
 
+    def test_calculate_trend_one_value_empty_half_returns_stable(self):
+        """One value yields empty first half and returns 'stable' (covers empty-half branch)."""
+        from analytics.utils import _calculate_trend
+
+        self.assertEqual(_calculate_trend([10]), "stable")
+
     def test_calculate_trend_decreasing(self):
         """Decreasing values return 'decreasing'."""
         from analytics.utils import _calculate_trend
@@ -1866,7 +1874,7 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
         user = User.objects.create_user(
             username="todayuser",
             email="today@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         child = Child.objects.create(
             parent=user,
@@ -1889,7 +1897,7 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
         user = User.objects.create_user(
             username="timelineutil",
             email="timelineutil@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         child = Child.objects.create(
             parent=user,
@@ -1906,6 +1914,34 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
         self.assertEqual(len(nap_events), 1)
         self.assertIsNone(nap_events[0]["nap"].get("duration_minutes"))
 
+    def test_get_child_timeline_events_nap_with_ended_at_sets_duration_minutes(self):
+        """Timeline nap with ended_at has duration_minutes computed."""
+        from analytics.utils import get_child_timeline_events
+        from children.models import Child
+        from naps.models import Nap
+
+        user = User.objects.create_user(
+            username="timelineutil2",
+            email="timelineutil2@example.com",
+            password=TEST_PASSWORD,
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Timeline Baby 2",
+            date_of_birth="2024-01-15",
+        )
+        napped = timezone.now() - timedelta(hours=1)
+        ended = timezone.now()
+        Nap.objects.create(
+            child=child,
+            napped_at=napped,
+            ended_at=ended,
+        )
+        events = get_child_timeline_events(child.id)
+        nap_events = [e for e in events if e["type"] == "nap"]
+        self.assertEqual(len(nap_events), 1)
+        self.assertEqual(nap_events[0]["nap"].get("duration_minutes"), 60)
+
     def test_weekly_summary_with_diaper_breakdown(self):
         """Weekly summary includes diaper type breakdown from DB."""
         from analytics.utils import get_weekly_summary
@@ -1915,7 +1951,7 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
         user = User.objects.create_user(
             username="weeklyuser",
             email="weekly@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         child = Child.objects.create(
             parent=user,
@@ -2142,12 +2178,12 @@ class GeneratePDFReportPermissionTests(TestCase):
         cls.owner = User.objects.create_user(
             username="owner",
             email="owner@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.unauthorized = User.objects.create_user(
             username="unauthorized",
             email="unauthorized@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
@@ -2225,7 +2261,7 @@ class GeneratePDFReportChartErrorHandlingTests(TestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -2306,7 +2342,7 @@ class GeneratePDFReportEmptyDataTests(TestCase):
         cls.user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -2407,12 +2443,12 @@ class PatternAlertsAPITests(APITestCase):
         cls.owner = User.objects.create_user(
             username="pa_owner",
             email="pa_owner@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.other_user = User.objects.create_user(
             username="pa_other",
             email="pa_other@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner,
@@ -2721,7 +2757,7 @@ class PatternAlertsUtilsTests(TestCase):
         cls.user = User.objects.create_user(
             username="pa_util_user",
             email="pa_util@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user,
@@ -2804,7 +2840,7 @@ class PatternAlertsUtilsTests(TestCase):
         coparent = User.objects.create_user(
             username="pa_coparent",
             email="pa_coparent@example.com",
-            password="password123",
+            password=TEST_PASSWORD,
         )
         ChildShare.objects.create(child=self.child, user=coparent, role="CO")
         # Clear accessible children cache

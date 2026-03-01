@@ -7,6 +7,7 @@ API tests to eliminate duplication.
 from abc import ABC
 
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -168,3 +169,13 @@ class BaseTrackingAPITests(ABC, APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.stranger_token.key}")
         response = self.client.post(self.get_list_url(), self.get_create_data())
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class TrackingBaseContractTests(TestCase):
+    """Tests for BaseTrackingAPITests contract (subclasshook, etc.)."""
+
+    def test_subclasshook_returns_not_implemented_for_non_subclass(self):
+        """__subclasshook__ returns NotImplemented for non-subclass."""
+        # Called as class method: cls is bound, pass only the candidate subclass
+        result = BaseTrackingAPITests.__subclasshook__(object)
+        self.assertIs(result, NotImplemented)

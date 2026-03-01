@@ -17,6 +17,7 @@ from django.utils import timezone
 
 from children.models import Child
 from diapers.models import DiaperChange
+from django_project.test_constants import TEST_PASSWORD
 from feedings.models import Feeding
 from naps.models import Nap
 
@@ -32,7 +33,7 @@ class CacheInvalidationSetupTests(TestCase):
         cls.parent = User.objects.create_user(
             username="parent",
             email="parent@test.com",
-            password="testpass123",  # nosec B106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -65,7 +66,7 @@ class FeedingCacheInvalidationTests(TestCase):
         cls.parent = User.objects.create_user(
             username="parent",
             email="parent@test.com",
-            password="testpass123",  # nosec B106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -140,7 +141,7 @@ class DiaperCacheInvalidationTests(TestCase):
         cls.parent = User.objects.create_user(
             username="parent",
             email="parent@test.com",
-            password="testpass123",  # nosec B106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -209,7 +210,7 @@ class NapCacheInvalidationTests(TestCase):
         cls.parent = User.objects.create_user(
             username="parent",
             email="parent@test.com",
-            password="testpass123",  # nosec B106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.parent,
@@ -281,7 +282,7 @@ class MultipleChildrenCacheInvalidationTests(TestCase):
         cls.parent = User.objects.create_user(
             username="parent",
             email="parent@test.com",
-            password="testpass123",  # nosec B106
+            password=TEST_PASSWORD,
         )
         cls.child1 = Child.objects.create(
             parent=cls.parent,
@@ -356,7 +357,7 @@ class CacheInvalidationBulkOperationsTests(TestCase):
         cls.parent = User.objects.create_user(
             username="parent",
             email="parent@test.com",
-            password="testpass123",  # nosec B106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.parent,

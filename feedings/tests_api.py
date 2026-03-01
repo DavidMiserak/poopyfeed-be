@@ -34,6 +34,16 @@ class FeedingAPITests(BaseTrackingAPITests):
         )
 
     # Feedings-specific validation tests
+    def test_get_update_data_returns_create_data(self):
+        """Base get_update_data() returns get_create_data() when not overridden."""
+        self.assertEqual(self.get_update_data(), self.get_create_data())
+
+    def test_base_create_test_record_raises_not_implemented(self):
+        """Base create_test_record() raises NotImplementedError when called on base."""
+        with self.assertRaises(NotImplementedError) as ctx:
+            BaseTrackingAPITests.create_test_record(self)
+        self.assertIn("create_test_record", str(ctx.exception))
+
     def test_create_bottle_feeding(self):
         """Can create bottle feeding with amount."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")

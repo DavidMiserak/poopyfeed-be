@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from children.models import Child, ChildShare
+from django_project.test_constants import TEST_PASSWORD
 
 from .models import FeedingReminderLog, Notification, NotificationPreference, QuietHours
 from .signals import tracking_created
@@ -22,12 +23,12 @@ class NotificationModelTests(TestCase):
         cls.owner = User.objects.create_user(
             username="owner",
             email="owner@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.coparent = User.objects.create_user(
             username="coparent",
             email="coparent@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner, name="Baby Alice", date_of_birth=date(2025, 6, 15)
@@ -130,7 +131,7 @@ class FeedingReminderLogModelTests(TestCase):
         cls.user = User.objects.create_user(
             username="remlog",
             email="remlog@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user, name="Baby Rem", date_of_birth=date(2025, 6, 15)
@@ -152,7 +153,7 @@ class NotificationPreferenceModelTests(TestCase):
         cls.user = User.objects.create_user(
             username="user1",
             email="user1@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user, name="Baby Bob", date_of_birth=date(2025, 6, 15)
@@ -181,7 +182,7 @@ class QuietHoursModelTests(TestCase):
         cls.user = User.objects.create_user(
             username="qhuser",
             email="qh@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             timezone="America/New_York",
         )
 
@@ -353,19 +354,19 @@ class NotificationTaskTests(TestCase):
         cls.owner = User.objects.create_user(
             username="taskowner",
             email="taskowner@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Sarah",
         )
         cls.coparent = User.objects.create_user(
             username="taskcoparent",
             email="taskcoparent@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Michael",
         )
         cls.caregiver = User.objects.create_user(
             username="taskcg",
             email="taskcg@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Maria",
         )
         cls.child = Child.objects.create(
@@ -558,7 +559,7 @@ class SignalDispatchTests(TestCase):
         cls.owner = User.objects.create_user(
             username="sigowner",
             email="sigowner@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.owner, name="Signal Baby", date_of_birth=date(2025, 6, 15)
@@ -595,19 +596,19 @@ class FeedingReminderTaskTests(TestCase):
         cls.owner = User.objects.create_user(
             username="remowner",
             email="remowner@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Sarah",
         )
         cls.coparent = User.objects.create_user(
             username="remcoparent",
             email="remcoparent@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Michael",
         )
         cls.caregiver = User.objects.create_user(
             username="remcg",
             email="remcg@example.com",
-            password="testpass123",  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Maria",
         )
         cls.child = Child.objects.create(

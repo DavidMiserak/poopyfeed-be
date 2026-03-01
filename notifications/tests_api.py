@@ -8,12 +8,11 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from children.models import Child, ChildShare
+from django_project.test_constants import TEST_PASSWORD
 
 from .models import Notification, NotificationPreference, QuietHours
 
 User = get_user_model()
-
-TEST_PASSWORD = "testpass123"  # noqa: S105
 
 # API URL paths (avoid string duplication for Sonar)
 URL_NOTIFICATIONS = "/api/v1/notifications/"
@@ -29,13 +28,13 @@ class NotificationAPITests(APITestCase):
         cls.user = User.objects.create_user(
             username="notifuser",
             email="notifuser@example.com",
-            password=TEST_PASSWORD,  # noqa: S106
+            password=TEST_PASSWORD,
             first_name="Alice",
         )
         cls.other_user = User.objects.create_user(
             username="otheruser",
             email="other@example.com",
-            password=TEST_PASSWORD,  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user, name="Baby Notif", date_of_birth=date(2025, 6, 15)
@@ -139,12 +138,12 @@ class NotificationPreferenceAPITests(APITestCase):
         cls.user = User.objects.create_user(
             username="prefuser",
             email="prefuser@example.com",
-            password=TEST_PASSWORD,  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.other_user = User.objects.create_user(
             username="prefother",
             email="prefother@example.com",
-            password=TEST_PASSWORD,  # noqa: S106
+            password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
             parent=cls.user, name="Baby Pref", date_of_birth=date(2025, 6, 15)
@@ -222,7 +221,7 @@ class QuietHoursAPITests(APITestCase):
         cls.user = User.objects.create_user(
             username="qhuser",
             email="qhuser@example.com",
-            password=TEST_PASSWORD,  # noqa: S106
+            password=TEST_PASSWORD,
         )
 
     def setUp(self):
