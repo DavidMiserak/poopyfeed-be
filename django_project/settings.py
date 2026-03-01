@@ -51,7 +51,6 @@ ALLOWED_HOSTS = (
 
 ROOT_URLCONF = "django_project.urls"
 WSGI_APPLICATION = "django_project.wsgi.application"
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 # =============================================================================

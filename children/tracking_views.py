@@ -24,6 +24,7 @@ Permission model:
 - Views use ChildAccessMixin/ChildEditMixin to enforce via dispatch()
 """
 
+from django.db import models
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -340,6 +341,7 @@ class TrackingDeleteView(TrackingEditQuerysetMixin, ChildEditMixin, DeleteView):
             success_url_name = "diapers:diaper_list"
     """
 
+    object: models.Model  # type narrowing for mixin conflict in stubs
     success_url_name: str | None = None  # Must be set by subclass
 
     def get_success_url(self):

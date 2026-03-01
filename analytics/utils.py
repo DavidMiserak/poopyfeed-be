@@ -628,21 +628,45 @@ def get_merged_activities(
         )
     )
     diapers = list(diaper_qs.values("id", "changed_at", "change_type"))
-    naps = list(nap_qs.values("id", "napped_at", "ended_at"))
+    naps_raw = list(nap_qs.values("id", "napped_at", "ended_at"))
 
-    for n in naps:
-        if n["ended_at"] and n["napped_at"]:
-            total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
+    def _nap_to_dict(n: Any) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "id": n["id"],
+            "napped_at": n["napped_at"],
+            "ended_at": n["ended_at"],
+        }
+        if n.get("ended_at") and n.get("napped_at"):
+            delta = n["ended_at"] - n["napped_at"]
+            total = int(delta.total_seconds() / 60)
             h, m = divmod(total, 60)
-            n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
+            out["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
+        return out
+
+    naps_list: list[dict[str, Any]] = [_nap_to_dict(n) for n in naps_raw]
 
     merged: list[dict[str, Any]] = []
     for f in feedings:
-        merged.append({"type": "feeding", "at": f["fed_at"], "obj": f})
+        merged.append(
+            cast(dict[str, Any], {"type": "feeding", "at": f["fed_at"], "obj": f})
+        )
     for d in diapers:
-        merged.append({"type": "diaper", "at": d["changed_at"], "obj": d})
-    for n in naps:
-        merged.append({"type": "nap", "at": n["napped_at"], "obj": n})
+        merged.append(
+            cast(dict[str, Any], {"type": "diaper", "at": d["changed_at"], "obj": d})
+        )
+    for n in naps_list:
+        nap_obj: dict[str, Any] = {
+            "id": n["id"],
+            "napped_at": n["napped_at"],
+            "ended_at": n["ended_at"],
+        }
+        if n.get("duration_display") is not None:
+            nap_obj["duration_display"] = n.get("duration_display")
+        nap_item: dict[str, Any] = {}
+        nap_item["type"] = "nap"
+        nap_item["at"] = n["napped_at"]
+        nap_item["obj"] = nap_obj
+        merged.append(nap_item)
     merged.sort(key=lambda x: x["at"], reverse=True)
     return merged
 
@@ -820,8 +844,10 @@ def _compute_wake_alert(child_id: int, now: datetime) -> dict[str, Any]:
     # Calculate wake windows: time from nap end to next nap start
     wake_windows = []
     for i in range(1, len(completed_naps)):
-        prev_ended = completed_naps[i - 1][1]  # ended_at
+        prev_ended = completed_naps[i - 1][1]  # ended_at (not null per filter)
         curr_started = completed_naps[i][0]  # napped_at
+        if prev_ended is None:
+            continue
         wake_min = (curr_started - prev_ended).total_seconds() / 60
         if wake_min > 0:
             wake_windows.append(wake_min)
@@ -830,7 +856,9 @@ def _compute_wake_alert(child_id: int, now: datetime) -> dict[str, Any]:
         return no_alert
 
     avg_wake = sum(wake_windows) / len(wake_windows)
-    last_ended = completed_naps[-1][1]  # ended_at of most recent
+    last_ended = completed_naps[-1][1]  # ended_at of most recent (not null per filter)
+    if last_ended is None:
+        return no_alert
     minutes_awake = (now - last_ended).total_seconds() / 60
     threshold = avg_wake * _ALERT_THRESHOLD_MULTIPLIER
 

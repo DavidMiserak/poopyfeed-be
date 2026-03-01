@@ -168,6 +168,7 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
 
 class ChildDeleteView(ChildOwnerMixin, DeleteView):
     model = Child
+    object: Child  # type narrowing for mixin conflict in stubs
     template_name = "children/child_confirm_delete.html"
     success_url = reverse_lazy(URL_CHILD_LIST)
 
