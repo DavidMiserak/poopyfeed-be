@@ -725,6 +725,16 @@ class TimelineTests(APITestCase):
         self.assertIsNotNone(data["next"])
         self.assertIsNone(data["previous"])
 
+    def test_timeline_invalid_page_param_falls_back_to_first_page(self):
+        """Invalid page= (ValueError/TypeError) uses page 1."""
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/",
+            {"page": "not-a-number", "page_size": "10"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIn("results", data)
+
     def test_timeline_empty_results(self):
         """Timeline returns count=0 and empty results when child has no events."""
         response = self.client.get(

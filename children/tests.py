@@ -938,6 +938,72 @@ class SharedChildListViewTests(TestCase):
         self.assertIn("notification_preference_form", response.context)
         self.assertContains(response, "Notification alerts")
 
+    def test_child_edit_post_notification_preference_invalid_rerenders_form(self):
+        """Invalid notification preference form re-renders edit page with form errors."""
+        from unittest.mock import patch
+
+        self.client.login(email=TEST_OWNER_EMAIL, password=TEST_PASSWORD)
+        # Ensure pref exists (GET edit page)
+        self.client.get(reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk}))
+        with patch(
+            "notifications.forms.NotificationPreferenceForm.is_valid",
+            return_value=False,
+        ):
+            response = self.client.post(
+                reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk}),
+                {"action": "notification_preference"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("notification_preference_form", response.context)
+
+    def test_child_edit_post_notification_preference_no_pref_redirects_to_list(self):
+        """When user has no NotificationPreference for child, POST redirects to child list."""
+        from notifications.models import NotificationPreference
+
+        # Use a coparent who has never loaded edit page (no pref). Create fresh child + user.
+        coparent2 = get_user_model().objects.create_user(
+            username="coparent2",
+            email="coparent2@example.com",
+            password=TEST_PASSWORD,
+        )
+        child2 = Child.objects.create(
+            parent=self.owner,
+            name="Baby No Pref",
+            date_of_birth=date(2025, 1, 1),
+        )
+        ChildShare.objects.create(
+            child=child2,
+            user=coparent2,
+            role=ChildShare.Role.CO_PARENT,
+            created_by=self.owner,
+        )
+        self.assertFalse(
+            NotificationPreference.objects.filter(user=coparent2, child=child2).exists()
+        )
+        self.client.login(email="coparent2@example.com", password=TEST_PASSWORD)
+        response = self.client.post(
+            reverse(URL_CHILD_EDIT, kwargs={"pk": child2.pk}),
+            {"action": "notification_preference"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse(URL_CHILD_LIST))
+
+    def test_child_edit_post_notification_preference_valid_redirects_with_saved(self):
+        """Valid notification preference save redirects with notifications_saved=1."""
+        self.client.login(email=TEST_OWNER_EMAIL, password=TEST_PASSWORD)
+        self.client.get(reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk}))
+        response = self.client.post(
+            reverse(URL_CHILD_EDIT, kwargs={"pk": self.child.pk}),
+            {
+                "action": "notification_preference",
+                "notify_feedings": "on",
+                "notify_diapers": "on",
+                "notify_naps": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("notifications_saved=1", response["Location"])
+
     def test_caregiver_cannot_edit_child(self):
         self.client.login(email=TEST_CAREGIVER_EMAIL, password=TEST_PASSWORD)
         response = self.client.get(
@@ -1008,6 +1074,45 @@ class ChildFormFutureDateTests(TestCase):
 
 class LocalDateTimeFormMixinTests(TestCase):
     """Test LocalDateTimeFormMixin timezone conversion and future validation."""
+
+    def test_initial_datetime_set_to_now_when_no_instance(self):
+        """Create form with request and no instance sets initial to now in user TZ."""
+        from django import forms as django_forms
+        from django.test import RequestFactory
+
+        class TestForm(LocalDateTimeFormMixin, django_forms.Form):
+            datetime_field_name = "test_dt"
+            test_dt = django_forms.DateTimeField()
+
+        user = get_user_model().objects.create_user(
+            username="tzinitial",
+            email="tzinitial@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        form = TestForm(request=request)
+        self.assertIn("test_dt", form.initial)
+        self.assertIsNotNone(form.initial["test_dt"])
+
+    def test_mixin_early_return_when_no_datetime_field_name(self):
+        """When datetime_field_name is None, __init__ returns without setting initial."""
+        from django import forms as django_forms
+        from django.test import RequestFactory
+
+        class NoFieldForm(LocalDateTimeFormMixin, django_forms.Form):
+            datetime_field_name = None
+
+        request = RequestFactory().get("/")
+        request.user = get_user_model().objects.create_user(
+            username="nofield",
+            email="nofield@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        form = NoFieldForm(request=request)
+        self.assertEqual(form.initial, {})
 
     def test_future_utc_datetime_rejected(self):
         """Datetime in the future (in user TZ) is rejected."""
@@ -1133,6 +1238,40 @@ class ChildDashboardViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
+    def test_dashboard_recent_activities_includes_nap_duration_display(self):
+        """Dashboard recent_activities includes naps with duration_display when ended_at set."""
+        from diapers.models import DiaperChange
+        from feedings.models import Feeding
+        from naps.models import Nap
+
+        now = timezone.now()
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now,
+            amount_oz=4.0,
+        )
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now,
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=1),
+            ended_at=now,
+        )
+        self.client.login(email="dashboard@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        activities = response.context["recent_activities"]
+        self.assertGreater(len(activities), 0)
+        nap_activities = [a for a in activities if a.get("type") == "nap"]
+        if nap_activities:
+            self.assertIn("duration_display", nap_activities[0].get("obj", {}))
+
 
 class ChildTimelineViewTests(TestCase):
     """Tests for child timeline (template parity)."""
@@ -1196,6 +1335,53 @@ class ChildTimelineViewTests(TestCase):
         self.assertIn("Sunday, Feb 25", content)
         self.assertNotIn("Thursday, Feb 26", content)
 
+    def test_timeline_nap_with_ended_at_has_duration_display(self):
+        """Timeline includes nap duration_display when nap has ended_at."""
+        from naps.models import Nap
+
+        now = timezone.now()
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=1),
+            ended_at=now,
+        )
+        self.client.login(email="timeline@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_timeline", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        page_obj = response.context["page_obj"]
+        self.assertGreater(len(page_obj.object_list), 0)
+        nap_items = [x for x in page_obj.object_list if x.get("type") == "nap"]
+        self.assertEqual(len(nap_items), 1)
+        self.assertIn("duration_display", nap_items[0]["obj"])
+
+    def test_timeline_includes_diaper_and_nap_in_merged_list(self):
+        """Timeline merge loop includes both diaper and nap when present."""
+        from diapers.models import DiaperChange
+        from naps.models import Nap
+
+        now = timezone.now()
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now,
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=1),
+            ended_at=now,
+        )
+        self.client.login(email="timeline@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_timeline", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        page_obj = response.context["page_obj"]
+        types = [x.get("type") for x in page_obj.object_list]
+        self.assertIn("diaper", types)
+        self.assertIn("nap", types)
+
 
 class ChildAnalyticsViewTests(TestCase):
     """Tests for child analytics (template parity)."""
@@ -1228,6 +1414,16 @@ class ChildAnalyticsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["days"], 7)
         self.assertIn("feeding_trends", response.context)
+
+    def test_analytics_invalid_days_defaults_to_30(self):
+        """days not in (7, 14, 30) falls back to 30."""
+        self.client.login(email="analytics@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_analytics", kwargs={"pk": self.child.pk}),
+            {"days": "99"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["days"], 30)
 
 
 class ChildExportViewTests(TestCase):
@@ -1263,6 +1459,26 @@ class ChildExportViewTests(TestCase):
         self.assertEqual(response["Content-Type"], "text/csv")
         self.assertIn("attachment", response["Content-Disposition"])
 
+    def test_export_post_invalid_days_defaults_to_30(self):
+        """Invalid days (non-int or not 7/14/30) uses 30."""
+        self.client.login(email="export@example.com", password=TEST_PASSWORD)
+        response = self.client.post(
+            reverse("children:child_export", kwargs={"pk": self.child.pk}),
+            {"format": "csv", "days": "abc"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+
+    def test_export_post_days_99_defaults_to_30(self):
+        """days=99 not in (7,14,30) falls back to 30."""
+        self.client.login(email="export@example.com", password=TEST_PASSWORD)
+        response = self.client.post(
+            reverse("children:child_export", kwargs={"pk": self.child.pk}),
+            {"format": "csv", "days": "99"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+
     def test_export_post_pdf_redirects_to_status(self):
         self.client.login(email="export@example.com", password=TEST_PASSWORD)
         response = self.client.post(
@@ -1271,6 +1487,26 @@ class ChildExportViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertIn("export/status/", response["Location"])
+
+    def test_export_post_invalid_format_warning_and_redirect(self):
+        """Invalid format shows warning and redirects back to export page."""
+        from django.contrib.messages import get_messages
+
+        self.client.login(email="export@example.com", password=TEST_PASSWORD)
+        response = self.client.post(
+            reverse("children:child_export", kwargs={"pk": self.child.pk}),
+            {"format": "invalid", "days": "30"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            reverse("children:child_export", kwargs={"pk": self.child.pk}),
+        )
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any("CSV" in str(m) and "PDF" in str(m) for m in messages),
+            msg="Expected warning about choosing CSV or PDF",
+        )
 
 
 class ChildCatchUpViewTests(TestCase):
@@ -1304,3 +1540,159 @@ class ChildCatchUpViewTests(TestCase):
         self.assertIn("events", response.context)
         self.assertIn("start", response.context)
         self.assertIn("end", response.context)
+
+    def test_catchup_invalid_date_range_uses_defaults(self):
+        """Invalid or missing start/end params use default last-7-days range."""
+        self.client.login(email="catchup@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk}),
+            {"start": "not-a-date", "end": "also-bad"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("events", response.context)
+        self.assertIn("start", response.context)
+        self.assertIn("end", response.context)
+
+    def test_catchup_valid_date_range_uses_params(self):
+        """Valid start/end query params are used for date range."""
+        self.client.login(email="catchup@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk}),
+            {"start": "2025-01-01", "end": "2025-01-07"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["start"], "2025-01-01")
+        self.assertEqual(response.context["end"], "2025-01-07")
+
+    def test_catchup_events_include_nap_duration_display(self):
+        """Catch-up events include nap duration_display when ended_at set."""
+        from naps.models import Nap
+
+        now = timezone.now()
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=1),
+            ended_at=now,
+        )
+        self.client.login(email="catchup@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk}),
+            {
+                "start": (now.date() - timedelta(days=1)).isoformat(),
+                "end": (now.date() + timedelta(days=1)).isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        events = response.context["events"]
+        nap_events = [e for e in events if e["type"] == "nap"]
+        self.assertEqual(len(nap_events), 1)
+        self.assertIn("duration_display", nap_events[0]["obj"])
+
+    def test_catchup_events_include_diaper_and_nap(self):
+        """Catch-up events list includes both diaper and nap when present in range."""
+        from diapers.models import DiaperChange
+        from naps.models import Nap
+
+        now = timezone.now()
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now,
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=1),
+            ended_at=now,
+        )
+        self.client.login(email="catchup@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk}),
+            {
+                "start": (now.date() - timedelta(days=1)).isoformat(),
+                "end": (now.date() + timedelta(days=1)).isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        events = response.context["events"]
+        types = [e["type"] for e in events]
+        self.assertIn("diaper", types)
+        self.assertIn("nap", types)
+
+
+class ChildExportStatusViewTests(TestCase):
+    """Tests for PDF export status page."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="statususer",
+            email="status@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_export_status_200_with_task_id(self):
+        """Status page renders with task_id and status in context."""
+        self.client.login(email="status@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(
+                "children:child_export_status",
+                kwargs={"pk": self.child.pk, "task_id": "fake-task-id"},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("task_id", response.context)
+        self.assertEqual(response.context["task_id"], "fake-task-id")
+        self.assertIn("status", response.context)
+
+    def test_export_status_successful_task_shows_download(self):
+        """When task is successful with dict result, context has filename and download_url."""
+        from unittest.mock import MagicMock, patch
+
+        with patch("celery.result.AsyncResult") as mock_async:
+            mock_result = MagicMock()
+            mock_result.successful.return_value = True
+            mock_result.failed.return_value = False
+            mock_result.result = {
+                "filename": "report.pdf",
+                "download_url": "/media/exports/report.pdf",
+            }
+            mock_async.return_value = mock_result
+
+            self.client.login(email="status@example.com", password=TEST_PASSWORD)
+            response = self.client.get(
+                reverse(
+                    "children:child_export_status",
+                    kwargs={"pk": self.child.pk, "task_id": "any-id"},
+                )
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context.get("filename"), "report.pdf")
+        self.assertEqual(
+            response.context.get("download_url"), "/media/exports/report.pdf"
+        )
+
+    def test_export_status_failed_task_shows_error(self):
+        """When task has failed, context has error message."""
+        from unittest.mock import MagicMock, patch
+
+        with patch("celery.result.AsyncResult") as mock_async:
+            mock_result = MagicMock()
+            mock_result.successful.return_value = False
+            mock_result.failed.return_value = True
+            mock_result.info = "Worker timeout"
+            mock_async.return_value = mock_result
+
+            self.client.login(email="status@example.com", password=TEST_PASSWORD)
+            response = self.client.get(
+                reverse(
+                    "children:child_export_status",
+                    kwargs={"pk": self.child.pk, "task_id": "any-id"},
+                )
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context.get("error"), "Worker timeout")

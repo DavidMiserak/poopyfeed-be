@@ -300,6 +300,20 @@ class AccountSettingsViewTests(TestCase):
         response = self.client.get(reverse("account_settings"))
         self.assertIn("quiet_hours_form", response.context)
 
+    def test_account_settings_post_quiet_hours_invalid_rerenders_form(self):
+        """Invalid quiet hours form re-renders settings with form errors (no redirect)."""
+        response = self.client.post(
+            reverse("account_settings"),
+            {
+                "action": "quiet_hours",
+                "start_time": "not-a-time",
+                "end_time": "07:00",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("quiet_hours_form", response.context)
+        self.assertFalse(response.context["quiet_hours_form"].is_valid())
+
     def test_account_settings_post_quiet_hours_valid(self):
         """Test AccountSettingsView saves quiet hours and redirects with success."""
         response = self.client.post(

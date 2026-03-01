@@ -117,6 +117,24 @@ class NapModelTests(TestCase):
         )
         self.assertIsNone(nap.duration_minutes)
 
+    def test_duration_display_none_when_ongoing(self):
+        """duration_display is None when nap has no ended_at (ongoing)."""
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=timezone.now(),
+        )
+        self.assertIsNone(nap.duration_display)
+
+    def test_duration_display_formatted_when_ended(self):
+        """duration_display returns e.g. '1h 30m' when ended_at is set."""
+        now = timezone.now()
+        nap = Nap.objects.create(
+            child=self.child,
+            napped_at=now,
+            ended_at=now + timedelta(hours=1, minutes=30),
+        )
+        self.assertEqual(nap.duration_display, "1h 30m")
+
     def test_check_constraint_ended_before_start(self):
         now = timezone.now()
         with self.assertRaises(IntegrityError):
@@ -149,6 +167,31 @@ class NapFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("napped_at", form.errors)
+
+    def test_form_initializes_ended_at_from_instance_when_editing(self):
+        """Edit form pre-fills ended_at in user timezone when nap has ended_at."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="tzuser",
+            email="tz@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        child = Child.objects.create(
+            parent=user, name="Nap Baby", date_of_birth=date(2025, 1, 1)
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+        now = timezone.now()
+        nap = Nap.objects.create(
+            child=child,
+            napped_at=now,
+            ended_at=now + timedelta(hours=1),
+        )
+        form = NapForm(instance=nap, request=request)
+        self.assertIn("ended_at", form.initial)
+        self.assertIsNotNone(form.initial["ended_at"])
 
     def test_form_converts_local_time_to_utc(self):
         """Form interprets submitted datetime in user's timezone and converts to UTC."""

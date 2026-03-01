@@ -1,5 +1,7 @@
 """Tests for batch event creation API (catch-up mode)."""
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -173,6 +175,113 @@ class BatchCreateAPITest(TestCase):
         url = f"/api/v1/children/9999/batch/"
         response = self.client.post(url, {"events": []}, format="json")
         self.assertEqual(response.status_code, 404)
+
+    def test_batch_invalid_event_type_rejected(self):
+        """Invalid event type returns 400 and mentions allowed types."""
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            self.url,
+            {
+                "events": [
+                    {
+                        "type": "sleep",
+                        "data": {"napped_at": TEST_TIME_1000},
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("events", response.data)
+
+    def test_batch_more_than_20_events_rejected(self):
+        """More than 20 events in one batch returns 400."""
+        self.client.force_authenticate(self.owner)
+        events = [FEEDING_BOTTLE_EVENT] * 21
+        response = self.client.post(
+            self.url,
+            {"events": events},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("events", response.data)
+
+    def test_batch_save_exception_returns_generic_error(self):
+        """When save raises, view returns 400 with generic message (no internal leak)."""
+        self.client.force_authenticate(self.owner)
+        with patch(
+            "feedings.api.NestedFeedingSerializer.save",
+            side_effect=Exception("DB error"),
+        ):
+            response = self.client.post(
+                self.url,
+                {"events": [FEEDING_BOTTLE_EVENT]},
+                format="json",
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.data)
+        self.assertIn("Failed to save events", response.data["detail"])
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 0)
+
+    def test_get_event_serializer_unknown_type_raises(self):
+        """_get_event_serializer raises ValueError for unknown event type."""
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .batch_api import BatchCreateView
+
+        factory = APIRequestFactory()
+        request = factory.post("/")
+        force_authenticate(request, user=self.owner)
+        view = BatchCreateView()
+        view.request = request
+        view.format_kwarg = None
+        with self.assertRaises(ValueError) as ctx:
+            view._get_event_serializer("unknown", {}, self.child)
+        self.assertIn("Unknown event type", str(ctx.exception))
+
+    def test_get_model_for_type_unknown_raises(self):
+        """_get_model_for_type raises ValueError for unknown event type."""
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .batch_api import BatchCreateView
+
+        factory = APIRequestFactory()
+        request = factory.post("/")
+        force_authenticate(request, user=self.owner)
+        view = BatchCreateView()
+        view.request = request
+        with self.assertRaises(ValueError) as ctx:
+            view._get_model_for_type("other")
+        self.assertIn("Unknown event type", str(ctx.exception))
+
+    def test_batch_event_serializer_validate_type_invalid_raises(self):
+        """BatchEventSerializer.validate_type raises for invalid type."""
+        from rest_framework.exceptions import ValidationError
+
+        from .batch_api import BatchEventSerializer
+
+        serializer = BatchEventSerializer()
+        with self.assertRaises(ValidationError) as ctx:
+            serializer.validate_type("invalid")
+        self.assertIn("Invalid event type", str(ctx.exception))
+
+    def test_batch_create_serializer_validate_events_valid_returns(self):
+        """BatchCreateSerializer.validate_events returns value when 1–20 events."""
+        from .batch_api import BatchCreateSerializer
+
+        serializer = BatchCreateSerializer()
+        value = [
+            {
+                "type": "feeding",
+                "data": {
+                    "feeding_type": "bottle",
+                    "fed_at": TEST_TIME_1000,
+                    "amount_oz": 4.0,
+                },
+            }
+        ]
+        result = serializer.validate_events(value)
+        self.assertEqual(result, value)
 
     # --- Successful Creation Tests ---
 

@@ -113,6 +113,27 @@ class ChildAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 0)
 
+    def test_list_children_non_paginated_when_pagination_disabled(self):
+        """When pagination_class is None, list returns plain list (no pagination keys)."""
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .api import ChildViewSet
+
+        factory = APIRequestFactory()
+        request = factory.get(API_CHILDREN_URL)
+        force_authenticate(request, user=self.owner)
+        view = ChildViewSet.as_view({"get": "list"})
+        old_pagination = ChildViewSet.pagination_class
+        ChildViewSet.pagination_class = None
+        try:
+            response = view(request)
+        finally:
+            ChildViewSet.pagination_class = old_pagination
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], TEST_BABY_NAME)
+
     def test_create_child(self):
         """Authenticated user can create a child."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.stranger_token.key}")
@@ -887,6 +908,30 @@ class CacheUtilsTests(APITestCase):
         # Invalidate - verify function doesn't error
         invalidate_child_activities_cache(999)
 
+    def test_invalidate_child_activities_cache_handles_delete_failure(self):
+        """When cache.delete raises (e.g. Redis down), exception is caught and logged."""
+        from unittest.mock import patch
+
+        from .cache_utils import invalidate_child_activities_cache
+
+        with patch("children.cache_utils.cache") as mock_cache:
+            mock_cache.delete.side_effect = Exception("Redis connection failed")
+            with self.captureOnCommitCallbacks(execute=True):
+                invalidate_child_activities_cache(777)
+        # Callback ran; exception was caught and logged (no re-raise)
+        mock_cache.delete.assert_called_once_with("child_activities_777")
+
+    def test_invalidate_child_activities_cache_success_path_runs_on_commit(self):
+        """On commit, cache.delete runs and success path (logger.info) is executed."""
+        from django.core.cache import cache
+
+        from .cache_utils import invalidate_child_activities_cache
+
+        cache.set("child_activities_555", {"test": "data"})
+        with self.captureOnCommitCallbacks(execute=True):
+            invalidate_child_activities_cache(555)
+        self.assertIsNone(cache.get("child_activities_555"))
+
 
 class CacheUtilsTransactionTests(APITestCase):
     """Test cache invalidation with TransactionTestCase behavior."""
@@ -915,6 +960,31 @@ class CacheUtilsTransactionTests(APITestCase):
 class ChildSerializerDirectValidationTests(APITestCase):
     """Test serializer validators directly to hit custom validation code."""
 
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.owner = user_model.objects.create_user(
+            username="serowner",
+            email="serowner@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.caregiver = user_model.objects.create_user(
+            username="sercaregiver",
+            email="sercaregiver@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.owner,
+            name="Direct Baby",
+            date_of_birth="2025-01-01",
+        )
+        ChildShare.objects.create(
+            child=cls.child,
+            user=cls.caregiver,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=cls.owner,
+        )
+
     def test_validate_custom_bottle_low_oz_out_of_range(self):
         """Direct call to validate_custom_bottle_low_oz with out-of-range value."""
         from decimal import Decimal
@@ -930,6 +1000,52 @@ class ChildSerializerDirectValidationTests(APITestCase):
         # Above range
         with self.assertRaises(ValidationError):
             serializer.validate_custom_bottle_low_oz(Decimal("51"))
+
+    def test_validate_feeding_reminder_interval_rejects_caregiver(self):
+        """Caregiver cannot set feeding_reminder_interval (serializer validation)."""
+        from rest_framework.request import Request
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .api import ChildSerializer
+
+        factory = APIRequestFactory()
+        req = factory.patch("/")
+        force_authenticate(req, user=self.caregiver)
+        request = Request(req)
+        serializer = ChildSerializer(
+            instance=self.child,
+            data={"feeding_reminder_interval": 2},
+            partial=True,
+            context={"request": request},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("feeding_reminder_interval", serializer.errors)
+
+    def test_validate_feeding_reminder_interval_no_request_returns_value(self):
+        """When context has no request, validate_feeding_reminder_interval returns value."""
+        from .api import ChildSerializer
+
+        serializer = ChildSerializer(instance=self.child, context={})
+        result = serializer.validate_feeding_reminder_interval(3)
+        self.assertEqual(result, 3)
+
+    def test_validate_feeding_reminder_interval_valid_returns_value(self):
+        """Owner with valid interval (2,3,4,6) returns value."""
+        from rest_framework.request import Request
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from .api import ChildSerializer
+
+        factory = APIRequestFactory()
+        req = factory.patch("/")
+        force_authenticate(req, user=self.owner)
+        request = Request(req)
+        serializer = ChildSerializer(
+            instance=self.child,
+            context={"request": request},
+        )
+        result = serializer.validate_feeding_reminder_interval(4)
+        self.assertEqual(result, 4)
 
     def test_validate_custom_bottle_mid_oz_out_of_range(self):
         """Direct call to validate_custom_bottle_mid_oz with out-of-range value."""

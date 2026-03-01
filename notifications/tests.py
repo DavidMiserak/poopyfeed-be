@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from children.models import Child, ChildShare
 
-from .models import Notification, NotificationPreference, QuietHours
+from .models import FeedingReminderLog, Notification, NotificationPreference, QuietHours
 from .signals import tracking_created
 
 User = get_user_model()
@@ -120,6 +120,30 @@ class NotificationModelTests(TestCase):
         )
         serializer = NotificationSerializer(notif)
         self.assertEqual(serializer.data["actor_name"], "coparent")
+
+
+class FeedingReminderLogModelTests(TestCase):
+    """Tests for FeedingReminderLog model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="remlog",
+            email="remlog@example.com",
+            password="testpass123",  # noqa: S106
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user, name="Baby Rem", date_of_birth=date(2025, 6, 15)
+        )
+
+    def test_str(self):
+        """__str__ includes reminder number and child name."""
+        log = FeedingReminderLog.objects.create(
+            child=self.child,
+            window_start=timezone.now(),
+            reminder_number=1,
+        )
+        self.assertEqual(str(log), "Feeding reminder #1 for Baby Rem")
 
 
 class NotificationPreferenceModelTests(TestCase):
@@ -507,6 +531,24 @@ class NotificationTaskTests(TestCase):
         self.assertIn("Unknown event type", result)
         self.assertEqual(Notification.objects.count(), 0)
 
+    def test_task_returns_no_recipients_when_actor_is_only_member(self):
+        """When only the child owner exists and actor is owner, returns 'No recipients'."""
+        from .tasks import create_notifications_for_activity
+
+        # Child with no shares: only owner is in recipient set; actor = owner → empty after discard
+        solo_child = Child.objects.create(
+            parent=self.owner,
+            name="Solo Baby",
+            date_of_birth=date(2025, 6, 15),
+        )
+        result = create_notifications_for_activity(
+            child_id=solo_child.id,
+            actor_id=self.owner.id,
+            event_type="feeding",
+        )
+        self.assertEqual(result, "No recipients")
+        self.assertEqual(Notification.objects.filter(child=solo_child).count(), 0)
+
 
 class SignalDispatchTests(TestCase):
     """Test that the tracking_created signal dispatches correctly."""
@@ -719,6 +761,30 @@ class FeedingReminderTaskTests(TestCase):
         check_feeding_reminders()
         # No new notifications should be created
         self.assertEqual(Notification.objects.filter(child=self.child).count(), 0)
+
+    def test_log_reminder_sent_handles_duplicate_gracefully(self):
+        """_log_reminder_sent catches IntegrityError on duplicate (idempotent)."""
+        from unittest.mock import patch
+
+        from .models import FeedingReminderLog
+        from .tasks import _log_reminder_sent
+
+        last_fed_at = timezone.now() - timezone.timedelta(hours=4)
+        real_create = FeedingReminderLog.objects.create
+        call_count = [0]
+
+        def create_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                raise IntegrityError("duplicate key")
+            return real_create(*args, **kwargs)
+
+        with patch.object(
+            FeedingReminderLog.objects, "create", side_effect=create_side_effect
+        ):
+            _log_reminder_sent(self.child, last_fed_at, 1)
+            _log_reminder_sent(self.child, last_fed_at, 1)
+        self.assertEqual(call_count[0], 2)
 
     def test_window_reset_on_new_feeding(self):
         """New feeding resets reminder window (AC-004)."""
