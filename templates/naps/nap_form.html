@@ -20,8 +20,8 @@
           {% csrf_token %}
           {{ form|crispy }}
           <div class="d-grid gap-2 mt-3">
-            <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">
-              <i class="fa-solid fa-check me-2"></i>Save
+            <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold" aria-label="Save nap">
+              <i class="fa-solid fa-check me-2" aria-hidden="true"></i>Save
             </button>
             <a href="{% url 'naps:nap_list' child.pk %}" class="btn btn-outline-secondary">Cancel</a>
           </div>

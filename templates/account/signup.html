@@ -7,8 +7,8 @@
 <div class="row justify-content-center">
   <div class="col-md-5 col-lg-4">
     <div class="text-center mb-4">
-      <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-        <i class="fa-solid fa-user-plus fa-xl text-success"></i>
+      <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;" aria-hidden="true">
+        <i class="fa-solid fa-user-plus fa-xl text-success" aria-hidden="true"></i>
       </div>
       <h1 class="h4 fw-bold mb-1">Create your account</h1>
       <p class="text-body-secondary small">Start tracking your baby's care in seconds</p>
@@ -20,7 +20,7 @@
           {% csrf_token %}
           {{ form|crispy }}
           <div class="d-grid mt-4">
-            <button class="btn btn-primary btn-lg py-3 fw-semibold" type="submit">
+            <button class="btn btn-primary btn-lg py-3 fw-semibold" type="submit" aria-label="Create account">
               Create Account
             </button>
           </div>

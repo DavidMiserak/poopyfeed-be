@@ -21,8 +21,8 @@
         <form method="post">
           {% csrf_token %}
           <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-danger py-2 fw-semibold">
-              <i class="fa-solid fa-trash me-1"></i>Yes, Delete
+            <button type="submit" class="btn btn-danger py-2 fw-semibold" aria-label="Yes, delete this nap">
+              <i class="fa-solid fa-trash me-1" aria-hidden="true"></i>Yes, Delete
             </button>
             <a href="{% url 'naps:nap_list' object.child.pk %}" class="btn btn-outline-secondary py-2">Cancel</a>
           </div>

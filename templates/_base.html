@@ -5,12 +5,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}PoopyFeed{% endblock title %}</title>
+    <meta name="description" content="{% block meta_description %}Track feedings, diapers, and sleep for your baby. Share with co-parents and caregivers so everyone stays in the loop.{% endblock meta_description %}">
     <!-- bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <!-- Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Favicon -->
-    <link rel="icon" type="image/svg" href="{% static 'images/favicon.svg' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
     <!-- PWA -->
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <meta name="theme-color" content="#74C0FC">
@@ -22,6 +23,7 @@
     {% block extra_css %}{% endblock extra_css %}
   </head>
   <body class="d-flex flex-column min-vh-100 bg-body-tertiary">
+    <a href="#main-content" class="visually-hidden-focusable btn btn-primary position-absolute top-0 start-0 m-2" style="z-index: 1050;">Skip to main content</a>
     {% if user.is_authenticated %}
     <div id="tz-banner" class="d-none w-100 border-bottom border-2 border-warning px-3 py-2" style="background: linear-gradient(to right, #fffbeb, #fff7ed);" data-profile-timezone="{{ user_timezone|default:'UTC' }}" role="status" aria-live="polite">
       <div class="container">
@@ -31,7 +33,7 @@
             <form id="tz-banner-form" method="post" action="{% url 'account_settings_timezone' %}" class="d-inline">
               {% csrf_token %}
               <input type="hidden" name="timezone" id="tz-banner-timezone-value" value="">
-              <button type="submit" id="tz-banner-update-btn" class="btn btn-warning btn-sm fw-semibold" aria-busy="false">
+              <button type="submit" id="tz-banner-update-btn" class="btn btn-warning btn-sm fw-semibold" aria-busy="false" aria-label="Update timezone to match device">
                 <span id="tz-banner-update-label"></span>
               </button>
             </form>
@@ -43,29 +45,29 @@
       </div>
     </div>
     {% endif %}
-    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top" aria-label="Main navigation">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold fs-5" href="{% url 'home' %}">
-          <span class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-            <i class="fa-solid fa-baby"></i>
+          <span class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" aria-hidden="true">
+            <i class="fa-solid fa-baby" aria-hidden="true"></i>
           </span>
           <span class="text-dark">Poopy<span class="text-primary">Feed</span></span>
         </a>
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation menu">
+          <span class="navbar-toggler-icon" aria-hidden="true"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto align-items-center gap-1">
             {% if user.is_authenticated %}
               <li class="nav-item">
                 <a class="nav-link fw-medium px-3" href="{% url 'children:child_list' %}">
-                  <i class="fa-solid fa-children me-1"></i>My Children
+                  <i class="fa-solid fa-children me-1" aria-hidden="true"></i>My Children
                 </a>
               </li>
               <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-3" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                    <i class="fa-solid fa-user small"></i>
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-3" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+                  <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" aria-hidden="true">
+                    <i class="fa-solid fa-user small" aria-hidden="true"></i>
                   </span>
                   <span class="d-none d-lg-inline">{{ user.email }}</span>
                 </a>
@@ -76,13 +78,13 @@
                   <li class="d-lg-none"><hr class="dropdown-divider"></li>
                   <li>
                     <a class="dropdown-item py-2" href="{% url 'account_settings' %}">
-                      <i class="fa-solid fa-gear me-2 text-body-secondary"></i>Account Settings
+                      <i class="fa-solid fa-gear me-2 text-body-secondary" aria-hidden="true"></i>Account Settings
                     </a>
                   </li>
                   <li><hr class="dropdown-divider"></li>
                   <li>
                     <a class="dropdown-item py-2" href="{% url 'account_logout' %}">
-                      <i class="fa-solid fa-right-from-bracket me-2 text-body-secondary"></i>Log Out
+                      <i class="fa-solid fa-right-from-bracket me-2 text-body-secondary" aria-hidden="true"></i>Log Out
                     </a>
                   </li>
                 </ul>
@@ -102,7 +104,7 @@
       </div>
     </nav>
 
-    <main class="flex-grow-1 py-4 py-md-5">
+    <main id="main-content" class="flex-grow-1 py-4 py-md-5" role="main">
       <div class="container">
         {% block content %}{% endblock content %}
       </div>
@@ -112,13 +114,13 @@
       <div class="container">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
           <div class="d-flex align-items-center gap-2">
-            <span class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-              <i class="fa-solid fa-baby small"></i>
+            <span class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;" aria-hidden="true">
+              <i class="fa-solid fa-baby small" aria-hidden="true"></i>
             </span>
             <span class="fw-semibold text-body-secondary small">PoopyFeed</span>
           </div>
           <p class="text-body-tertiary small mb-0">
-            Made with <i class="fa-solid fa-heart text-danger"></i> for tired parents
+            Made with <i class="fa-solid fa-heart text-danger" aria-hidden="true"></i> for tired parents
           </p>
         </div>
       </div>
@@ -158,12 +160,15 @@
         if (browserTz && browserTz !== profileTz && !wasDismissed()) {
           banner.classList.remove('d-none');
           var msgEl = document.getElementById('tz-banner-message');
+          var updateBtn = document.getElementById('tz-banner-update-btn');
           if (profileTz === 'UTC') {
             msgEl.innerHTML = 'Your device timezone is <strong>' + browserTz + '</strong>. Set it as your preference so times display correctly.';
             document.getElementById('tz-banner-update-label').textContent = 'Set to ' + browserTz;
+            updateBtn.setAttribute('aria-label', 'Set timezone to ' + browserTz);
           } else {
             msgEl.innerHTML = 'Your device timezone is <strong>' + browserTz + '</strong> but your account is set to <strong>' + profileTz + '</strong>.';
             document.getElementById('tz-banner-update-label').textContent = 'Update to ' + browserTz;
+            updateBtn.setAttribute('aria-label', 'Update timezone to ' + browserTz);
           }
           document.getElementById('tz-banner-timezone-value').value = browserTz;
         }
@@ -175,6 +180,7 @@
           var btn = document.getElementById('tz-banner-update-btn');
           btn.disabled = true;
           btn.setAttribute('aria-busy', 'true');
+          btn.setAttribute('aria-label', 'Updating timezone');
           btn.textContent = 'Updating...';
         });
       })();

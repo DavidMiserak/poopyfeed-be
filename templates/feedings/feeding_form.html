@@ -7,8 +7,8 @@
 <div class="row justify-content-center">
   <div class="col-md-5 col-lg-4">
     <div class="text-center mb-4">
-      <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-        <i class="fa-solid fa-bottle-water fa-xl text-warning"></i>
+      <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;" aria-hidden="true">
+        <i class="fa-solid fa-bottle-water fa-xl text-warning" aria-hidden="true"></i>
       </div>
       <h1 class="h4 fw-bold mb-1">{% if object %}Edit Feeding{% else %}Log Feeding{% endif %}</h1>
       <p class="text-body-secondary small">{{ child.name }}</p>
@@ -28,8 +28,8 @@
             {{ form.side|as_crispy_field }}
           </div>
           <div class="d-grid gap-2 mt-3">
-            <button type="submit" class="btn btn-warning btn-lg py-3 fw-semibold">
-              <i class="fa-solid fa-check me-2"></i>Save
+            <button type="submit" class="btn btn-warning btn-lg py-3 fw-semibold" aria-label="Save feeding">
+              <i class="fa-solid fa-check me-2" aria-hidden="true"></i>Save
             </button>
             <a href="{% url 'feedings:feeding_list' child.pk %}" class="btn btn-outline-secondary">Cancel</a>
           </div>

@@ -19,13 +19,13 @@
       <div>
         <h1 class="h3 fw-bold mb-1">{{ child.name }}</h1>
         <div class="text-body-secondary small">
-          <i class="fa-solid fa-cake-candles me-1"></i>{{ child.date_of_birth|date:"M j, Y" }}
+          <i class="fa-solid fa-cake-candles me-1" aria-hidden="true"></i>{{ child.date_of_birth|date:"M j, Y" }}
           <span class="text-body-secondary">{{ child.date_of_birth|format_child_age_tz:user_timezone }}</span>
           {% if child.gender %}
-            <span class="ms-1">
-              {% if child.gender == "M" %}<i class="fa-solid fa-mars text-info"></i>
-              {% elif child.gender == "F" %}<i class="fa-solid fa-venus text-danger"></i>
-              {% else %}<i class="fa-solid fa-genderless text-secondary"></i>{% endif %}
+            <span class="ms-1" aria-hidden="true">
+              {% if child.gender == "M" %}<i class="fa-solid fa-mars text-info" aria-hidden="true" title="Male"></i>
+              {% elif child.gender == "F" %}<i class="fa-solid fa-venus text-danger" aria-hidden="true" title="Female"></i>
+              {% else %}<i class="fa-solid fa-genderless text-secondary" aria-hidden="true"></i>{% endif %}
             </span>
           {% endif %}
         </div>
@@ -33,11 +33,11 @@
       <div class="d-flex align-items-center gap-2">
         {% if can_edit %}
           <a href="{% url 'children:child_edit' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
-            <i class="fa-solid fa-pen me-1"></i>Edit
+            <i class="fa-solid fa-pen me-1" aria-hidden="true"></i>Edit
           </a>
         {% endif %}
         <a href="{% url 'children:child_advanced' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="View advanced options for this child">
-          <i class="fa-solid fa-screwdriver-wrench me-1"></i>More tools
+          <i class="fa-solid fa-screwdriver-wrench me-1" aria-hidden="true"></i>More tools
         </a>
       </div>
     </div>
@@ -60,8 +60,8 @@
       <div class="col-4">
         <div class="card border-0 shadow-sm rounded-4 h-100">
           <div class="card-body text-center p-3">
-            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-              <i class="fa-solid fa-bottle-water text-warning"></i>
+            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;" aria-hidden="true">
+              <i class="fa-solid fa-bottle-water text-warning" aria-hidden="true"></i>
             </div>
             <div class="fw-bold fs-4 lh-1 mb-1">{{ today_summary.feedings.count }}</div>
             <div class="text-body-secondary small">Feedings</div>
@@ -72,8 +72,8 @@
       <div class="col-4">
         <div class="card border-0 shadow-sm rounded-4 h-100">
           <div class="card-body text-center p-3">
-            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-              <i class="fa-solid fa-poo text-success"></i>
+            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;" aria-hidden="true">
+              <i class="fa-solid fa-poo text-success" aria-hidden="true"></i>
             </div>
             <div class="fw-bold fs-4 lh-1 mb-1">{{ today_summary.diapers.count }}</div>
             <div class="text-body-secondary small">Diapers</div>
@@ -83,8 +83,8 @@
       <div class="col-4">
         <div class="card border-0 shadow-sm rounded-4 h-100">
           <div class="card-body text-center p-3">
-            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-              <i class="fa-solid fa-moon text-primary"></i>
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;" aria-hidden="true">
+              <i class="fa-solid fa-moon text-primary" aria-hidden="true"></i>
             </div>
             <div class="fw-bold fs-4 lh-1 mb-1">{{ today_summary.sleep.naps }}</div>
             <div class="text-body-secondary small">Naps</div>
@@ -98,17 +98,17 @@
     <div class="row g-2 mb-4">
       <div class="col-12 col-sm-4">
         <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning btn-lg w-100 py-3 rounded-3 fw-semibold">
-          <i class="fa-solid fa-bottle-water me-2"></i>Add Feeding
+          <i class="fa-solid fa-bottle-water me-2" aria-hidden="true"></i>Add Feeding
         </a>
       </div>
       <div class="col-12 col-sm-4">
         <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}" class="btn btn-success btn-lg w-100 py-3 rounded-3 fw-semibold">
-          <i class="fa-solid fa-poo me-2"></i>Add Diaper
+          <i class="fa-solid fa-poo me-2" aria-hidden="true"></i>Add Diaper
         </a>
       </div>
       <div class="col-12 col-sm-4">
         <a href="{% url 'naps:nap_add' child_pk=child.pk %}" class="btn btn-primary btn-lg w-100 py-3 rounded-3 fw-semibold">
-          <i class="fa-solid fa-moon me-2"></i>Add Nap
+          <i class="fa-solid fa-moon me-2" aria-hidden="true"></i>Add Nap
         </a>
       </div>
     </div>
@@ -118,10 +118,10 @@
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
         <div class="d-flex justify-content-between align-items-center">
           <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-            <i class="fa-solid fa-clock-rotate-left me-1"></i>Recent Activity
+            <i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>Recent Activity
           </h2>
           <a href="{% url 'children:child_timeline' pk=child.pk %}" class="text-body-tertiary text-decoration-none small">
-            View all <i class="fa-solid fa-arrow-right ms-1"></i>
+            View all <i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i>
           </a>
         </div>
       </div>
@@ -134,7 +134,7 @@
           </div>
         {% else %}
           <div class="text-center py-4">
-            <i class="fa-solid fa-clock fa-2x text-body-tertiary mb-3 d-block opacity-50"></i>
+            <i class="fa-solid fa-clock fa-2x text-body-tertiary mb-3 d-block opacity-50" aria-hidden="true"></i>
             <p class="text-body-tertiary small mb-0">No activity yet. Use the buttons above to get started.</p>
           </div>
         {% endif %}

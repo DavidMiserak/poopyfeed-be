@@ -7,8 +7,8 @@
 <div class="row justify-content-center">
   <div class="col-md-5 col-lg-4">
     <div class="text-center mb-4">
-      <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-        <i class="fa-solid fa-right-to-bracket fa-xl text-primary"></i>
+      <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;" aria-hidden="true">
+        <i class="fa-solid fa-right-to-bracket fa-xl text-primary" aria-hidden="true"></i>
       </div>
       <h1 class="h4 fw-bold mb-1">Welcome back</h1>
       <p class="text-body-secondary small">Log in to continue tracking</p>
@@ -20,7 +20,7 @@
           {% csrf_token %}
           {{ form|crispy }}
           <div class="d-grid mt-4">
-            <button class="btn btn-primary btn-lg py-3 fw-semibold" type="submit">
+            <button class="btn btn-primary btn-lg py-3 fw-semibold" type="submit" aria-label="Log in">
               Log In
             </button>
           </div>

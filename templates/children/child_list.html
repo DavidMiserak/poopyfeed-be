@@ -12,7 +12,7 @@
         <p class="text-body-secondary mb-0 small">Manage and track your little ones</p>
       </div>
       <a href="{% url 'children:child_add' %}" class="btn btn-primary btn-lg rounded-pill px-4">
-        <i class="fa-solid fa-plus me-2"></i>Add Child
+        <i class="fa-solid fa-plus me-2" aria-hidden="true"></i>Add Child
       </a>
     </div>
 
@@ -33,16 +33,16 @@
                     </h2>
                     <div class="d-flex align-items-center gap-2 text-body-secondary small">
                       <span>
-                        <i class="fa-solid fa-cake-candles me-1"></i>{{ child.date_of_birth|date:"M j, Y" }}
+                        <i class="fa-solid fa-cake-candles me-1" aria-hidden="true"></i>{{ child.date_of_birth|date:"M j, Y" }}
                       </span>
                       <span class="text-body-secondary">{{ child.date_of_birth|format_child_age_tz:user_timezone }}</span>
                       {% if child.gender %}
                         {% if child.gender == "M" %}
-                          <i class="fa-solid fa-mars text-info"></i>
+                          <i class="fa-solid fa-mars text-info" aria-hidden="true" title="Male"></i>
                         {% elif child.gender == "F" %}
-                          <i class="fa-solid fa-venus text-danger"></i>
+                          <i class="fa-solid fa-venus text-danger" aria-hidden="true" title="Female"></i>
                         {% else %}
-                          <i class="fa-solid fa-genderless text-secondary"></i>
+                          <i class="fa-solid fa-genderless text-secondary" aria-hidden="true"></i>
                         {% endif %}
                       {% endif %}
                     </div>
@@ -62,8 +62,8 @@
                 </h6>
                 <div class="d-flex flex-column gap-2">
                   <div class="d-flex align-items-center">
-                    <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
-                      <i class="fa-solid fa-poo small"></i>
+                    <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;" aria-hidden="true">
+                      <i class="fa-solid fa-poo small" aria-hidden="true"></i>
                     </span>
                     <span class="fw-medium small flex-grow-1">Diaper</span>
                     {% if child.last_diaper_change %}
@@ -75,8 +75,8 @@
                     {% endif %}
                   </div>
                   <div class="d-flex align-items-center">
-                    <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
-                      <i class="fa-solid fa-moon small"></i>
+                    <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;" aria-hidden="true">
+                      <i class="fa-solid fa-moon small" aria-hidden="true"></i>
                     </span>
                     <span class="fw-medium small flex-grow-1">Nap</span>
                     {% if child.last_nap %}
@@ -88,8 +88,8 @@
                     {% endif %}
                   </div>
                   <div class="d-flex align-items-center">
-                    <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
-                      <i class="fa-solid fa-bottle-water small"></i>
+                    <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;" aria-hidden="true">
+                      <i class="fa-solid fa-bottle-water small" aria-hidden="true"></i>
                     </span>
                     <span class="fw-medium small flex-grow-1">Feeding</span>
                     {% if child.last_feeding %}
@@ -105,7 +105,7 @@
 
               <div class="card-footer bg-transparent border-top text-center py-2">
                 <span class="text-body-tertiary small">
-                  <i class="fa-solid fa-arrow-right me-1"></i>Open dashboard
+                  <i class="fa-solid fa-arrow-right me-1" aria-hidden="true"></i>Open dashboard
                 </span>
               </div>
             </div>
@@ -116,13 +116,13 @@
     {% else %}
       <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body text-center py-5 px-4">
-          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
-            <i class="fa-solid fa-baby fa-2x text-primary"></i>
+          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;" aria-hidden="true">
+            <i class="fa-solid fa-baby fa-2x text-primary" aria-hidden="true"></i>
           </div>
           <h5 class="fw-bold mb-2">No children added yet</h5>
           <p class="text-body-secondary mb-4">Add your first child to start tracking feedings, diapers, and naps.</p>
           <a href="{% url 'children:child_add' %}" class="btn btn-primary btn-lg rounded-pill px-5 py-3">
-            <i class="fa-solid fa-plus me-2"></i>Add Your First Child
+            <i class="fa-solid fa-plus me-2" aria-hidden="true"></i>Add Your First Child
           </a>
         </div>
       </div>

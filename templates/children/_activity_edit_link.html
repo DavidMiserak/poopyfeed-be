@@ -5,8 +5,8 @@
 {% endcomment %}
 {% if can_edit %}
   {% with edit_pk=edit_pk|default:activity.obj.id %}
-    <a href="{% if activity.type == 'feeding' %}{% url 'feedings:feeding_edit' child_pk=child.pk pk=edit_pk %}{% elif activity.type == 'diaper' %}{% url 'diapers:diaper_edit' child_pk=child.pk pk=edit_pk %}{% else %}{% url 'naps:nap_edit' child_pk=child.pk pk=edit_pk %}{% endif %}" class="btn btn-link btn-sm text-body-tertiary p-0 flex-shrink-0">
-      <i class="fa-solid fa-pen small"></i>
+    <a href="{% if activity.type == 'feeding' %}{% url 'feedings:feeding_edit' child_pk=child.pk pk=edit_pk %}{% elif activity.type == 'diaper' %}{% url 'diapers:diaper_edit' child_pk=child.pk pk=edit_pk %}{% else %}{% url 'naps:nap_edit' child_pk=child.pk pk=edit_pk %}{% endif %}" class="btn btn-link btn-sm text-body-tertiary p-0 flex-shrink-0" aria-label="Edit {{ activity.type }} entry">
+      <i class="fa-solid fa-pen small" aria-hidden="true"></i>
     </a>
   {% endwith %}
 {% endif %}

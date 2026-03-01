@@ -7,11 +7,11 @@
 <div class="row justify-content-center">
   <div class="col-md-5 col-lg-4">
     <div class="text-center mb-4">
-      <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+      <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;" aria-hidden="true">
         {% if object %}
-          <i class="fa-solid fa-pen fa-xl text-primary"></i>
+          <i class="fa-solid fa-pen fa-xl text-primary" aria-hidden="true"></i>
         {% else %}
-          <i class="fa-solid fa-baby fa-xl text-primary"></i>
+          <i class="fa-solid fa-baby fa-xl text-primary" aria-hidden="true"></i>
         {% endif %}
       </div>
       <h1 class="h4 fw-bold mb-1">
@@ -28,7 +28,7 @@
       {% if object %}
       <div class="card border-0 shadow-sm rounded-4 mt-4">
         <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-          <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-sliders me-2 text-primary"></i>Advanced settings</h2>
+          <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-sliders me-2 text-primary" aria-hidden="true"></i>Advanced settings</h2>
         </div>
         <div class="card-body p-4">
           <p class="text-body-secondary small mb-3">Feeding reminders notify you when it may be time for the next feeding based on the interval you set.</p>
@@ -43,8 +43,8 @@
       </div>
       {% endif %}
       <div class="d-grid gap-2 mt-4">
-        <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">
-          <i class="fa-solid fa-check me-2"></i>Save
+        <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold" aria-label="Save child">
+          <i class="fa-solid fa-check me-2" aria-hidden="true"></i>Save
         </button>
         <a href="{% url 'children:child_list' %}" class="btn btn-outline-secondary">Cancel</a>
       </div>
@@ -53,13 +53,13 @@
     {% if object and notification_preference %}
     <div class="card border-0 shadow-sm rounded-4 mt-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-bell me-2 text-primary"></i>Notification alerts</h2>
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-bell me-2 text-primary" aria-hidden="true"></i>Notification alerts</h2>
       </div>
       <div class="card-body p-4">
         <p class="text-body-secondary small mb-3">When someone else logs a feeding, diaper change, or nap for {{ object.name }}, you can get an in-app notification. Choose which activities to get alerts for.</p>
         {% if notifications_saved %}
           <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
-            <i class="fa-solid fa-check-circle me-1"></i>
+            <i class="fa-solid fa-check-circle me-1" aria-hidden="true"></i>
             Notification settings saved.
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
@@ -78,8 +78,8 @@
             {% endfor %}
           </div>
           <div class="mt-2">
-            <button type="submit" class="btn btn-outline-primary btn-sm">
-              <i class="fa-solid fa-check me-1"></i>Save notification settings
+            <button type="submit" class="btn btn-outline-primary btn-sm" aria-label="Save notification settings">
+              <i class="fa-solid fa-check me-1" aria-hidden="true"></i>Save notification settings
             </button>
           </div>
         </form>
@@ -90,7 +90,7 @@
     {% if object and user_role == "owner" %}
     <div class="text-center mt-4 pt-4 border-top">
       <a href="{% url 'children:child_delete' object.pk %}" class="btn btn-sm btn-link text-danger text-decoration-none">
-        <i class="fa-solid fa-trash me-1"></i>Delete {{ object.name }}
+        <i class="fa-solid fa-trash me-1" aria-hidden="true"></i>Delete {{ object.name }}
       </a>
     </div>
     {% endif %}

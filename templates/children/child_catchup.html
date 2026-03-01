@@ -33,15 +33,15 @@
           <div class="card-body p-4">
             <form method="get">
               <div class="mb-3">
-                <label class="form-label fw-semibold small">Start</label>
-                <input type="date" name="start" class="form-control rounded-3" value="{{ start }}" required>
+                <label class="form-label fw-semibold small" for="id_catchup_start">Start</label>
+                <input type="date" id="id_catchup_start" name="start" class="form-control rounded-3" value="{{ start }}" required>
               </div>
               <div class="mb-3">
-                <label class="form-label fw-semibold small">End</label>
-                <input type="date" name="end" class="form-control rounded-3" value="{{ end }}" required>
+                <label class="form-label fw-semibold small" for="id_catchup_end">End</label>
+                <input type="date" id="id_catchup_end" name="end" class="form-control rounded-3" value="{{ end }}" required>
               </div>
-              <button type="submit" class="btn btn-primary w-100 fw-semibold">
-                <i class="fa-solid fa-magnifying-glass me-1"></i>View
+              <button type="submit" class="btn btn-primary w-100 fw-semibold" aria-label="View events in date range">
+                <i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>View
               </button>
             </form>
           </div>

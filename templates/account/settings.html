@@ -14,12 +14,12 @@
     <!-- Profile & Timezone -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-user me-2 text-primary"></i>Profile & Timezone</h2>
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-user me-2 text-primary" aria-hidden="true"></i>Profile & Timezone</h2>
       </div>
       <div class="card-body p-4">
         {% if profile_success %}
           <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
-            <i class="fa-solid fa-check-circle me-1"></i>
+            <i class="fa-solid fa-check-circle me-1" aria-hidden="true"></i>
             Profile updated successfully.
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
@@ -30,8 +30,8 @@
           <input type="hidden" name="action" value="profile">
           {% crispy profile_form %}
           <div class="d-grid">
-            <button type="submit" class="btn btn-primary fw-semibold">
-              <i class="fa-solid fa-check me-1"></i>Save Profile
+            <button type="submit" class="btn btn-primary fw-semibold" aria-label="Save profile">
+              <i class="fa-solid fa-check me-1" aria-hidden="true"></i>Save Profile
             </button>
           </div>
         </form>
@@ -41,13 +41,13 @@
     <!-- Quiet hours -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-bell me-2 text-primary"></i>Quiet hours</h2>
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-bell me-2 text-primary" aria-hidden="true"></i>Quiet hours</h2>
       </div>
       <div class="card-body p-4">
         <p class="text-body-secondary small mb-3">During this time (in your timezone), no in-app notification alerts will be created.</p>
         {% if notifications_success %}
           <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
-            <i class="fa-solid fa-check-circle me-1"></i>
+            <i class="fa-solid fa-check-circle me-1" aria-hidden="true"></i>
             Quiet hours saved.
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
@@ -70,8 +70,8 @@
             </div>
           </div>
           <div class="d-grid d-md-block mt-2">
-            <button type="submit" class="btn btn-outline-primary">
-              <i class="fa-solid fa-check me-1"></i>Save quiet hours
+            <button type="submit" class="btn btn-outline-primary" aria-label="Save quiet hours">
+              <i class="fa-solid fa-check me-1" aria-hidden="true"></i>Save quiet hours
             </button>
           </div>
         </form>
@@ -81,12 +81,12 @@
     <!-- Password -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-key me-2 text-primary"></i>Password</h2>
+        <h2 class="h6 fw-bold mb-0"><i class="fa-solid fa-key me-2 text-primary" aria-hidden="true"></i>Password</h2>
       </div>
       <div class="card-body p-4">
         <p class="text-body-secondary small mb-3">Update your password to keep your account secure.</p>
         <a href="{% url 'account_change_password' %}" class="btn btn-outline-primary">
-          <i class="fa-solid fa-key me-1"></i>Change Password
+          <i class="fa-solid fa-key me-1" aria-hidden="true"></i>Change Password
         </a>
       </div>
     </div>
@@ -94,15 +94,15 @@
     <!-- Danger Zone -->
     <div class="card border-0 shadow-sm rounded-4 border-start border-danger border-3">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-        <h2 class="h6 fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>Danger Zone</h2>
+        <h2 class="h6 fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i>Danger Zone</h2>
       </div>
       <div class="card-body p-4">
         <p class="text-body-secondary small mb-3">
           Permanently delete your account and all associated data. This cannot be undone.
         </p>
 
-        <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#deleteSection" aria-expanded="false" aria-controls="deleteSection">
-          <i class="fa-solid fa-trash me-1"></i>Delete Account
+        <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#deleteSection" aria-expanded="false" aria-controls="deleteSection" aria-label="Expand delete account section">
+          <i class="fa-solid fa-trash me-1" aria-hidden="true"></i>Delete Account
         </button>
 
         <div class="collapse mt-3" id="deleteSection">
@@ -111,8 +111,8 @@
               {% csrf_token %}
               <input type="hidden" name="action" value="delete">
               {{ delete_form|crispy }}
-              <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
-                <i class="fa-solid fa-trash me-1"></i>Permanently Delete Account
+              <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')" aria-label="Permanently delete account">
+                <i class="fa-solid fa-trash me-1" aria-hidden="true"></i>Permanently Delete Account
               </button>
             </form>
           </div>

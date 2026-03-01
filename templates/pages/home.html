@@ -6,8 +6,8 @@
 <!-- Hero -->
 <div class="row justify-content-center mb-5">
   <div class="col-lg-8 text-center">
-    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 88px; height: 88px;">
-      <i class="fa-solid fa-baby-carriage fa-3x text-primary"></i>
+    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 88px; height: 88px;" aria-hidden="true">
+      <i class="fa-solid fa-baby-carriage fa-3x text-primary" aria-hidden="true"></i>
     </div>
     <h1 class="display-5 fw-bold mb-3">
       Track your baby's day,<br class="d-none d-md-inline"> one tap at a time
@@ -17,8 +17,8 @@
     </p>
 
     {% if user.is_authenticated %}
-      <a href="{% url 'children:child_list' %}" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-semibold shadow-sm">
-        <i class="fa-solid fa-children me-2"></i>Go to My Children
+        <a href="{% url 'children:child_list' %}" class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-semibold shadow-sm">
+        <i class="fa-solid fa-children me-2" aria-hidden="true"></i>Go to My Children
       </a>
     {% else %}
       <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
@@ -26,7 +26,7 @@
           Get Started Free
         </a>
         <a href="{% url 'account_login' %}" class="btn btn-outline-secondary btn-lg px-4 py-3 rounded-pill">
-          <i class="fa-solid fa-right-to-bracket me-2"></i>Log In
+          <i class="fa-solid fa-right-to-bracket me-2" aria-hidden="true"></i>Log In
         </a>
       </div>
     {% endif %}
@@ -40,8 +40,8 @@
       <div class="col-sm-6 col-lg-3">
         <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
           <div class="card-body p-4">
-            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
-              <i class="fa-solid fa-bottle-water fa-lg text-warning"></i>
+            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;" aria-hidden="true">
+              <i class="fa-solid fa-bottle-water fa-lg text-warning" aria-hidden="true"></i>
             </div>
             <h3 class="h6 fw-bold mb-2">Feeding Tracker</h3>
             <p class="text-body-secondary small mb-0">
@@ -54,8 +54,8 @@
       <div class="col-sm-6 col-lg-3">
         <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
           <div class="card-body p-4">
-            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
-              <i class="fa-solid fa-poo fa-lg text-success"></i>
+            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;" aria-hidden="true">
+              <i class="fa-solid fa-poo fa-lg text-success" aria-hidden="true"></i>
             </div>
             <h3 class="h6 fw-bold mb-2">Diaper Changes</h3>
             <p class="text-body-secondary small mb-0">
@@ -68,8 +68,8 @@
       <div class="col-sm-6 col-lg-3">
         <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
           <div class="card-body p-4">
-            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
-              <i class="fa-solid fa-moon fa-lg text-primary"></i>
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;" aria-hidden="true">
+              <i class="fa-solid fa-moon fa-lg text-primary" aria-hidden="true"></i>
             </div>
             <h3 class="h6 fw-bold mb-2">Sleep Patterns</h3>
             <p class="text-body-secondary small mb-0">
@@ -82,8 +82,8 @@
       <div class="col-sm-6 col-lg-3">
         <div class="card h-100 border-0 shadow-sm rounded-4 text-center">
           <div class="card-body p-4">
-            <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
-              <i class="fa-solid fa-share-nodes fa-lg text-info"></i>
+            <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;" aria-hidden="true">
+              <i class="fa-solid fa-share-nodes fa-lg text-info" aria-hidden="true"></i>
             </div>
             <h3 class="h6 fw-bold mb-2">Share Access</h3>
             <p class="text-body-secondary small mb-0">

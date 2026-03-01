@@ -49,8 +49,8 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100 py-3 rounded-3 fw-bold">
-            <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Create Invite Link
+          <button type="submit" class="btn btn-primary btn-lg w-100 py-3 rounded-3 fw-bold" aria-label="Create invite link">
+            <i class="fa-solid fa-wand-magic-sparkles me-2" aria-hidden="true"></i>Create Invite Link
           </button>
         </form>
       </div>
@@ -88,9 +88,10 @@
           <button type="button"
                   class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3 fw-bold copy-btn mb-3"
                   data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'children:accept_invite' invite.token %}"
-                  onclick="copyLink(this)">
-            <i class="fa-solid fa-copy me-2 copy-icon"></i>
-            <i class="fa-solid fa-check me-2 check-icon d-none"></i>
+                  onclick="copyLink(this)"
+                  aria-label="Copy invite link to clipboard">
+            <i class="fa-solid fa-copy me-2 copy-icon" aria-hidden="true"></i>
+            <i class="fa-solid fa-check me-2 check-icon d-none" aria-hidden="true"></i>
             <span class="btn-text">Tap to Copy Link</span>
           </button>
           {% endif %}
@@ -98,19 +99,19 @@
           <div class="d-flex gap-2">
             <form method="post" action="{% url 'children:toggle_invite' child.pk invite.pk %}" class="flex-fill">
               {% csrf_token %}
-              <button type="submit" class="btn btn-outline-secondary w-100 py-2 small">
+              <button type="submit" class="btn btn-outline-secondary w-100 py-2 small" aria-label="{% if invite.is_active %}Pause invite{% else %}Resume invite{% endif %}">
                 {% if invite.is_active %}
-                <i class="fa-solid fa-pause me-1"></i>Pause
+                <i class="fa-solid fa-pause me-1" aria-hidden="true"></i>Pause
                 {% else %}
-                <i class="fa-solid fa-play me-1"></i>Resume
+                <i class="fa-solid fa-play me-1" aria-hidden="true"></i>Resume
                 {% endif %}
               </button>
             </form>
             <form method="post" action="{% url 'children:delete_invite' child.pk invite.pk %}" class="flex-fill"
                   onsubmit="return confirm('Delete this invite link?');">
               {% csrf_token %}
-              <button type="submit" class="btn btn-outline-danger w-100 py-2 small">
-                <i class="fa-solid fa-trash me-1"></i>Delete
+              <button type="submit" class="btn btn-outline-danger w-100 py-2 small" aria-label="Delete invite link">
+                <i class="fa-solid fa-trash me-1" aria-hidden="true"></i>Delete
               </button>
             </form>
           </div>
@@ -149,8 +150,8 @@
           <form method="post" action="{% url 'children:revoke_access' child.pk share.pk %}"
                 onsubmit="return confirm('Remove access for {{ share.user.email }}?');">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline-danger btn-sm rounded-3 px-3" title="Remove access">
-              <i class="fa-solid fa-user-minus"></i>
+            <button type="submit" class="btn btn-outline-danger btn-sm rounded-3 px-3" title="Remove access" aria-label="Remove access for {{ share.user.email }}">
+              <i class="fa-solid fa-user-minus" aria-hidden="true"></i>
             </button>
           </form>
         </div>
