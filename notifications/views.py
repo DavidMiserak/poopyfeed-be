@@ -85,8 +85,18 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         """Ensure preferences exist for all accessible children before listing."""
         accessible_children = Child.for_user(request.user)
-        for child in accessible_children:
-            NotificationPreference.objects.get_or_create(user=request.user, child=child)
+        existing_child_ids = set(
+            NotificationPreference.objects.filter(
+                user=request.user, child__in=accessible_children
+            ).values_list("child_id", flat=True)
+        )
+        missing = [
+            NotificationPreference(user=request.user, child=child)
+            for child in accessible_children
+            if child.id not in existing_child_ids
+        ]
+        if missing:
+            NotificationPreference.objects.bulk_create(missing, ignore_conflicts=True)
         return super().list(request, *args, **kwargs)
 
 

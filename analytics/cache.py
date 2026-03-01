@@ -17,8 +17,8 @@ def _get_analytics_cache_keys(child_id: int) -> list[str]:
     Returns:
         List of all cache keys for this child
     """
-    # Supported day ranges: 30, 60, 90
-    day_ranges = [30, 60, 90]
+    # Supported day ranges: includes 7/14 used by web UI analytics view
+    day_ranges = [7, 14, 30, 60, 90]
 
     keys = []
 
@@ -38,6 +38,7 @@ def _get_analytics_cache_keys(child_id: int) -> list[str]:
             f"analytics:today-summary:{child_id}",
             f"analytics:weekly-summary:{child_id}",
             f"analytics:pattern-alerts:{child_id}",
+            f"analytics:timeline:{child_id}",
         ]
     )
 

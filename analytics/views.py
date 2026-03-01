@@ -252,7 +252,10 @@ class AnalyticsViewSet(viewsets.ViewSet):
         from django.core.paginator import Paginator
 
         child = self.get_child(pk)
-        events = get_child_timeline_events(child.id)
+        cache_key = f"analytics:timeline:{child.id}"
+        events = self._get_cached_data(
+            cache_key, get_child_timeline_events, child.id, cache_ttl=300
+        )
 
         page_size = min(max(int(request.query_params.get("page_size", 25)), 1), 100)
         paginator = Paginator(events, page_size)

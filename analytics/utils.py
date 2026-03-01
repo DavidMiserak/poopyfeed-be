@@ -583,6 +583,70 @@ def build_analytics_csv(
     return buffer.getvalue(), filename
 
 
+def get_merged_activities(
+    child_id: int,
+    limit_per_type: int | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch feedings, diapers, and naps, merge by timestamp descending.
+
+    Shared helper used by dashboard, timeline, and catch-up views.
+
+    Args:
+        child_id: The child's ID
+        limit_per_type: Max events per type (None = no limit)
+        start_date: Optional start date filter (inclusive)
+        end_date: Optional end date filter (inclusive)
+
+    Returns:
+        List of dicts with "type", "at" (datetime), and "obj" (field values).
+    """
+    feeding_qs = Feeding.objects.filter(child_id=child_id).order_by("-fed_at")
+    diaper_qs = DiaperChange.objects.filter(child_id=child_id).order_by("-changed_at")
+    nap_qs = Nap.objects.filter(child_id=child_id).order_by("-napped_at")
+
+    if start_date and end_date:
+        feeding_qs = feeding_qs.filter(
+            fed_at__date__gte=start_date, fed_at__date__lte=end_date
+        )
+        diaper_qs = diaper_qs.filter(
+            changed_at__date__gte=start_date, changed_at__date__lte=end_date
+        )
+        nap_qs = nap_qs.filter(
+            napped_at__date__gte=start_date, napped_at__date__lte=end_date
+        )
+
+    if limit_per_type is not None:
+        feeding_qs = feeding_qs[:limit_per_type]
+        diaper_qs = diaper_qs[:limit_per_type]
+        nap_qs = nap_qs[:limit_per_type]
+
+    feedings = list(
+        feeding_qs.values(
+            "id", "fed_at", "feeding_type", "amount_oz", "duration_minutes"
+        )
+    )
+    diapers = list(diaper_qs.values("id", "changed_at", "change_type"))
+    naps = list(nap_qs.values("id", "napped_at", "ended_at"))
+
+    for n in naps:
+        if n["ended_at"] and n["napped_at"]:
+            total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
+            h, m = divmod(total, 60)
+            n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
+
+    merged: list[dict[str, Any]] = []
+    for f in feedings:
+        merged.append({"type": "feeding", "at": f["fed_at"], "obj": f})
+    for d in diapers:
+        merged.append({"type": "diaper", "at": d["changed_at"], "obj": d})
+    for n in naps:
+        merged.append({"type": "nap", "at": n["napped_at"], "obj": n})
+    merged.sort(key=lambda x: x["at"], reverse=True)
+    return merged
+
+
 # Timeline: fetch up to this many per type before merge (matches children.views)
 TIMELINE_FETCH_PER_TYPE = 100
 

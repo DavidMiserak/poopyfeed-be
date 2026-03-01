@@ -208,65 +208,18 @@ class ChildDashboardView(ChildAccessMixin, DetailView):
 
     def _get_recent_activities(self):
         """Merge last feedings, diapers, naps by timestamp; return top N."""
-        from diapers.models import DiaperChange
-        from feedings.models import Feeding
-        from naps.models import Nap
+        from analytics.utils import get_merged_activities
 
-        child_id = self.object.id
-        n_per_type = 5
-        feedings = list(
-            Feeding.objects.filter(child_id=child_id)
-            .order_by("-fed_at")[:n_per_type]
-            .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes")
-        )
-        diapers = list(
-            DiaperChange.objects.filter(child_id=child_id)
-            .order_by("-changed_at")[:n_per_type]
-            .values("id", "changed_at", "change_type")
-        )
-        naps = list(
-            Nap.objects.filter(child_id=child_id)
-            .order_by("-napped_at")[:n_per_type]
-            .values("id", "napped_at", "ended_at")
-        )
-        for n in naps:
-            if n["ended_at"] and n["napped_at"]:
-                total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
-                h, m = divmod(total, 60)
-                n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
-        merged = []
-        for f in feedings:
-            merged.append(
-                {
-                    "type": "feeding",
-                    "at": f["fed_at"],
-                    "obj": f,
-                    "url_name": "feedings:feeding_edit",
-                    "url_pk": f["id"],
-                }
-            )
-        for d in diapers:
-            merged.append(
-                {
-                    "type": "diaper",
-                    "at": d["changed_at"],
-                    "obj": d,
-                    "url_name": "diapers:diaper_edit",
-                    "url_pk": d["id"],
-                }
-            )
-        for n in naps:
-            merged.append(
-                {
-                    "type": "nap",
-                    "at": n["napped_at"],
-                    "obj": n,
-                    "url_name": "naps:nap_edit",
-                    "url_pk": n["id"],
-                }
-            )
-        merged.sort(key=lambda x: x["at"], reverse=True)
-        return merged[:DASHBOARD_RECENT_ACTIVITY_LIMIT]
+        URL_MAP = {
+            "feeding": "feedings:feeding_edit",
+            "diaper": "diapers:diaper_edit",
+            "nap": "naps:nap_edit",
+        }
+        activities = get_merged_activities(self.object.id, limit_per_type=5)
+        for item in activities:
+            item["url_name"] = URL_MAP[item["type"]]
+            item["url_pk"] = item["obj"]["id"]
+        return activities[:DASHBOARD_RECENT_ACTIVITY_LIMIT]
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
@@ -287,39 +240,10 @@ class ChildTimelineView(ChildAccessMixin, View):
     template_name = "children/child_timeline.html"
 
     def get(self, request, pk):
-        from diapers.models import DiaperChange
-        from feedings.models import Feeding
-        from naps.models import Nap
+        from analytics.utils import get_merged_activities
 
         child = self.child
-        feedings = list(
-            Feeding.objects.filter(child_id=child.id)
-            .order_by("-fed_at")[:TIMELINE_FETCH_PER_TYPE]
-            .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes")
-        )
-        diapers = list(
-            DiaperChange.objects.filter(child_id=child.id)
-            .order_by("-changed_at")[:TIMELINE_FETCH_PER_TYPE]
-            .values("id", "changed_at", "change_type")
-        )
-        naps = list(
-            Nap.objects.filter(child_id=child.id)
-            .order_by("-napped_at")[:TIMELINE_FETCH_PER_TYPE]
-            .values("id", "napped_at", "ended_at")
-        )
-        for n in naps:
-            if n["ended_at"] and n["napped_at"]:
-                total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
-                h, m = divmod(total, 60)
-                n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
-        merged = []
-        for f in feedings:
-            merged.append({"type": "feeding", "at": f["fed_at"], "obj": f})
-        for d in diapers:
-            merged.append({"type": "diaper", "at": d["changed_at"], "obj": d})
-        for n in naps:
-            merged.append({"type": "nap", "at": n["napped_at"], "obj": n})
-        merged.sort(key=lambda x: x["at"], reverse=True)
+        merged = get_merged_activities(child.id, limit_per_type=TIMELINE_FETCH_PER_TYPE)
 
         paginator = Paginator(merged, TIMELINE_PAGE_SIZE)
         page_number = request.GET.get("page", 1)
@@ -482,53 +406,13 @@ class ChildCatchUpView(ChildAccessMixin, View):
     template_name = "children/child_catchup.html"
 
     def get(self, request, pk):
-        from diapers.models import DiaperChange
-        from feedings.models import Feeding
-        from naps.models import Nap
+        from analytics.utils import get_merged_activities
 
         child = self.child
         start_date, end_date = _parse_catchup_date_range(request)
-        events = []
-
-        feedings = list(
-            Feeding.objects.filter(
-                child_id=child.id,
-                fed_at__date__gte=start_date,
-                fed_at__date__lte=end_date,
-            )
-            .order_by("-fed_at")
-            .values("id", "fed_at", "feeding_type", "amount_oz", "duration_minutes")
+        events = get_merged_activities(
+            child.id, start_date=start_date, end_date=end_date
         )
-        diapers = list(
-            DiaperChange.objects.filter(
-                child_id=child.id,
-                changed_at__date__gte=start_date,
-                changed_at__date__lte=end_date,
-            )
-            .order_by("-changed_at")
-            .values("id", "changed_at", "change_type")
-        )
-        naps = list(
-            Nap.objects.filter(
-                child_id=child.id,
-                napped_at__date__gte=start_date,
-                napped_at__date__lte=end_date,
-            )
-            .order_by("-napped_at")
-            .values("id", "napped_at", "ended_at")
-        )
-        for n in naps:
-            if n["ended_at"] and n["napped_at"]:
-                total = int((n["ended_at"] - n["napped_at"]).total_seconds() / 60)
-                h, m = divmod(total, 60)
-                n["duration_display"] = f"{h}h {m}m" if h else f"{m}m"
-        for f in feedings:
-            events.append({"type": "feeding", "at": f["fed_at"], "obj": f})
-        for d in diapers:
-            events.append({"type": "diaper", "at": d["changed_at"], "obj": d})
-        for n in naps:
-            events.append({"type": "nap", "at": n["napped_at"], "obj": n})
-        events.sort(key=lambda x: x["at"], reverse=True)
 
         return render(
             request,
