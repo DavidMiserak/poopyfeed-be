@@ -25,6 +25,29 @@
     <form method="post">
       {% csrf_token %}
       {% crispy form %}
+      {% if object %}
+      <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+          <button class="btn btn-link p-0 text-start d-flex align-items-center gap-2 w-100 fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#advanced-settings-panel" aria-expanded="false" aria-controls="advanced-settings-panel" id="advanced-settings-toggle">
+            <i class="fa-solid fa-sliders text-primary"></i>
+            <span>Advanced settings</span>
+            <i class="fa-solid fa-chevron-down ms-auto small" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="collapse" id="advanced-settings-panel">
+          <div class="card-body p-4">
+            <p class="text-body-secondary small mb-3">Feeding reminders notify you when it may be time for the next feeding based on the interval you set.</p>
+            <div class="mb-0">
+              <label for="{{ form.feeding_reminder_interval.id_for_label }}" class="form-label">{{ form.feeding_reminder_interval.label }}</label>
+              {{ form.feeding_reminder_interval }}
+              {% if form.feeding_reminder_interval.errors %}
+                <div class="invalid-feedback d-block">{{ form.feeding_reminder_interval.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       <div class="d-grid gap-2 mt-4">
         <button type="submit" class="btn btn-primary btn-lg py-3 fw-semibold">
           <i class="fa-solid fa-check me-2"></i>Save

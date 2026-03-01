@@ -1,0 +1,142 @@
+{% extends "_base.html" %}
+
+{% block title %}Advanced – {{ child.name }} | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <!-- Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-decoration-none">{{ child.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Advanced</li>
+      </ol>
+    </nav>
+
+    <!-- Back link -->
+    <div class="mb-4">
+      <a href="{% url 'children:child_dashboard' pk=child.pk %}" class="text-body-secondary text-decoration-none small">
+        <i class="fa-solid fa-arrow-left me-1"></i>Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Header -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-body p-4">
+        <h1 class="h3 fw-bold mb-1">Advanced options for {{ child.name }}</h1>
+        <p class="text-body-secondary small mb-0">Power tools and deep dives live here. Your everyday logging stays on the main dashboard.</p>
+      </div>
+    </div>
+
+    <!-- Analytics and history -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <a href="{% url 'children:child_pediatrician_summary' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-stethoscope fa-2x text-primary" aria-hidden="true"></i>
+              <h2 class="h5 fw-bold mb-0">For the Doctor</h2>
+            </div>
+            <p class="text-body-secondary small mb-0">Last 7 days summary to print or show at pediatrician visits.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'children:child_analytics' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-chart-line fa-2x text-primary" aria-hidden="true"></i>
+              <h2 class="h5 fw-bold mb-0">Trends & Analytics</h2>
+            </div>
+            <p class="text-body-secondary small mb-0">View feeding, diaper, and sleep trends over time.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'children:child_export' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-file-export fa-2x text-primary" aria-hidden="true"></i>
+              <h2 class="h5 fw-bold mb-0">Export Data</h2>
+            </div>
+            <p class="text-body-secondary small mb-0">Download CSV or PDF summaries to share with your doctor or partner.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'children:child_timeline' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-timeline fa-2x text-primary" aria-hidden="true"></i>
+              <h2 class="h5 fw-bold mb-0">Timeline</h2>
+            </div>
+            <p class="text-body-secondary small mb-0">Walk back through recent activity in one place.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'children:child_catchup' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-clock-rotate-left fa-2x text-primary" aria-hidden="true"></i>
+              <h2 class="h5 fw-bold mb-0">Catch-Up Mode</h2>
+            </div>
+            <p class="text-body-secondary small mb-0">Log several missed events at once when things were hectic.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Detailed lists & sharing -->
+    <div class="row g-3">
+      <div class="col-md-6">
+        <a href="{% url 'feedings:feeding_list' child_pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-bottle-water fa-2x text-warning" aria-hidden="true"></i>
+              <h3 class="h5 fw-bold mb-0">All Feedings</h3>
+            </div>
+            <p class="text-body-secondary small mb-0">Review and edit the full feeding history.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'diapers:diaper_list' child_pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-poo fa-2x text-success" aria-hidden="true"></i>
+              <h3 class="h5 fw-bold mb-0">All Diapers</h3>
+            </div>
+            <p class="text-body-secondary small mb-0">See every diaper change and spot patterns.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'naps:nap_list' child_pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-moon fa-2x text-primary" aria-hidden="true"></i>
+              <h3 class="h5 fw-bold mb-0">All Naps</h3>
+            </div>
+            <p class="text-body-secondary small mb-0">Browse nap history and sleep stretches.</p>
+          </div>
+        </a>
+      </div>
+      {% if can_manage_sharing %}
+      <div class="col-md-6">
+        <a href="{% url 'children:child_sharing' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-share-nodes fa-2x text-secondary" aria-hidden="true"></i>
+              <h3 class="h5 fw-bold mb-0">Manage Sharing</h3>
+            </div>
+            <p class="text-body-secondary small mb-0">Invite co-parents or caregivers and adjust access.</p>
+          </div>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock content %}

@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AcceptInviteView,
+    ChildAdvancedView,
     ChildAnalyticsView,
     ChildCatchUpView,
     ChildCreateView,
@@ -10,6 +11,7 @@ from .views import (
     ChildExportStatusView,
     ChildExportView,
     ChildListView,
+    ChildPediatricianSummaryView,
     ChildSharingView,
     ChildTimelineView,
     ChildUpdateView,
@@ -25,6 +27,12 @@ urlpatterns = [
     path("", ChildListView.as_view(), name="child_list"),
     path("add/", ChildCreateView.as_view(), name="child_add"),
     path("<int:pk>/dashboard/", ChildDashboardView.as_view(), name="child_dashboard"),
+    path("<int:pk>/advanced/", ChildAdvancedView.as_view(), name="child_advanced"),
+    path(
+        "<int:pk>/pediatrician-summary/",
+        ChildPediatricianSummaryView.as_view(),
+        name="child_pediatrician_summary",
+    ),
     path("<int:pk>/timeline/", ChildTimelineView.as_view(), name="child_timeline"),
     path("<int:pk>/analytics/", ChildAnalyticsView.as_view(), name="child_analytics"),
     path("<int:pk>/export/", ChildExportView.as_view(), name="child_export"),

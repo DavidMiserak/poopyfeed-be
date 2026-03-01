@@ -27,6 +27,16 @@ BOTTLE_PRESET_ATTRS = {
 }
 
 
+# Feeding reminder choices: empty = Off, then 2/3/4/6 hours (owner/co-parent only in edit)
+FEEDING_REMINDER_CHOICES = [
+    ("", "Off"),
+    (2, "2 hours"),
+    (3, "3 hours"),
+    (4, "4 hours"),
+    (6, "6 hours"),
+]
+
+
 class ChildForm(forms.ModelForm):
     """Form for creating/updating child profiles.
 
@@ -35,6 +45,7 @@ class ChildForm(forms.ModelForm):
     - date_of_birth: Required, ISO format, cannot be in future
     - gender: Optional, one of 'M', 'F', 'O'
     - custom_bottle_*_oz: Optional bottle feeding presets (0.1-50 oz)
+    - feeding_reminder_interval: Optional (edit only), 2/3/4/6 hours or Off
 
     Uses HTML5 date input widget for date_of_birth field.
     Applies Bootstrap CSS classes for consistent styling.
@@ -48,6 +59,13 @@ class ChildForm(forms.ModelForm):
             attrs={"type": "date", "class": INPUT_CLASS},
         ),
     )
+    feeding_reminder_interval = forms.TypedChoiceField(
+        choices=FEEDING_REMINDER_CHOICES,
+        coerce=lambda x: int(x) if x else None,
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select form-select-lg border-2"}),
+        label="Feeding reminder interval",
+    )
 
     class Meta:
         model = Child
@@ -58,6 +76,7 @@ class ChildForm(forms.ModelForm):
             "custom_bottle_low_oz",
             "custom_bottle_mid_oz",
             "custom_bottle_high_oz",
+            "feeding_reminder_interval",
         ]
         labels = {
             "custom_bottle_low_oz": "Low (oz)",

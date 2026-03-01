@@ -1224,6 +1224,7 @@ class ChildDashboardViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("today_summary", response.context)
         self.assertIn("recent_activities", response.context)
+        self.assertIn("pattern_alerts", response.context)
         self.assertTrue(response.context["can_manage_sharing"])
 
     def test_dashboard_404_for_no_access(self):
@@ -1271,6 +1272,89 @@ class ChildDashboardViewTests(TestCase):
         nap_activities = [a for a in activities if a.get("type") == "nap"]
         if nap_activities:
             self.assertIn("duration_display", nap_activities[0].get("obj", {}))
+
+
+class ChildAdvancedViewTests(TestCase):
+    """Tests for advanced tools hub (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="advanceduser",
+            email="advanced@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_advanced_requires_login(self):
+        response = self.client.get(
+            reverse("children:child_advanced", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_advanced_200_for_owner(self):
+        self.client.login(email="advanced@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_advanced", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["child"], self.child)
+        self.assertTrue(response.context["can_manage_sharing"])
+
+    def test_advanced_404_for_no_access(self):
+        other = get_user_model().objects.create_user(
+            username="otheradv",
+            email="otheradv@example.com",
+            password=TEST_PASSWORD,
+        )
+        self.client.login(email="otheradv@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_advanced", kwargs={"pk": self.child.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class ChildPediatricianSummaryViewTests(TestCase):
+    """Tests for pediatrician summary (template parity)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="peduser",
+            email="ped@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_pediatrician_summary_requires_login(self):
+        response = self.client.get(
+            reverse(
+                "children:child_pediatrician_summary",
+                kwargs={"pk": self.child.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_pediatrician_summary_200_for_owner(self):
+        self.client.login(email="ped@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(
+                "children:child_pediatrician_summary",
+                kwargs={"pk": self.child.pk},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["child"], self.child)
+        self.assertIn("summary", response.context)
+        self.assertIn("feedings_per_day", response.context)
 
 
 class ChildTimelineViewTests(TestCase):

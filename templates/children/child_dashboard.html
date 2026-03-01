@@ -30,12 +30,30 @@
           {% endif %}
         </div>
       </div>
-      {% if can_edit %}
-        <a href="{% url 'children:child_edit' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
-          <i class="fa-solid fa-pen me-1"></i>Edit
+      <div class="d-flex align-items-center gap-2">
+        {% if can_edit %}
+          <a href="{% url 'children:child_edit' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="fa-solid fa-pen me-1"></i>Edit
+          </a>
+        {% endif %}
+        <a href="{% url 'children:child_advanced' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="View advanced options for this child">
+          <i class="fa-solid fa-screwdriver-wrench me-1"></i>More tools
         </a>
-      {% endif %}
+      </div>
     </div>
+
+    {% if pattern_alerts %}
+    <div class="mb-4" role="region" aria-label="Pattern alerts">
+      <div class="d-flex flex-column gap-2">
+        {% for alert in pattern_alerts %}
+          <div class="alert alert-warning rounded-3 mb-0 d-flex align-items-start gap-2" role="alert">
+            <i class="fa-solid fa-triangle-exclamation mt-1 flex-shrink-0" aria-hidden="true"></i>
+            <p class="mb-0">{{ alert.message }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Today's Summary -->
     <div class="row g-3 mb-4">
@@ -95,78 +113,31 @@
       </div>
     </div>
 
-    <div class="row g-4">
-      <!-- Recent Activity -->
-      <div class="col-lg-7">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-          <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-            <div class="d-flex justify-content-between align-items-center">
-              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-                <i class="fa-solid fa-clock-rotate-left me-1"></i>Recent Activity
-              </h2>
-              <a href="{% url 'children:child_timeline' pk=child.pk %}" class="text-body-tertiary text-decoration-none small">
-                View all <i class="fa-solid fa-arrow-right ms-1"></i>
-              </a>
-            </div>
-          </div>
-          <div class="card-body px-4 pb-3">
-            {% if recent_activities %}
-              <div class="d-flex flex-column gap-3">
-                {% for activity in recent_activities %}
-                  {% include "children/_activity_row.html" with activity=activity child=child can_edit=can_edit time_display=activity.at|format_relative_tz:user_timezone edit_pk=activity.url_pk row_class="" content_class="flex-grow-1 min-width-0" %}
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="text-center py-4">
-                <i class="fa-solid fa-clock fa-2x text-body-tertiary mb-3 d-block opacity-50"></i>
-                <p class="text-body-tertiary small mb-0">No activity yet. Use the buttons above to get started.</p>
-              </div>
-            {% endif %}
-          </div>
+    <!-- Recent Activity -->
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+            <i class="fa-solid fa-clock-rotate-left me-1"></i>Recent Activity
+          </h2>
+          <a href="{% url 'children:child_timeline' pk=child.pk %}" class="text-body-tertiary text-decoration-none small">
+            View all <i class="fa-solid fa-arrow-right ms-1"></i>
+          </a>
         </div>
       </div>
-
-      <!-- Navigation sidebar -->
-      <div class="col-lg-5">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-          <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
-            <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-              <i class="fa-solid fa-compass me-1"></i>View & Manage
-            </h2>
+      <div class="card-body px-4 pb-3">
+        {% if recent_activities %}
+          <div class="d-flex flex-column gap-3">
+            {% for activity in recent_activities %}
+              {% include "children/_activity_row.html" with activity=activity child=child can_edit=can_edit time_display=activity.at|format_relative_tz:user_timezone edit_pk=activity.url_pk row_class="" content_class="flex-grow-1 min-width-0" %}
+            {% endfor %}
           </div>
-          <div class="card-body px-4">
-            <div class="d-flex flex-column gap-2">
-              <a href="{% url 'feedings:feeding_list' child_pk=child.pk %}" class="btn btn-outline-warning text-start py-2">
-                <i class="fa-solid fa-bottle-water me-2"></i>Feedings
-              </a>
-              <a href="{% url 'diapers:diaper_list' child_pk=child.pk %}" class="btn btn-outline-success text-start py-2">
-                <i class="fa-solid fa-poo me-2"></i>Diapers
-              </a>
-              <a href="{% url 'naps:nap_list' child_pk=child.pk %}" class="btn btn-outline-primary text-start py-2">
-                <i class="fa-solid fa-moon me-2"></i>Naps
-              </a>
-              <hr class="my-1">
-              <a href="{% url 'children:child_timeline' pk=child.pk %}" class="btn btn-outline-secondary text-start py-2">
-                <i class="fa-solid fa-timeline me-2"></i>Timeline
-              </a>
-              <a href="{% url 'children:child_analytics' pk=child.pk %}" class="btn btn-outline-secondary text-start py-2">
-                <i class="fa-solid fa-chart-line me-2"></i>Analytics
-              </a>
-              <a href="{% url 'children:child_export' pk=child.pk %}" class="btn btn-outline-secondary text-start py-2">
-                <i class="fa-solid fa-file-export me-2"></i>Export Data
-              </a>
-              <a href="{% url 'children:child_catchup' pk=child.pk %}" class="btn btn-outline-secondary text-start py-2">
-                <i class="fa-solid fa-clock-rotate-left me-2"></i>Catch-up
-              </a>
-              {% if can_manage_sharing %}
-                <a href="{% url 'children:child_sharing' pk=child.pk %}" class="btn btn-outline-secondary text-start py-2">
-                  <i class="fa-solid fa-share-nodes me-2"></i>Sharing
-                </a>
-              {% endif %}
-            </div>
+        {% else %}
+          <div class="text-center py-4">
+            <i class="fa-solid fa-clock fa-2x text-body-tertiary mb-3 d-block opacity-50"></i>
+            <p class="text-body-tertiary small mb-0">No activity yet. Use the buttons above to get started.</p>
           </div>
-        </div>
-
+        {% endif %}
       </div>
     </div>
   </div>

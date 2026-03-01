@@ -204,6 +204,16 @@ class ChildDashboardView(ChildAccessMixin, DetailView):
         context["can_manage_sharing"] = self.object.can_manage_sharing(
             self.request.user
         )
+        # Pattern alerts: feeding/nap overdue warnings from last 7 days
+        from analytics.utils import compute_pattern_alerts
+
+        alerts_data = compute_pattern_alerts(self.object.id)
+        pattern_alerts = []
+        for key in ("feeding", "nap"):
+            part = alerts_data.get(key, {})
+            if part.get("alert") and part.get("message"):
+                pattern_alerts.append({"key": key, "message": part["message"]})
+        context["pattern_alerts"] = pattern_alerts
         return context
 
     def _get_recent_activities(self):
@@ -232,6 +242,52 @@ class ChildDashboardView(ChildAccessMixin, DetailView):
 # Timeline: fetch up to this many per type before merge (then paginate)
 TIMELINE_FETCH_PER_TYPE = 100
 TIMELINE_PAGE_SIZE = 25
+
+
+class ChildAdvancedView(ChildAccessMixin, View):
+    """Advanced tools hub: links to pediatrician summary, analytics, export, timeline, catch-up, lists, sharing."""
+
+    template_name = "children/child_advanced.html"
+
+    def get(self, request, pk):
+        return render(
+            request,
+            self.template_name,
+            {
+                "child": self.child,
+                "can_manage_sharing": self.child.can_manage_sharing(request.user),
+            },
+        )
+
+
+PEDIATRICIAN_SUMMARY_DAYS = 7
+
+
+class ChildPediatricianSummaryView(ChildAccessMixin, View):
+    """Printable 7-day summary for pediatrician visits. Uses get_weekly_summary."""
+
+    template_name = "children/child_pediatrician_summary.html"
+
+    def get(self, request, pk):
+        from analytics.utils import get_weekly_summary
+
+        child = self.child
+        summary = get_weekly_summary(child.id)
+        # Per-day averages for doctor-friendly display
+        days = PEDIATRICIAN_SUMMARY_DAYS
+        feedings = summary.get("feedings", {})
+        diapers = summary.get("diapers", {})
+        sleep = summary.get("sleep", {})
+        context = {
+            "child": child,
+            "summary": summary,
+            "feedings_per_day": round(feedings.get("count", 0) / days, 1),
+            "oz_per_day": round(feedings.get("total_oz", 0) / days, 1),
+            "diapers_per_day": round(diapers.get("count", 0) / days, 1),
+            "naps_per_day": round(sleep.get("naps", 0) / days, 1),
+            "sleep_minutes_per_day": round(sleep.get("total_minutes", 0) / days, 0),
+        }
+        return render(request, self.template_name, context)
 
 
 class ChildTimelineView(ChildAccessMixin, View):
