@@ -4,8 +4,10 @@ Tests permission checking, data aggregation accuracy, caching behavior,
 and error handling for all analytics endpoints.
 """
 
+import tempfile
 from datetime import date, datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -22,10 +24,19 @@ from diapers.models import DiaperChange
 from feedings.models import Feeding
 from naps.models import Nap
 
+from . import urls as analytics_urls
 from .cache import invalidate_child_analytics
 from .tasks import generate_pdf_report
 
 User = get_user_model()
+
+
+class AnalyticsUrlsTests(TestCase):
+    """Test analytics URL configuration (module is loadable and has routes)."""
+
+    def test_analytics_urlpatterns_defined(self):
+        """analytics.urls defines urlpatterns (module is used or kept for reference)."""
+        self.assertGreater(len(analytics_urls.urlpatterns), 0)
 
 
 class AnalyticsPermissionTests(APITestCase):
@@ -1634,24 +1645,19 @@ class PDFDownloadTests(APITestCase):
     @patch("django.core.files.storage.default_storage.path")
     def test_download_pdf_storage_path_not_implemented(self, mock_storage_path):
         """Download endpoint should handle storage backends without path() method."""
-        from pathlib import Path
-
-        # Create test file
-        export_dir = Path("exports")
-        export_dir.mkdir(exist_ok=True)
+        tmpdir = tempfile.mkdtemp()
+        export_dir = Path(tmpdir) / "exports"
+        export_dir.mkdir(parents=True, exist_ok=True)
         test_file = export_dir / "test123.pdf"
         test_file.write_bytes(b"PDF test content")
 
         try:
-            # Storage raises NotImplementedError
             mock_storage_path.side_effect = NotImplementedError()
-
-            response = self.client.get("/api/v1/analytics/download/test123.pdf/")
-            # Should fallback to filesystem and succeed
+            with override_settings(BASE_DIR=tmpdir):
+                response = self.client.get("/api/v1/analytics/download/test123.pdf/")
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response["Content-Type"], "application/pdf")
         finally:
-            # Cleanup
             if test_file.exists():
                 test_file.unlink()
             if export_dir.exists() and not any(export_dir.iterdir()):
@@ -1770,18 +1776,18 @@ class PDFDownloadIOErrorTests(APITestCase):
 
     def test_download_pdf_io_error(self):
         """Download endpoint returns 404 on IOError when reading file."""
-        from pathlib import Path
-
-        export_dir = Path("exports")
-        export_dir.mkdir(exist_ok=True)
+        tmpdir = tempfile.mkdtemp()
+        export_dir = Path(tmpdir) / "exports"
+        export_dir.mkdir(parents=True, exist_ok=True)
         test_file = export_dir / "ioerror_test.pdf"
         test_file.write_bytes(b"test")
 
         try:
-            with patch("builtins.open", side_effect=IOError("Permission denied")):
-                response = self.client.get(
-                    "/api/v1/analytics/download/ioerror_test.pdf/"
-                )
+            with override_settings(BASE_DIR=tmpdir):
+                with patch("builtins.open", side_effect=IOError("Permission denied")):
+                    response = self.client.get(
+                        "/api/v1/analytics/download/ioerror_test.pdf/"
+                    )
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         finally:
             if test_file.exists():
@@ -1826,6 +1832,13 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
         result = _calculate_trend([1, 1, 1, 5, 5, 5])
         self.assertEqual(result, "increasing")
 
+    def test_calculate_trend_first_avg_zero_second_zero_returns_stable(self):
+        """When first_avg is 0 and second_avg <= 0, returns 'stable'."""
+        from analytics.utils import _calculate_trend
+
+        result = _calculate_trend([0, 0, 0, 0])
+        self.assertEqual(result, "stable")
+
     def test_calculate_variance_empty_list(self):
         """Empty list returns 0.0."""
         from analytics.utils import _calculate_variance
@@ -1844,6 +1857,54 @@ class AnalyticsUtilsEdgeCaseTests(TestCase):
 
         result = _calculate_variance([2, 4, 4, 4, 5, 5, 7, 9])
         self.assertGreater(result, 0)
+
+    def test_get_today_summary_without_timezone_uses_utc_today(self):
+        """get_today_summary with user_timezone=None uses UTC today (else branch)."""
+        from analytics.utils import get_today_summary
+        from children.models import Child
+
+        user = User.objects.create_user(
+            username="todayuser",
+            email="today@example.com",
+            password="password123",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Today Baby",
+            date_of_birth="2024-01-15",
+        )
+        result = get_today_summary(child.id, user_timezone=None)
+        self.assertEqual(result["child_id"], child.id)
+        self.assertEqual(result["period"], "today")
+        self.assertIn("feedings", result)
+        self.assertIn("diapers", result)
+        self.assertIn("sleep", result)
+
+    def test_get_child_timeline_events_nap_without_ended_at_has_duration_none(self):
+        """Timeline nap with no ended_at has duration_minutes None."""
+        from analytics.utils import get_child_timeline_events
+        from children.models import Child
+        from naps.models import Nap
+
+        user = User.objects.create_user(
+            username="timelineutil",
+            email="timelineutil@example.com",
+            password="password123",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Timeline Baby",
+            date_of_birth="2024-01-15",
+        )
+        Nap.objects.create(
+            child=child,
+            napped_at=timezone.now(),
+            ended_at=None,
+        )
+        events = get_child_timeline_events(child.id)
+        nap_events = [e for e in events if e["type"] == "nap"]
+        self.assertEqual(len(nap_events), 1)
+        self.assertIsNone(nap_events[0]["nap"].get("duration_minutes"))
 
     def test_weekly_summary_with_diaper_breakdown(self):
         """Weekly summary includes diaper type breakdown from DB."""
@@ -2518,6 +2579,33 @@ class PatternAlertsAPITests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["nap"]["alert"])
         self.assertEqual(response.json()["nap"]["data_points"], 2)
+
+    def test_nap_alert_no_wake_windows_returns_no_alert(self):
+        """When 3+ completed naps but all wake windows <= 0 (back-to-back), no alert."""
+        Nap.objects.filter(child=self.child).delete()
+        now = timezone.now()
+        # 3 naps ending back-to-back: no positive gap between nap end and next start
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=10),
+            ended_at=now - timedelta(hours=9),
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=9),
+            ended_at=now - timedelta(hours=8),
+        )
+        Nap.objects.create(
+            child=self.child,
+            napped_at=now - timedelta(hours=8),
+            ended_at=now - timedelta(hours=7),
+        )
+
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["nap"]["alert"])
+        self.assertEqual(data["nap"]["data_points"], 3)
 
     # --- AC-007: Incomplete naps excluded ---
     def test_incomplete_naps_excluded_from_computation(self):

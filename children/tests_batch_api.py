@@ -283,6 +283,18 @@ class BatchCreateAPITest(TestCase):
         result = serializer.validate_events(value)
         self.assertEqual(result, value)
 
+    def test_batch_create_serializer_validate_events_more_than_20_raises(self):
+        """BatchCreateSerializer.validate_events raises when given more than 20 events."""
+        from rest_framework.exceptions import ValidationError
+
+        from .batch_api import BatchCreateSerializer
+
+        serializer = BatchCreateSerializer()
+        value = [FEEDING_BOTTLE_EVENT] * 21
+        with self.assertRaises(ValidationError) as ctx:
+            serializer.validate_events(value)
+        self.assertIn("Maximum 20 events per batch", str(ctx.exception))
+
     # --- Successful Creation Tests ---
 
     def test_batch_create_single_feeding(self):
