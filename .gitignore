@@ -61,10 +61,14 @@ Thumbs.db
 # SonarQube
 .scannerwork/
 
+# AI generated files
+CLAUDE.md
+memory/
+.cursor/
+
 # Other
 build/
 *~
-CLAUDE.md
 htmlcov/
 .coverage
 coverage.xml
