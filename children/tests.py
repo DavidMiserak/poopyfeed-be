@@ -1618,6 +1618,31 @@ class ChildCatchUpViewTests(TestCase):
         self.assertIn("diaper", types)
         self.assertIn("nap", types)
 
+    def test_catchup_events_include_feedings_in_range(self):
+        """Catch-up events list includes feedings when present in date range."""
+        from feedings.models import Feeding
+
+        now = timezone.now()
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now,
+            amount_oz=4.0,
+        )
+        self.client.login(email="catchup@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse("children:child_catchup", kwargs={"pk": self.child.pk}),
+            {
+                "start": (now.date() - timedelta(days=1)).isoformat(),
+                "end": (now.date() + timedelta(days=1)).isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        events = response.context["events"]
+        feeding_events = [e for e in events if e["type"] == "feeding"]
+        self.assertEqual(len(feeding_events), 1)
+        self.assertIn("obj", feeding_events[0])
+
 
 class ChildExportStatusViewTests(TestCase):
     """Tests for PDF export status page."""
