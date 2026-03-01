@@ -11,6 +11,7 @@ from django.db.models import QuerySet
 from django.utils.dateparse import parse_datetime
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
 from django_project.throttles import TrackingCreateThrottle
@@ -33,6 +34,9 @@ class TrackingViewSet(viewsets.ModelViewSet):
             - {field}__gte: Filter records on or after this ISO datetime
             - {field}__lt: Filter records before this ISO datetime
 
+    Pagination: List actions return paginated results (count, next, previous, results)
+    using PageNumberPagination and REST_FRAMEWORK["PAGE_SIZE"] from settings.
+
     Handles:
         - Nested routing (/children/{child_pk}/tracking/)
         - Top-level routing (/tracking/)
@@ -50,6 +54,7 @@ class TrackingViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated, HasChildAccess]
+    pagination_class = PageNumberPagination
     nested_serializer_class: type | None = None  # Must be set by subclass
     datetime_filter_field: str | None = None  # Set by subclass to enable date filtering
 

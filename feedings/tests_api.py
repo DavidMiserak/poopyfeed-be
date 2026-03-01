@@ -167,3 +167,31 @@ class FeedingAPITests(BaseTrackingAPITests):
         response = self.client.get(self.get_list_url())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 2)
+
+    def test_pagination_applied(self):
+        """Verify pagination is applied to list endpoints (PAGE_SIZE=50)."""
+        for _ in range(60):
+            Feeding.objects.create(
+                child=self.child,
+                feeding_type=Feeding.FeedingType.BOTTLE,
+                fed_at=TEST_DATETIME,
+                amount_oz=4,
+            )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.owner_token.key}")
+        response = self.client.get(self.get_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("count", response.data)
+        self.assertIn("results", response.data)
+        self.assertIn("next", response.data)
+        self.assertIn("previous", response.data)
+        self.assertEqual(len(response.data["results"]), 50)
+        self.assertEqual(response.data["count"], 60)
+        self.assertIsNotNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+
+        response_page2 = self.client.get(response.data["next"])
+        self.assertEqual(len(response_page2.data["results"]), 10)
+        self.assertIsNone(response_page2.data["next"])
+        self.assertIsNotNone(response_page2.data["previous"])

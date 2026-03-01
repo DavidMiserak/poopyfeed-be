@@ -73,6 +73,19 @@
           </div>
         {% endfor %}
       </div>
+      {% if page_obj.has_other_pages %}
+        <nav aria-label="Feedings pagination" class="d-flex justify-content-center mt-4">
+          <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item"><a class="page-link rounded-start-pill" href="?page={{ page_obj.previous_page_number }}"><i class="fa-solid fa-chevron-left me-1"></i>Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+              <li class="page-item"><a class="page-link rounded-end-pill" href="?page={{ page_obj.next_page_number }}">Next<i class="fa-solid fa-chevron-right ms-1"></i></a></li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
     {% else %}
       <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body text-center py-5">

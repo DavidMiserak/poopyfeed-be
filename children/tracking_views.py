@@ -97,10 +97,12 @@ class TrackingListView(ChildAccessMixin, ListView):
     Sorting: Records are ordered by timestamp descending (newest first) via
     Meta.ordering on the model class.
 
-    Pagination: Uses Django's default pagination (see settings.py for PAGE_SIZE).
+    Pagination: List is paginated (paginate_by); context includes page_obj and
+    paginator. Aligns with API PAGE_SIZE (50) for consistency.
 
     Template context:
-    - {context_object_name}: List of tracking records (e.g., "diaper_changes")
+    - {context_object_name}: Current page of tracking records (e.g., "diaper_changes")
+    - page_obj: Page object (has_previous, has_next, number, paginator, etc.)
     - child: The child being viewed
     - user_role: Current user's role ('owner', 'co-parent', 'caregiver')
 
@@ -137,6 +139,8 @@ class TrackingListView(ChildAccessMixin, ListView):
             Model's Meta.ordering ensures newest records appear first (e.g., -changed_at)
         """
         return self.model.objects.filter(child=self.child)
+
+    paginate_by = 50
 
 
 class TrackingCreateView(ChildAccessMixin, CreateView):
