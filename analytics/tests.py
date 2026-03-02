@@ -27,7 +27,7 @@ from naps.models import Nap
 
 from . import urls as analytics_urls
 from .cache import invalidate_child_analytics
-from .tasks import generate_pdf_report
+from .tasks import cleanup_old_exports, generate_pdf_report
 
 User = get_user_model()
 
@@ -1465,6 +1465,29 @@ class GeneratePDFReportTaskTests(TestCase):
             self.assertEqual(row[2], "1", f"Row {data_row_idx}: wet should be '1'")
             self.assertEqual(row[3], "1", f"Row {data_row_idx}: dirty should be '1'")
             self.assertEqual(row[4], "1", f"Row {data_row_idx}: both should be '1'")
+
+
+class CleanupOldExportsTaskTests(TestCase):
+    """Test cleanup task for PDF export files."""
+
+    def test_cleanup_deletes_expired_exports(self):
+        """Expired export files should be deleted, fresh ones kept."""
+        now = timezone.now()
+        expired_ts = int((now - timedelta(hours=25)).timestamp())
+        fresh_ts = int((now - timedelta(hours=1)).timestamp())
+        expired_file = f"analytics-Baby-{expired_ts}-abc123.pdf"
+        fresh_file = f"analytics-Baby-{fresh_ts}-def456.pdf"
+
+        with patch("analytics.tasks.default_storage") as mock_storage:
+            mock_storage.listdir.return_value = (
+                [],
+                [expired_file, fresh_file, "readme.txt"],
+            )
+
+            result = cleanup_old_exports.run()
+
+            mock_storage.delete.assert_called_once_with(f"exports/{expired_file}")
+            self.assertIn("Deleted 1", result)
 
 
 class ExportStatusProgressExtractionTests(APITestCase):

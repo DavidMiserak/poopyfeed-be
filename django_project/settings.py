@@ -303,11 +303,18 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notifications.tasks.cleanup_old_notifications",
         "schedule": 86400.0,  # Every 24 hours
     },
+    "cleanup-old-exports": {
+        "task": "analytics.tasks.cleanup_old_exports",
+        "schedule": 86400.0,  # Every 24 hours
+    },
     "check-feeding-reminders": {
         "task": "notifications.tasks.check_feeding_reminders",
         "schedule": 1800.0,  # Every 30 minutes
     },
 }
+
+# PDF export retention (hours)
+PDF_EXPORT_TTL_HOURS = int(os.environ.get("PDF_EXPORT_TTL_HOURS", "24"))
 
 # =============================================================================
 # Authentication & Authorization

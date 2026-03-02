@@ -6,10 +6,12 @@ Handles asynchronous export jobs (PDF generation, etc.).
 import re
 import secrets
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from io import BytesIO
 from pathlib import Path
 
 from celery import shared_task
+from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from reportlab.lib import colors
@@ -37,6 +39,8 @@ from .pdf_charts import (
 )
 from .utils import get_diaper_patterns, get_feeding_trends, get_sleep_summary
 
+EXPORTS_DIR = "exports"
+
 
 def _format_duration(minutes: float) -> str:
     """Format minutes as a human-readable duration string.
@@ -49,6 +53,54 @@ def _format_duration(minutes: float) -> str:
     hours = minutes // 60
     remaining = minutes % 60
     return f"{hours}h {remaining}m"
+
+
+def _get_export_ttl_hours() -> int:
+    """Return PDF export retention in hours (default: 24)."""
+    return int(getattr(settings, "PDF_EXPORT_TTL_HOURS", 24))
+
+
+def _parse_export_timestamp(filename: str) -> datetime | None:
+    """Extract timestamp from export filename if it matches the expected format."""
+    if not filename.startswith("analytics-") or not filename.endswith(".pdf"):
+        return None
+    name = filename[:-4]
+    try:
+        _, timestamp_str, _ = name.rsplit("-", 2)
+    except ValueError:
+        return None
+    try:
+        timestamp = int(timestamp_str)
+    except ValueError:
+        return None
+    return datetime.fromtimestamp(timestamp, tz=dt_timezone.utc)
+
+
+def _ensure_aware(value: datetime | None) -> datetime | None:
+    """Ensure datetime is timezone-aware for comparisons."""
+    if value is None:
+        return None
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return value
+
+
+def _get_modified_time(file_path: str) -> datetime | None:
+    """Return storage modified time (aware) or None if unavailable."""
+    try:
+        modified = default_storage.get_modified_time(file_path)
+    except Exception:
+        try:
+            full_path = default_storage.path(file_path)
+        except Exception:
+            return None
+        try:
+            return datetime.fromtimestamp(
+                Path(full_path).stat().st_mtime, tz=dt_timezone.utc
+            )
+        except OSError:
+            return None
+    return _ensure_aware(modified)
 
 
 def _add_chart_to_story(story: list, chart_generator, data: dict, chart_name: str):
@@ -352,14 +404,14 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
             f"analytics-{safe_name}-{int(timezone.now().timestamp())}-{token}.pdf"
         )
         pdf_buffer.seek(0)
-        default_storage.save(f"exports/{filename}", pdf_buffer)
+        default_storage.save(f"{EXPORTS_DIR}/{filename}", pdf_buffer)
 
         # Generate download URL using the API endpoint (no trailing slash for consistency)
         download_url = f"/api/v1/analytics/download/{filename}/"
 
         # Calculate timestamps
         now = timezone.now()
-        expires_at = now + timedelta(hours=24)
+        expires_at = now + timedelta(hours=_get_export_ttl_hours())
 
         return {
             "filename": filename,
@@ -373,3 +425,41 @@ def generate_pdf_report(self, child_id: int, user_id: int, days: int = 30):
     except Exception:
         # Task will retry on failure
         raise
+
+
+@shared_task(bind=True, time_limit=120)
+def cleanup_old_exports(self):
+    """Delete expired PDF export files from storage."""
+    cutoff = timezone.now() - timedelta(hours=_get_export_ttl_hours())
+    try:
+        _, files = default_storage.listdir(EXPORTS_DIR)
+    except Exception:
+        export_dir = Path(getattr(settings, "BASE_DIR", "")) / EXPORTS_DIR
+        if not export_dir.exists():
+            return "No exports directory to clean"
+        files = [path.name for path in export_dir.iterdir() if path.is_file()]
+
+    deleted = 0
+    skipped = 0
+    errors = 0
+
+    for filename in files:
+        if not filename.lower().endswith(".pdf"):
+            skipped += 1
+            continue
+        file_path = f"{EXPORTS_DIR}/{filename}"
+        created_at = _parse_export_timestamp(filename)
+        if created_at is None:
+            created_at = _get_modified_time(file_path)
+        if created_at is None:
+            skipped += 1
+            continue
+        if created_at > cutoff:
+            continue
+        try:
+            default_storage.delete(file_path)
+            deleted += 1
+        except Exception:
+            errors += 1
+
+    return f"Deleted {deleted} expired exports, skipped {skipped}, errors {errors}"
