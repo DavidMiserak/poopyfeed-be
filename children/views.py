@@ -215,6 +215,18 @@ class ChildDashboardView(ChildAccessMixin, DetailView):
             if part.get("alert") and part.get("message"):
                 pattern_alerts.append({"key": key, "message": part["message"]})
         context["pattern_alerts"] = pattern_alerts
+        # Quick-log bottle button labels: oz amounts that will be submitted
+        from .quick_log_views import _get_bottle_amount_for_preset
+
+        context["quick_log_bottle_low_oz"] = _get_bottle_amount_for_preset(
+            self.object, "low"
+        )
+        context["quick_log_bottle_mid_oz"] = _get_bottle_amount_for_preset(
+            self.object, "mid"
+        )
+        context["quick_log_bottle_high_oz"] = _get_bottle_amount_for_preset(
+            self.object, "high"
+        )
         return context
 
     def _get_recent_activities(self):

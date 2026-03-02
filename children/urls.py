@@ -1,5 +1,10 @@
 from django.urls import path
 
+from .quick_log_views import (
+    QuickLogDiaperView,
+    QuickLogFeedingView,
+    QuickLogNapView,
+)
 from .views import (
     AcceptInviteView,
     ChildAdvancedView,
@@ -27,6 +32,21 @@ urlpatterns = [
     path("", ChildListView.as_view(), name="child_list"),
     path("add/", ChildCreateView.as_view(), name="child_add"),
     path("<int:pk>/dashboard/", ChildDashboardView.as_view(), name="child_dashboard"),
+    path(
+        "<int:pk>/quick-log/feeding/<str:preset>/",
+        QuickLogFeedingView.as_view(),
+        name="quick_log_feeding",
+    ),
+    path(
+        "<int:pk>/quick-log/diaper/<str:change_type>/",
+        QuickLogDiaperView.as_view(),
+        name="quick_log_diaper",
+    ),
+    path(
+        "<int:pk>/quick-log/nap/",
+        QuickLogNapView.as_view(),
+        name="quick_log_nap",
+    ),
     path("<int:pk>/advanced/", ChildAdvancedView.as_view(), name="child_advanced"),
     path(
         "<int:pk>/pediatrician-summary/",

@@ -94,21 +94,105 @@
       </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="row g-2 mb-4">
-      <div class="col-12 col-sm-4">
-        <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning btn-lg w-100 py-3 rounded-3 fw-semibold">
-          <i class="fa-solid fa-bottle-water me-2" aria-hidden="true"></i>Add Feeding
-        </a>
+    <!-- Quick log (one-tap, card layout similar to front-end quick log) -->
+    <div class="mb-4">
+      <p class="fw-bold text-body-secondary small mb-2">Quick log</p>
+      <div class="row g-3">
+        <!-- Diaper card: wet / dirty / both -->
+        <div class="col-12 col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+                <i class="fa-solid fa-poo me-1" aria-hidden="true"></i>Diaper
+              </h2>
+              <div class="row g-2">
+                <div class="col-4">
+                  <form method="post" action="{% url 'children:quick_log_diaper' pk=child.pk change_type='wet' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg w-100 fw-semibold text-nowrap">Wet</button>
+                  </form>
+                </div>
+                <div class="col-4">
+                  <form method="post" action="{% url 'children:quick_log_diaper' pk=child.pk change_type='dirty' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg w-100 fw-semibold text-nowrap">Dirty</button>
+                  </form>
+                </div>
+                <div class="col-4">
+                  <form method="post" action="{% url 'children:quick_log_diaper' pk=child.pk change_type='both' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg w-100 fw-semibold text-nowrap">Both</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nap card: single primary action -->
+        <div class="col-12 col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+                <i class="fa-solid fa-moon me-1" aria-hidden="true"></i>Nap
+              </h2>
+              <div class="row g-2">
+                <div class="col-12">
+                  <form method="post" action="{% url 'children:quick_log_nap' pk=child.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold">Start nap</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottle card: low / mid / high -->
+        <div class="col-12 col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+                <i class="fa-solid fa-bottle-water me-1" aria-hidden="true"></i>Bottle
+              </h2>
+              <div class="row g-2">
+                <div class="col-4">
+                  <form method="post" action="{% url 'children:quick_log_feeding' pk=child.pk preset='low' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg w-100 fw-semibold text-nowrap">{{ quick_log_bottle_low_oz }} oz</button>
+                  </form>
+                </div>
+                <div class="col-4">
+                  <form method="post" action="{% url 'children:quick_log_feeding' pk=child.pk preset='mid' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg w-100 fw-semibold text-nowrap">{{ quick_log_bottle_mid_oz }} oz</button>
+                  </form>
+                </div>
+                <div class="col-4">
+                  <form method="post" action="{% url 'children:quick_log_feeding' pk=child.pk preset='high' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg w-100 fw-semibold text-nowrap">{{ quick_log_bottle_high_oz }} oz</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="col-12 col-sm-4">
-        <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}" class="btn btn-success btn-lg w-100 py-3 rounded-3 fw-semibold">
-          <i class="fa-solid fa-poo me-2" aria-hidden="true"></i>Add Diaper
+    </div>
+
+    <!-- Log with details (smaller, like front-end dashboard) -->
+    <div class="mb-4">
+      <p class="fw-bold text-body-secondary small mb-2">Log with details</p>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning btn-sm rounded-pill px-3 py-2 fw-semibold">
+          <i class="fa-solid fa-bottle-water me-1" aria-hidden="true"></i>Feeding
         </a>
-      </div>
-      <div class="col-12 col-sm-4">
-        <a href="{% url 'naps:nap_add' child_pk=child.pk %}" class="btn btn-primary btn-lg w-100 py-3 rounded-3 fw-semibold">
-          <i class="fa-solid fa-moon me-2" aria-hidden="true"></i>Add Nap
+        <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}" class="btn btn-success btn-sm rounded-pill px-3 py-2 fw-semibold">
+          <i class="fa-solid fa-poo me-1" aria-hidden="true"></i>Diaper
+        </a>
+        <a href="{% url 'naps:nap_add' child_pk=child.pk %}" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold">
+          <i class="fa-solid fa-moon me-1" aria-hidden="true"></i>Nap
         </a>
       </div>
     </div>

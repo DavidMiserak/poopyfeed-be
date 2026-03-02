@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -1805,3 +1806,202 @@ class ChildExportStatusViewTests(TestCase):
             )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context.get("error"), "Worker timeout")
+
+
+class QuickLogViewTests(TestCase):
+    """Tests for one-tap quick-log views (feeding, diaper, nap)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="quickloguser",
+            email="quicklog@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name=TEST_BABY_NAME,
+            date_of_birth=date(2025, 6, 15),
+        )
+
+    def test_quick_log_feeding_mid_post_creates_and_redirects(self):
+        from feedings.models import Feeding
+
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "mid"},
+        )
+        response = self.client.post(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+        self.assertEqual(Feeding.objects.filter(child=self.child).count(), 1)
+        feeding = Feeding.objects.get(child=self.child)
+        self.assertEqual(feeding.feeding_type, Feeding.FeedingType.BOTTLE)
+        self.assertEqual(feeding.amount_oz, Decimal("4"))
+        self.assertIsNotNone(feeding.fed_at)
+
+    def test_quick_log_feeding_mid_uses_custom_bottle_mid_oz_when_set(self):
+        from feedings.models import Feeding
+
+        self.child.custom_bottle_mid_oz = Decimal("6")
+        self.child.save(update_fields=["custom_bottle_mid_oz"])
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "mid"},
+        )
+        self.client.post(url)
+        feeding = Feeding.objects.get(child=self.child)
+        self.assertEqual(feeding.amount_oz, Decimal("6"))
+
+    def test_quick_log_feeding_low_and_high_use_presets(self):
+        from feedings.models import Feeding
+
+        self.child.custom_bottle_low_oz = Decimal("3")
+        self.child.custom_bottle_high_oz = Decimal("5")
+        self.child.save(update_fields=["custom_bottle_low_oz", "custom_bottle_high_oz"])
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+
+        url_low = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "low"},
+        )
+        url_high = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "high"},
+        )
+        self.client.post(url_low)
+        self.client.post(url_high)
+        amounts = list(
+            Feeding.objects.filter(child=self.child)
+            .order_by("fed_at")
+            .values_list("amount_oz", flat=True)
+        )
+        self.assertEqual(amounts, [Decimal("3"), Decimal("5")])
+
+    def test_quick_log_feeding_get_redirects_to_dashboard(self):
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "mid"},
+        )
+        response = self.client.get(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+
+    @patch("notifications.signals.tracking_created")
+    def test_quick_log_feeding_sends_signal(self, mock_signal):
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "mid"},
+        )
+        self.client.post(url)
+        mock_signal.send.assert_called_once()
+        call_kw = mock_signal.send.call_args[1]
+        self.assertEqual(call_kw["event_type"], "feeding")
+        self.assertEqual(call_kw["actor_id"], self.user.id)
+        self.assertEqual(call_kw["instance"].child_id, self.child.pk)
+
+    def test_quick_log_diaper_post_creates_and_redirects(self):
+        from diapers.models import DiaperChange
+
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        for change_type in ("wet", "dirty", "both"):
+            url = reverse(
+                "children:quick_log_diaper",
+                kwargs={"pk": self.child.pk, "change_type": change_type},
+            )
+            response = self.client.post(url)
+            self.assertRedirects(
+                response,
+                reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+            )
+            last = (
+                DiaperChange.objects.filter(child=self.child)
+                .order_by("-changed_at")
+                .first()
+            )
+            self.assertEqual(last.change_type, change_type)
+
+    def test_quick_log_diaper_invalid_change_type_redirects_with_error(self):
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_diaper",
+            kwargs={"pk": self.child.pk, "change_type": "invalid"},
+        )
+        response = self.client.post(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+        from django.contrib.messages import get_messages
+
+        messages_list = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any("Invalid" in str(m) for m in messages_list),
+            "Expected an error message about invalid change type",
+        )
+
+    def test_quick_log_diaper_get_redirects_to_dashboard(self):
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_diaper",
+            kwargs={"pk": self.child.pk, "change_type": "wet"},
+        )
+        response = self.client.get(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+
+    def test_quick_log_nap_post_creates_and_redirects(self):
+        from naps.models import Nap
+
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse("children:quick_log_nap", kwargs={"pk": self.child.pk})
+        response = self.client.post(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+        nap = Nap.objects.get(child=self.child)
+        self.assertIsNotNone(nap.napped_at)
+        self.assertIsNone(nap.ended_at)
+
+    def test_quick_log_nap_get_redirects_to_dashboard(self):
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse("children:quick_log_nap", kwargs={"pk": self.child.pk})
+        response = self.client.get(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+
+    def test_quick_log_unauthenticated_redirects_to_login(self):
+        url_feeding = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "mid"},
+        )
+        url_nap = reverse("children:quick_log_nap", kwargs={"pk": self.child.pk})
+        self.assertEqual(self.client.post(url_feeding).status_code, 302)
+        self.assertEqual(self.client.post(url_nap).status_code, 302)
+
+    def test_quick_log_no_access_returns_404(self):
+        other = get_user_model().objects.create_user(
+            username="otherql",
+            email="otherql@example.com",
+            password=TEST_PASSWORD,
+        )
+        self.client.login(email="otherql@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "mid"},
+        )
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 404)
