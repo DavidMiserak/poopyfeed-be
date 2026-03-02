@@ -936,12 +936,26 @@ class CacheUtilsTests(APITestCase):
 
         from .cache_utils import invalidate_child_activities_cache
 
-        with patch("children.cache_utils.cache") as mock_cache:
+        with (
+            patch("children.cache_utils.cache") as mock_cache,
+            patch("children.cache_utils.logger") as mock_logger,
+        ):
             mock_cache.delete.side_effect = Exception("Redis connection failed")
             with self.captureOnCommitCallbacks(execute=True):
                 invalidate_child_activities_cache(777)
         # Callback ran; exception was caught and logged (no re-raise)
         mock_cache.delete.assert_called_once_with("child_activities_777")
+        mock_logger.error.assert_called_once()
+        args, kwargs = mock_logger.error.call_args
+        self.assertIn("Failed to invalidate child activities cache", args[0])
+        self.assertEqual(kwargs.get("extra", {}).get("child_id"), 777)
+        self.assertEqual(
+            kwargs.get("extra", {}).get("cache_key"), "child_activities_777"
+        )
+        self.assertEqual(
+            kwargs.get("extra", {}).get("error"), "Redis connection failed"
+        )
+        self.assertTrue(kwargs.get("exc_info"))
 
     def test_invalidate_child_activities_cache_success_path_runs_on_commit(self):
         """On commit, cache.delete runs and success path (logger.info) is executed."""
