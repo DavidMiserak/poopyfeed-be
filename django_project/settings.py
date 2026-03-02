@@ -137,6 +137,14 @@ if DEBUG:
         pass
 
 # =============================================================================
+# API Performance Monitoring
+# =============================================================================
+
+# Threshold (ms) for logging individual slow SQL queries (DEBUG only).
+# Queries exceeding this are logged at WARNING level.
+API_PERF_SLOW_QUERY_MS = int(os.environ.get("API_PERF_SLOW_QUERY_MS", "100"))
+
+# =============================================================================
 # Templates
 # =============================================================================
 
