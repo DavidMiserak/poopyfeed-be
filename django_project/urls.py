@@ -37,13 +37,17 @@ urlpatterns = [
     path("children/<int:child_pk>/diapers/", include("diapers.urls")),
     path("children/<int:child_pk>/feedings/", include("feedings.urls")),
     path("children/<int:child_pk>/naps/", include("naps.urls")),
+    path("notifications/", include("notifications.urls")),
     path("", include("pages.urls")),
 ]
 
 if settings.DEBUG:
     try:
-        from debug_toolbar.toolbar import debug_toolbar_urls
+        import debug_toolbar  # noqa: F401
 
-        urlpatterns = debug_toolbar_urls() + urlpatterns
+        urlpatterns = [
+            path("__debug__/", include("debug_toolbar.urls")),
+        ] + urlpatterns
     except ImportError:
+        # Debug toolbar is optional; if not installed, just skip wiring it up.
         pass
