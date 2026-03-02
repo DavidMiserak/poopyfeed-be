@@ -111,6 +111,32 @@ MIDDLEWARE = [
 ]
 
 # =============================================================================
+# Debug Tools (Development Only)
+# =============================================================================
+
+if DEBUG:
+    try:
+        import debug_toolbar  # noqa: F401
+
+        INSTALLED_APPS += ["debug_toolbar"]
+        MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+        DEBUG_TOOLBAR_CONFIG = {
+            # Bypass INTERNAL_IPS check — required for Podman/Docker (container IPs vary)
+            "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+            "SQL_WARNING_THRESHOLD": 500,  # ms — highlight slow queries in SQL panel
+        }
+    except ImportError:
+        pass
+
+    try:
+        import django_extensions  # noqa: F401
+
+        INSTALLED_APPS += ["django_extensions"]
+    except ImportError:
+        pass
+
+# =============================================================================
 # Templates
 # =============================================================================
 

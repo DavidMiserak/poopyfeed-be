@@ -12,6 +12,13 @@ import os
 
 from django_project.settings import *  # noqa: F401, F403
 
+# Disable debug toolbar in tests (it injects into HTML responses and causes
+# NoReverseMatch errors when Django's test runner sets DEBUG=False)
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]  # noqa: F405
+MIDDLEWARE = [
+    m for m in MIDDLEWARE if m != "debug_toolbar.middleware.DebugToolbarMiddleware"
+]  # noqa: F405
+
 # Execute Celery tasks synchronously in tests
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True

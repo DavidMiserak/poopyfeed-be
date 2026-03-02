@@ -17,6 +17,7 @@ RUN pip install -r requirements.txt
 FROM base AS development
 
 COPY . .
+RUN pip install -r requirements-dev.txt
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000

@@ -21,6 +21,10 @@ module = [
   "reportlab.*",
   "psycopg2",
   "psycopg2.*",
+  "debug_toolbar",
+  "debug_toolbar.*",
+  "django_extensions",
+  "django_extensions.*",
 ]
 ignore_missing_imports = true
 
