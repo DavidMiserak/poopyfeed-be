@@ -150,7 +150,7 @@ class MarkAllReadView(LoginRequiredMixin, View):
         Notification.objects.filter(recipient=request.user, is_read=False).update(
             is_read=True
         )
-        return redirect("notifications_list")
+        return redirect("notifications:notifications_list")
 
 
 class NotificationGoView(LoginRequiredMixin, View):
