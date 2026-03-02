@@ -5,12 +5,13 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.utils import timezone
 
 from children.models import Child, ChildShare
 from django_project.test_constants import TEST_PASSWORD
 
+from .context_processors import notification_unread_count
 from .models import FeedingReminderLog, Notification, NotificationPreference, QuietHours
 from .signals import tracking_created
 
@@ -344,6 +345,113 @@ class QuietHoursModelTests(TestCase):
         qh = QuietHours.objects.create(user=self.user, enabled=True)
         self.assertIn("qh@example.com", str(qh))
         self.assertIn("ON", str(qh))
+
+
+class NotificationTemplatesTests(TestCase):
+    """Tests for notifications context processor and template views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="notifuser",
+            email="notif@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user, name="Baby Notif", date_of_birth=date(2025, 6, 15)
+        )
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_context_processor_returns_unread_count_for_authenticated_user(self):
+        request = RequestFactory().get("/")
+        request.user = self.user
+        Notification.objects.create(
+            recipient=self.user,
+            actor=self.other_user,
+            child=self.child,
+            event_type=Notification.EventType.FEEDING,
+            message="Test message",
+        )
+        ctx = notification_unread_count(request)
+        self.assertEqual(ctx.get("notification_unread_count"), 1)
+
+    def test_context_processor_returns_empty_for_anonymous(self):
+        request = RequestFactory().get("/")
+        ctx = notification_unread_count(request)
+        self.assertEqual(ctx, {})
+
+    def test_notifications_list_requires_login(self):
+        response = self.client.get("/notifications/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_notifications_list_shows_only_current_user_notifications(self):
+        Notification.objects.create(
+            recipient=self.user,
+            actor=self.other_user,
+            child=self.child,
+            event_type=Notification.EventType.FEEDING,
+            message="For notif user",
+        )
+        Notification.objects.create(
+            recipient=self.other_user,
+            actor=self.user,
+            child=self.child,
+            event_type=Notification.EventType.DIAPER,
+            message="For other user",
+        )
+        self.client.login(username="notifuser", password=TEST_PASSWORD)
+        response = self.client.get("/notifications/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "For notif user")
+        self.assertNotContains(response, "For other user")
+
+    def test_mark_all_read_view_marks_notifications_and_redirects(self):
+        Notification.objects.create(
+            recipient=self.user,
+            actor=self.other_user,
+            child=self.child,
+            event_type=Notification.EventType.FEEDING,
+            message="Unread 1",
+        )
+        Notification.objects.create(
+            recipient=self.user,
+            actor=self.other_user,
+            child=self.child,
+            event_type=Notification.EventType.DIAPER,
+            message="Unread 2",
+        )
+        self.client.login(username="notifuser", password=TEST_PASSWORD)
+        response = self.client.post("/notifications/mark-all-read/")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].endswith("/notifications/"))
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.user, is_read=False).count(), 0
+        )
+
+    def test_notification_go_marks_single_and_redirects_to_child_dashboard(self):
+        notif = Notification.objects.create(
+            recipient=self.user,
+            actor=self.other_user,
+            child=self.child,
+            event_type=Notification.EventType.NAP,
+            message="Go to dashboard",
+        )
+        self.client.login(username="notifuser", password=TEST_PASSWORD)
+        response = self.client.post(f"/notifications/{notif.pk}/go/")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response["Location"].endswith(f"/children/{self.child.pk}/dashboard/")
+        )
+        notif.refresh_from_db()
+        self.assertTrue(notif.is_read)
 
 
 class NotificationTaskTests(TestCase):

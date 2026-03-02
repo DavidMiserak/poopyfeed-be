@@ -1,0 +1,111 @@
+{% extends "_base.html" %}
+{% load poopyfeed_dt %}
+
+{% block title %}Notifications | PoopyFeed{% endblock title %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <nav aria-label="Breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item">
+          <a href="{% url 'children:child_list' %}" class="text-decoration-none">My Children</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Notifications</li>
+      </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 fw-bold mb-0">
+        <i class="fa-solid fa-bell me-2 text-primary" aria-hidden="true"></i>Notifications
+      </h1>
+      {% if notification_unread_count %}
+        <form method="post" action="{% url 'notifications:notifications_mark_all_read' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="fa-solid fa-check-double me-1" aria-hidden="true"></i>Mark all read
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    {% if notifications %}
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" role="list">
+            {% for notification in notifications %}
+              <li class="list-group-item px-4 py-3 {% if not notification.is_read %}bg-light-subtle{% endif %}">
+                <form method="post" action="{% url 'notifications:notification_go' pk=notification.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="w-100 d-flex align-items-start gap-3 text-start border-0 bg-transparent p-0">
+                    <span class="fs-4 flex-shrink-0 mt-1" aria-hidden="true">
+                      {% if notification.event_type == 'feeding' %}
+                        <i class="fa-solid fa-bottle-water text-warning"></i>
+                      {% elif notification.event_type == 'diaper' %}
+                        <i class="fa-solid fa-poo text-success"></i>
+                      {% elif notification.event_type == 'nap' %}
+                        <i class="fa-solid fa-moon text-primary"></i>
+                      {% elif notification.event_type == 'feeding_reminder' %}
+                        <i class="fa-solid fa-clock-rotate-left text-danger"></i>
+                      {% else %}
+                        <i class="fa-solid fa-bell text-secondary"></i>
+                      {% endif %}
+                    </span>
+                    <div class="flex-grow-1">
+                      <p class="mb-1 small {% if notification.is_read %}text-body-secondary{% else %}fw-semibold{% endif %}">
+                        {{ notification.message }}
+                      </p>
+                      <p class="mb-0 text-body-tertiary small">
+                        {{ notification.created_at|format_relative_tz:user_timezone }}
+                      </p>
+                    </div>
+                  </button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      {% if is_paginated %}
+        <nav aria-label="Notifications pagination" class="d-flex justify-content-center mt-4">
+          <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link rounded-start-pill" href="?page={{ page_obj.previous_page_number }}">
+                  <i class="fa-solid fa-chevron-left me-1"></i>Previous
+                </a>
+              </li>
+            {% endif %}
+            <li class="page-item disabled">
+              <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link rounded-end-pill" href="?page={{ page_obj.next_page_number }}">
+                  Next<i class="fa-solid fa-chevron-right ms-1"></i>
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body text-center py-5">
+          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="fa-solid fa-bell fa-xl text-primary"></i>
+          </div>
+          <h2 class="h5 fw-bold mb-2">No notifications yet</h2>
+          <p class="text-body-tertiary small mb-3">
+            When someone logs a feeding, diaper change, or nap for a shared child, you'll see it here.
+          </p>
+          <a href="{% url 'children:child_list' %}" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="fa-solid fa-children me-1" aria-hidden="true"></i>Back to My Children
+          </a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock content %}

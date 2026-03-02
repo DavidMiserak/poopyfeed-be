@@ -64,6 +64,15 @@
                   <i class="fa-solid fa-children me-1" aria-hidden="true"></i>My Children
                 </a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link fw-medium px-3 position-relative" href="{% url 'notifications:notifications_list' %}" aria-label="Notifications">
+                  <i class="fa-solid fa-bell me-1" aria-hidden="true"></i>
+                  Notifications
+                  {% if notification_unread_count %}
+                    <span class="small text-primary">({{ notification_unread_count }})</span>
+                  {% endif %}
+                </a>
+              </li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-3" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
                   <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" aria-hidden="true">

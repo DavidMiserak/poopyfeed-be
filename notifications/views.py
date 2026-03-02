@@ -1,5 +1,10 @@
-"""API views for the notifications system."""
+"""API and template views for the notifications system."""
 
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.views import View
+from django.views.generic import ListView
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -120,3 +125,41 @@ class QuietHoursView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class NotificationsListView(LoginRequiredMixin, ListView):
+    """Server-rendered notifications list for the web UI."""
+
+    model = Notification
+    template_name = "notifications/notification_list.html"
+    context_object_name = "notifications"
+    paginate_by = 25
+
+    def get_queryset(self):
+        return (
+            Notification.objects.filter(recipient=self.request.user)
+            .select_related("child", "actor")
+            .order_by("-created_at")
+        )
+
+
+class MarkAllReadView(LoginRequiredMixin, View):
+    """Mark all notifications as read for the current user and redirect back."""
+
+    def post(self, request, *args, **kwargs):
+        Notification.objects.filter(recipient=request.user, is_read=False).update(
+            is_read=True
+        )
+        return redirect("notifications_list")
+
+
+class NotificationGoView(LoginRequiredMixin, View):
+    """Mark a single notification as read and go to the child dashboard."""
+
+    def post(self, request, pk, *args, **kwargs):
+        notif = get_object_or_404(Notification, pk=pk, recipient=request.user)
+        notif.is_read = True
+        notif.save(update_fields=["is_read"])
+        return redirect(
+            reverse("children:child_dashboard", kwargs={"pk": notif.child_id})
+        )
