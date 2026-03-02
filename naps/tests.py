@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
@@ -353,6 +354,41 @@ class NapViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nap")
+
+    def test_nap_list_filter_by_date_range(self):
+        """List can be filtered by date_from and date_to (user timezone)."""
+        user = get_user_model().objects.create_user(
+            username="filteruser",
+            email="filteruser@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Filter Baby",
+            date_of_birth=date(2025, 1, 1),
+        )
+        Nap.objects.create(
+            child=child,
+            napped_at=timezone.make_aware(
+                datetime(2025, 2, 14, 23, 0), ZoneInfo("UTC")
+            ),
+        )
+        Nap.objects.create(
+            child=child,
+            napped_at=timezone.make_aware(
+                datetime(2025, 2, 15, 14, 0), ZoneInfo("UTC")
+            ),
+        )
+        self.client.login(email="filteruser@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_NAP_LIST, kwargs={"child_pk": child.pk}),
+            {"date_from": "2025-02-15", "date_to": "2025-02-15"},
+        )
+        self.assertEqual(response.status_code, 200)
+        # Only the nap on Feb 15 (EST) should appear
+        self.assertEqual(response.context["naps"].count(), 1)
+        self.assertEqual(response.context["naps"][0].napped_at.day, 15)
 
     def test_nap_create_requires_login(self):
         response = self.client.get(

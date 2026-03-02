@@ -15,6 +15,10 @@ class DiaperChangeListView(TrackingListView):
     model = DiaperChange
     template_name = "diapers/diaperchange_list.html"
     context_object_name = "diaper_changes"
+    date_field = "changed_at"
+    filter_type_field = "change_type"
+    filter_type_param = "type"
+    filter_type_choices = DiaperChange.ChangeType.choices
 
 
 class DiaperChangeCreateView(TrackingCreateView):

@@ -28,8 +28,10 @@ from django.db import models
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.datastructures import MultiValueDict
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
+from .datetime_utils import date_to_utc_range
 from .mixins import ChildAccessMixin, ChildEditMixin
 from .models import Child, ChildShare
 
@@ -88,12 +90,83 @@ class TrackingEditQuerysetMixin:
         return obj.child
 
 
-class TrackingListView(ChildAccessMixin, ListView):
+def _build_filter_query_string(
+    request_get: MultiValueDict, exclude_page: bool = True
+) -> str:
+    """Build query string from GET params for pagination links, optionally excluding page."""
+    params = []
+    for key, value in request_get.items():
+        if exclude_page and key == "page":
+            continue
+        if value:
+            params.append(f"{key}={value}")
+    return "&".join(params)
+
+
+class TrackingListFilterMixin:
+    """Optional mixin for TrackingListView to filter by date range and (optionally) type.
+
+    Subclasses set:
+        date_field (str): Model field name for the record timestamp (e.g. 'fed_at', 'changed_at', 'napped_at').
+        filter_type_field (str, optional): Model field for type filter (e.g. 'feeding_type', 'change_type').
+        filter_type_param (str, optional): GET param name for type (default 'type').
+        filter_type_choices (list of tuples, optional): (value, label) for dropdown (e.g. FeedingType.choices).
+
+    GET params: date_from, date_to (YYYY-MM-DD in user timezone), and type (when filter_type_* set).
+    Dates are interpreted in the request user's profile timezone.
+    """
+
+    date_field: str | None = None
+    filter_type_field: str | None = None
+    filter_type_param: str = "type"
+    filter_type_choices: list[tuple[str, str]] | None = None
+
+    def apply_list_filters(self, qs):
+        """Apply date range and type filters from GET params. Returns filtered queryset."""
+        if not self.date_field:
+            return qs
+        tz_name = getattr(self.request.user, "timezone", None) or "UTC"
+        date_from_str = self.request.GET.get("date_from", "").strip()
+        date_to_str = self.request.GET.get("date_to", "").strip()
+        if date_from_str:
+            utc_range = date_to_utc_range(date_from_str, tz_name)
+            if utc_range:
+                start_utc, _ = utc_range
+                qs = qs.filter(**{f"{self.date_field}__gte": start_utc})
+        if date_to_str:
+            utc_range = date_to_utc_range(date_to_str, tz_name)
+            if utc_range:
+                _, end_utc = utc_range
+                qs = qs.filter(**{f"{self.date_field}__lt": end_utc})
+        if self.filter_type_field and self.filter_type_choices:
+            type_value = self.request.GET.get(self.filter_type_param, "").strip()
+            valid_values = [v for v, _ in self.filter_type_choices]
+            if type_value in valid_values:
+                qs = qs.filter(**{self.filter_type_field: type_value})
+        return qs
+
+    def get_context_data(self, **kwargs):
+        """Add filter values and query string for templates (form and pagination)."""
+        context = super().get_context_data(**kwargs)
+        context["filter_date_from"] = self.request.GET.get("date_from", "")
+        context["filter_date_to"] = self.request.GET.get("date_to", "")
+        context["filter_type"] = self.request.GET.get(self.filter_type_param, "")
+        context["filter_query_string"] = _build_filter_query_string(self.request.GET)
+        if self.filter_type_choices is not None:
+            context["filter_type_choices"] = self.filter_type_choices
+        return context
+
+
+class TrackingListView(TrackingListFilterMixin, ChildAccessMixin, ListView):
     """Base ListView for tracking records (diaper changes, feedings, naps).
 
     Handles GET requests to list all tracking records for a child. Permission
     checking is enforced by ChildAccessMixin, which allows any authenticated
     user with access to the child (owner/co-parent/caregiver).
+
+    Optional filtering: Subclasses may set date_field (and optionally
+    filter_type_* attrs) to enable date range and type filters via GET params;
+    see TrackingListFilterMixin.
 
     Sorting: Records are ordered by timestamp descending (newest first) via
     Meta.ordering on the model class.
@@ -106,6 +179,8 @@ class TrackingListView(ChildAccessMixin, ListView):
     - page_obj: Page object (has_previous, has_next, number, paginator, etc.)
     - child: The child being viewed
     - user_role: Current user's role ('owner', 'co-parent', 'caregiver')
+    - filter_date_from, filter_date_to, filter_type, filter_query_string (when filtering used)
+    - filter_type_choices (when filter_type_choices set on subclass)
 
     Required subclass attributes:
         model (Model): Tracking model class (DiaperChange, Feeding, Nap)
@@ -117,6 +192,9 @@ class TrackingListView(ChildAccessMixin, ListView):
             model = DiaperChange
             template_name = "diapers/diaperchange_list.html"
             context_object_name = "diaper_changes"
+            date_field = "changed_at"
+            filter_type_field = "change_type"
+            filter_type_choices = DiaperChange.ChangeType.choices
     """
 
     def get_child_for_access_check(self):
@@ -131,15 +209,11 @@ class TrackingListView(ChildAccessMixin, ListView):
         return get_object_or_404(Child, pk=self.kwargs["child_pk"])
 
     def get_queryset(self):
-        """Get tracking records for the child.
-
-        Returns:
-            QuerySet: All tracking records for self.child, ordered by timestamp desc
-
-        Note:
-            Model's Meta.ordering ensures newest records appear first (e.g., -changed_at)
-        """
-        return self.model.objects.filter(child=self.child)
+        """Get tracking records for the child, with optional date/type filters from GET."""
+        qs = self.model.objects.filter(child=self.child)
+        if hasattr(self, "apply_list_filters"):
+            qs = self.apply_list_filters(qs)
+        return qs
 
     paginate_by = 50
 

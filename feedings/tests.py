@@ -1,5 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
@@ -474,6 +475,75 @@ class FeedingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Bottle")
         self.assertContains(response, "3.0 oz")
+
+    def test_feeding_list_filter_by_date_range(self):
+        """List can be filtered by date_from and date_to (user timezone)."""
+        user = get_user_model().objects.create_user(
+            username="filteruser",
+            email="filteruser@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Filter Baby",
+            date_of_birth=date(2025, 1, 1),
+        )
+        # Feb 14 23:00 UTC = Feb 14 18:00 EST (out of Feb 15)
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=timezone.make_aware(datetime(2025, 2, 14, 23, 0), ZoneInfo("UTC")),
+            amount_oz=1.0,
+        )
+        # Feb 15 14:00 UTC = Feb 15 09:00 EST (in range)
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=timezone.make_aware(datetime(2025, 2, 15, 14, 0), ZoneInfo("UTC")),
+            amount_oz=2.0,
+        )
+        # Feb 16 04:00 UTC = Feb 15 23:00 EST (in range)
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BREAST,
+            fed_at=timezone.make_aware(datetime(2025, 2, 16, 4, 0), ZoneInfo("UTC")),
+            duration_minutes=10,
+            side=Feeding.BreastSide.LEFT,
+        )
+        self.client.login(email="filteruser@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": child.pk}),
+            {"date_from": "2025-02-15", "date_to": "2025-02-15"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "1.0 oz")  # Feb 14 feeding excluded
+        self.assertContains(response, "2.0 oz")
+        self.assertContains(response, "Breast")
+
+    def test_feeding_list_filter_by_type(self):
+        """List can be filtered by feeding type."""
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=timezone.now(),
+            amount_oz=4.0,
+        )
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BREAST,
+            fed_at=timezone.now() - timezone.timedelta(hours=1),
+            duration_minutes=15,
+            side=Feeding.BreastSide.RIGHT,
+        )
+        self.client.login(email=TEST_PARENT_EMAIL, password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_FEEDING_LIST, kwargs={"child_pk": self.child.pk}),
+            {"type": "bottle"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "4.0 oz")
+        self.assertNotContains(response, "15 min")
 
     def test_feeding_create_requires_login(self):
         response = self.client.get(

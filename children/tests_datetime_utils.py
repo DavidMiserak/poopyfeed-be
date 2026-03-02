@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.utils import timezone as django_tz
 
 from .datetime_utils import (
+    date_to_utc_range,
     format_child_age,
     format_datetime_user_tz,
     format_relative,
@@ -179,3 +180,25 @@ class DatetimeUtilsTestCase(TestCase):
         dob = today - timedelta(days=730)
         result = format_child_age(dob, "UTC")
         self.assertEqual(result, "(2 years old)")
+
+    def test_date_to_utc_range_none(self):
+        """None or empty date_str returns None."""
+        self.assertIsNone(date_to_utc_range(None, "America/New_York"))
+        self.assertIsNone(date_to_utc_range("", "America/New_York"))
+
+    def test_date_to_utc_range_valid(self):
+        """Valid YYYY-MM-DD returns (start_utc, end_utc) for that day in tz."""
+        start_utc, end_utc = date_to_utc_range("2025-02-15", "America/New_York")
+        self.assertIsNotNone(start_utc)
+        self.assertIsNotNone(end_utc)
+        self.assertEqual(start_utc.tzinfo, ZoneInfo("UTC"))
+        self.assertLess(start_utc, end_utc)
+        # Feb 15 00:00 EST = 05:00 UTC; Feb 16 00:00 EST = 05:00 UTC next day
+        self.assertEqual(start_utc.hour, 5)
+        self.assertEqual(start_utc.day, 15)
+        self.assertEqual(end_utc.day, 16)
+
+    def test_date_to_utc_range_invalid_returns_none(self):
+        """Invalid date string returns None."""
+        self.assertIsNone(date_to_utc_range("not-a-date", "UTC"))
+        self.assertIsNone(date_to_utc_range("2025-13-01", "UTC"))  # invalid month

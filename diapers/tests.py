@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from django.contrib.admin.sites import site as admin_site
 from django.contrib.auth import get_user_model
@@ -239,6 +240,61 @@ class DiaperChangeViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Wet")
+
+    def test_diaper_list_filter_by_date_range(self):
+        """List can be filtered by date_from and date_to (user timezone)."""
+        user = get_user_model().objects.create_user(
+            username="filteruser",
+            email="filteruser@example.com",
+            password=TEST_PASSWORD,
+            timezone="America/New_York",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Filter Baby",
+            date_of_birth=date(2025, 1, 1),
+        )
+        DiaperChange.objects.create(
+            child=child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=timezone.make_aware(
+                datetime(2025, 2, 14, 23, 0), ZoneInfo("UTC")
+            ),
+        )
+        DiaperChange.objects.create(
+            child=child,
+            change_type=DiaperChange.ChangeType.DIRTY,
+            changed_at=timezone.make_aware(
+                datetime(2025, 2, 15, 14, 0), ZoneInfo("UTC")
+            ),
+        )
+        self.client.login(email="filteruser@example.com", password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": child.pk}),
+            {"date_from": "2025-02-15", "date_to": "2025-02-15"},
+        )
+        self.assertEqual(response.status_code, 200)
+        # Only the change on Feb 15 (EST) should appear
+        self.assertEqual(response.context["diaper_changes"].count(), 1)
+        self.assertEqual(response.context["diaper_changes"][0].change_type, "dirty")
+
+    def test_diaper_list_filter_by_type(self):
+        """List can be filtered by change type."""
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.BOTH,
+            changed_at=timezone.now(),
+        )
+        self.client.login(email=TEST_PARENT_EMAIL, password=TEST_PASSWORD)
+        response = self.client.get(
+            reverse(URL_DIAPER_LIST, kwargs={"child_pk": self.child.pk}),
+            {"type": "both"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Wet + Dirty")
+        # self.change is WET, so with type=both we may still see it if we had both - we have one WET (self.change) and one BOTH; filter type=both should show only BOTH
+        self.assertEqual(response.context["diaper_changes"].count(), 1)
+        self.assertEqual(response.context["diaper_changes"][0].change_type, "both")
 
     def test_diaper_edit_success(self):
         self.client.login(email=TEST_PARENT_EMAIL, password=TEST_PASSWORD)

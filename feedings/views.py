@@ -15,6 +15,10 @@ class FeedingListView(TrackingListView):
     model = Feeding
     template_name = "feedings/feeding_list.html"
     context_object_name = "feedings"
+    date_field = "fed_at"
+    filter_type_field = "feeding_type"
+    filter_type_param = "type"
+    filter_type_choices = Feeding.FeedingType.choices
 
 
 class FeedingCreateView(TrackingCreateView):

@@ -15,6 +15,7 @@ class NapListView(TrackingListView):
     model = Nap
     template_name = "naps/nap_list.html"
     context_object_name = "naps"
+    date_field = "napped_at"
 
 
 class NapCreateView(TrackingCreateView):

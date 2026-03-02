@@ -1,6 +1,6 @@
 """Pure Django datetime helpers using the user's timezone (no JavaScript)."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.utils import timezone as django_tz
@@ -100,6 +100,42 @@ def format_relative(utc_dt: datetime | None) -> str:
         return f"{mo} month{'s' if mo != 1 else ''} ago"
     y = total_seconds // 31536000
     return f"{y} year{'s' if y != 1 else ''} ago"
+
+
+def date_to_utc_range(
+    date_str: str | None, tz_name: str | None
+) -> tuple[datetime, datetime] | None:
+    """Convert a calendar date (YYYY-MM-DD) in the user's timezone to UTC range.
+
+    Args:
+        date_str: Date string YYYY-MM-DD, or None
+        tz_name: IANA timezone name (e.g. America/New_York)
+
+    Returns:
+        (start_utc, end_utc) for that day in the given timezone, or None if
+        date_str is missing/invalid.
+    """
+    if not date_str:
+        return None
+    try:
+        year, month, day = (int(x) for x in date_str.strip().split("-"))
+        local_date = date(year, month, day)
+    except (ValueError, AttributeError):
+        return None
+    tz = _user_tz(tz_name)
+    start_of_day = datetime(
+        local_date.year,
+        local_date.month,
+        local_date.day,
+        0,
+        0,
+        0,
+        tzinfo=tz,
+    )
+    end_of_day = start_of_day + timedelta(days=1)
+    start_utc = start_of_day.astimezone(ZoneInfo("UTC"))
+    end_utc = end_of_day.astimezone(ZoneInfo("UTC"))
+    return start_utc, end_utc
 
 
 def format_child_age(dob: date | datetime | None, tz_name: str | None) -> str:
