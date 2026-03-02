@@ -122,8 +122,10 @@ if DEBUG:
         MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
         DEBUG_TOOLBAR_CONFIG = {
-            # Bypass INTERNAL_IPS check — required for Podman/Docker (container IPs vary)
-            "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+            # Bypass INTERNAL_IPS check — required for Podman/Docker (container IPs vary).
+            # Exclude /api/ paths — toolbar injects HTML which breaks JSON responses.
+            "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG
+            and not request.path_info.startswith("/api/"),
             "SQL_WARNING_THRESHOLD": 500,  # ms — highlight slow queries in SQL panel
         }
     except ImportError:
