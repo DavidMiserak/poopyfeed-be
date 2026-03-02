@@ -104,6 +104,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # API performance: measure response times, add Server-Timing header
+    "django_project.middleware.APITimingMiddleware",
     # Disable browser caching of API responses (prevent stale data)
     "django_project.middleware.NoCacheAPIMiddleware",
 ]
@@ -378,6 +380,36 @@ EMAIL_BACKEND = os.environ.get(
     "DJANGO_EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend",
 )
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "performance": {
+            "format": "[{asctime}] {levelname} {message}",
+            "style": "{",
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "performance",
+        },
+    },
+    "loggers": {
+        "poopyfeed.performance": {
+            "handlers": ["console"],
+            # DEBUG/dev: log all API timings; production: only slow requests (WARNING)
+            "level": "INFO" if DEBUG else "WARNING",
+            "propagate": False,
+        },
+    },
+}
 
 # =============================================================================
 # Security Settings
