@@ -167,24 +167,22 @@ class NotificationPreferenceAPITests(APITestCase):
         )
         response = self.client.get(URL_NOTIFICATIONS_PREFERENCES)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data["results"]
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["child_name"], "Baby Pref")
-        self.assertTrue(results[0]["notify_feedings"])
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["child_name"], "Baby Pref")
+        self.assertTrue(response.data[0]["notify_feedings"])
 
     def test_list_shows_only_own_preferences(self):
         """Each user sees only their own preferences."""
         self.client.get(URL_NOTIFICATIONS_PREFERENCES)  # auto-create for user
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.other_token.key}")
         response = self.client.get(URL_NOTIFICATIONS_PREFERENCES)
-        results = response.data["results"]
         # other_user also has access via ChildShare, so should see 1 pref
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(response.data), 1)
         # Verify it's the other_user's preference, not the owner's
         pref = NotificationPreference.objects.get(
             user=self.other_user, child=self.child
         )
-        self.assertEqual(results[0]["id"], pref.id)
+        self.assertEqual(response.data[0]["id"], pref.id)
 
     def test_update_preference(self):
         pref = NotificationPreference.objects.create(user=self.user, child=self.child)

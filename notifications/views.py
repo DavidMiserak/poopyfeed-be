@@ -73,6 +73,7 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
 
     serializer_class = NotificationPreferenceSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     http_method_names = ["get", "patch"]
 
     def get_queryset(self):
