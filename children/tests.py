@@ -252,6 +252,138 @@ class ChildViewTests(TestCase):
         self.assertFalse(Child.objects.filter(pk=child_pk).exists())
 
 
+class FussBusViewTests(TestCase):
+    """Django view tests for The Fuss Bus wizard."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="fussbusparent",
+            email="fussbus@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.toddler_user = get_user_model().objects.create_user(
+            username="fusstoddler",
+            email="fusstoddler@example.com",
+            password=TEST_PASSWORD,
+        )
+        # Infant: 2 weeks old
+        cls.infant = Child.objects.create(
+            parent=cls.user,
+            name="Infant",
+            date_of_birth=timezone.now().date() - timedelta(weeks=2),
+        )
+        # Toddler: ~18 months old
+        cls.toddler = Child.objects.create(
+            parent=cls.toddler_user,
+            name="Toddler",
+            date_of_birth=timezone.now().date() - timedelta(weeks=78),
+        )
+
+    def test_fuss_bus_step1_default_symptom_and_reset(self):
+        """Fresh entry to Fuss Bus shows step 1 with default symptom and resets state."""
+        self.client.login(email="fussbus@example.com", password=TEST_PASSWORD)
+        url = reverse("children:child_fuss_bus", kwargs={"pk": self.infant.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        # Should render Step 1 template content
+        self.assertContains(response, "The Fuss Bus")
+        self.assertContains(response, "What best describes what's going on?")
+        # Infant should not see Refusing food option yet
+        self.assertNotContains(response, "Refusing food")
+
+    def test_fuss_bus_step1_to_step2_flow(self):
+        """Posting step 1 should advance to step 2 and preserve symptom in session."""
+        self.client.login(email="fussbus@example.com", password=TEST_PASSWORD)
+        url = reverse("children:child_fuss_bus", kwargs={"pk": self.infant.pk})
+        # Start wizard
+        self.client.get(url)
+        # Submit step 1 with symptom = crying
+        response = self.client.post(
+            url,
+            {
+                "step": 1,
+                "action": "next",
+                "symptom": "crying",
+            },
+        )
+        # Should redirect to step 2
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("step=2", response.url)
+        # Now GET step 2
+        response2 = self.client.get(response.url)
+        self.assertEqual(response2.status_code, 200)
+        self.assertContains(response2, "Start with the basics")
+        self.assertContains(response2, "Fed recently")
+        self.assertContains(response2, "Then check these")
+
+    def test_fuss_bus_start_over_resets_state(self):
+        """Start over from later step should reset wizard back to step 1."""
+        self.client.login(email="fussbus@example.com", password=TEST_PASSWORD)
+        url = reverse("children:child_fuss_bus", kwargs={"pk": self.infant.pk})
+        # Move to step 2
+        self.client.get(url)
+        self.client.post(
+            url,
+            {
+                "step": 1,
+                "action": "next",
+                "symptom": "crying",
+            },
+        )
+        # Now simulate being on step 2 and clicking Start over
+        response = self.client.post(
+            url,
+            {
+                "step": 2,
+                "action": "start_over",
+                "checked": ["comfortable_temperature"],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        # Fresh GET should go back to step 1
+        response2 = self.client.get(response.url)
+        self.assertEqual(response2.status_code, 200)
+        self.assertContains(response2, "What best describes what's going on?")
+
+    def test_fuss_bus_age_filtered_refusing_food_for_toddler(self):
+        """Toddler sees Refusing food symptom on Step 1."""
+        self.client.login(email="fusstoddler@example.com", password=TEST_PASSWORD)
+        url = reverse("children:child_fuss_bus", kwargs={"pk": self.toddler.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Refusing food")
+
+    def test_fuss_bus_caregiver_access(self):
+        """Caregiver with shared access can view Fuss Bus."""
+        owner = get_user_model().objects.create_user(
+            username="ownerfb",
+            email="ownerfb@example.com",
+            password=TEST_PASSWORD,
+        )
+        caregiver = get_user_model().objects.create_user(
+            username="caregiverfb",
+            email="caregiverfb@example.com",
+            password=TEST_PASSWORD,
+        )
+        child = Child.objects.create(
+            parent=owner,
+            name="Shared Baby",
+            date_of_birth=timezone.now().date() - timedelta(weeks=8),
+        )
+        ChildShare.objects.create(
+            child=child,
+            user=caregiver,
+            role=ChildShare.Role.CAREGIVER,
+            created_by=owner,
+        )
+        self.client.login(email="caregiverfb@example.com", password=TEST_PASSWORD)
+        url = reverse("children:child_fuss_bus", kwargs={"pk": child.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The Fuss Bus")
+
+
 class ChildShareModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
