@@ -36,6 +36,11 @@
             <i class="fa-solid fa-pen me-1" aria-hidden="true"></i>Edit
           </a>
         {% endif %}
+        <a href="{% url 'children:child_fuss_bus' pk=child.pk %}"
+           class="btn btn-outline-danger btn-sm rounded-pill"
+           aria-label="Open The Fuss Bus for this child">
+          <i class="fa-solid fa-bus me-1 text-danger" aria-hidden="true"></i>Fuss Bus
+        </a>
         <a href="{% url 'children:child_advanced' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="View advanced options for this child">
           <i class="fa-solid fa-screwdriver-wrench me-1" aria-hidden="true"></i>More tools
         </a>

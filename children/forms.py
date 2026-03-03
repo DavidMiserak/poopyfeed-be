@@ -10,6 +10,8 @@ from crispy_forms.layout import HTML, Column, Div, Layout, Row
 from django import forms
 from django.utils import timezone
 
+from analytics.fuss_bus import FUSS_BUS_SYMPTOM_IDS
+
 from .datetime_utils import (
     naive_local_to_utc,
     now_in_user_tz_str,
@@ -212,3 +214,26 @@ class LocalDateTimeFormMixin(forms.Form):
                     "Date/time cannot be in the future.",
                 )
         return cleaned_data
+
+
+class FussBusStep1Form(forms.Form):
+    """Step 1 form: select a primary symptom for The Fuss Bus."""
+
+    symptom = forms.ChoiceField(
+        choices=[(sid, sid.replace("_", " ")) for sid in FUSS_BUS_SYMPTOM_IDS],
+        required=True,
+        widget=forms.RadioSelect,
+    )
+
+
+class FussBusStep2Form(forms.Form):
+    """Step 2 form: manual checklist confirmations for The Fuss Bus."""
+
+    def __init__(self, *args, manual_ids: list[str] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        manual_ids = manual_ids or []
+        self.fields["checked"] = forms.MultipleChoiceField(
+            choices=[(mid, mid) for mid in manual_ids],
+            required=False,
+            widget=forms.CheckboxSelectMultiple,
+        )

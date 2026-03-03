@@ -15,7 +15,23 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import ChildForm
+from analytics.fuss_bus import (
+    COLIC_SECTION,
+    FUSS_BUS_GLOSSARY,
+    SELF_CARE_ITEMS,
+    SOOTHING_TOOLKIT,
+    WHEN_TO_CALL_DOCTOR_BULLETS,
+    AutoCheckState,
+    build_checklist_items,
+    get_auto_check_state,
+    get_child_age_months,
+    get_developmental_contexts,
+    get_lullaby_songs,
+    prioritize_suggestions,
+)
+from analytics.utils import compute_pattern_alerts, get_child_timeline_events
+
+from .forms import ChildForm, FussBusStep1Form, FussBusStep2Form
 from .mixins import ChildAccessMixin, ChildEditMixin, ChildOwnerMixin
 from .models import Child, ChildShare, ShareInvite
 
@@ -270,6 +286,200 @@ class ChildAdvancedView(ChildAccessMixin, View):
                 "child": self.child,
                 "can_manage_sharing": self.child.can_manage_sharing(request.user),
             },
+        )
+
+
+class ChildFussBusView(ChildAccessMixin, View):
+    """The Fuss Bus: guided 3-step troubleshooting wizard in Django templates."""
+
+    template_name = "children/child_fuss_bus.html"
+
+    SESSION_KEY = "fuss_bus_state"
+
+    def _get_state(self, request) -> dict:
+        """Return per-child wizard state from session with sensible defaults."""
+        session_state = request.session.get(self.SESSION_KEY, {})
+        child_key = str(self.child.id)
+        child_state = session_state.get(
+            child_key,
+            {
+                "step": 1,
+                "symptom": "general_fussiness",
+                "checked": [],
+            },
+        )
+        child_state.setdefault("step", 1)
+        child_state.setdefault("symptom", "general_fussiness")
+        child_state.setdefault("checked", [])
+        return child_state
+
+    def _save_state(self, request, state: dict) -> None:
+        session_state = request.session.get(self.SESSION_KEY, {})
+        session_state[str(self.child.id)] = {
+            "step": state.get("step", 1),
+            "symptom": state.get("symptom") or "general_fussiness",
+            "checked": list(state.get("checked", [])),
+        }
+        request.session[self.SESSION_KEY] = session_state
+        request.session.modified = True
+
+    def _build_auto_state_and_checklist(
+        self, *, symptom: str, checked_ids: set[str]
+    ) -> tuple[AutoCheckState, list]:
+        """Shared helper to compute auto-check state and checklist items."""
+        child = self.child
+        pattern_alerts = compute_pattern_alerts(child.id)
+        timeline_events = get_child_timeline_events(child.id)
+        age_months = get_child_age_months(child.date_of_birth)
+        auto_state = get_auto_check_state(
+            pattern_alerts=pattern_alerts,
+            timeline_events=timeline_events,
+            child_age_months=age_months,
+        )
+        checklist_items = build_checklist_items(
+            symptom_id=symptom,  # type: ignore[arg-type]
+            child_age_months=age_months,
+            auto_check_state=auto_state,
+        )
+        return auto_state, checklist_items
+
+    def get(self, request, pk):
+        child = self.child
+        # If user clicked the Fuss Bus link (no query params), start a fresh session state
+        if not request.GET:
+            state = {
+                "step": 1,
+                "symptom": "general_fussiness",
+                "checked": [],
+            }
+            self._save_state(request, state)
+        else:
+            state = self._get_state(request)
+
+        try:
+            step_param = int(request.GET.get("step") or state.get("step", 1))
+        except (TypeError, ValueError):
+            step_param = 1
+        if step_param < 1 or step_param > 3:
+            step_param = 1
+        state["step"] = step_param
+        self._save_state(request, state)
+
+        step = int(state["step"])
+        symptom = state.get("symptom") or "general_fussiness"
+        checked_ids = set(state.get("checked", []))
+
+        age_months = get_child_age_months(child.date_of_birth)
+        auto_state, checklist_items = self._build_auto_state_and_checklist(
+            symptom=symptom, checked_ids=checked_ids
+        )
+
+        suggestions = []
+        developmental_contexts: list[str] = []
+        show_colic = False
+
+        if step == 3 and symptom:
+            suggestions = prioritize_suggestions(
+                checklist_items=checklist_items,
+                checked_manual_ids=checked_ids,
+                symptom_id=symptom,
+                child_age_months=age_months,
+                auto_check_state=auto_state,
+            )
+            developmental_contexts = get_developmental_contexts(age_months)
+            show_colic = age_months <= 4 and symptom == "crying"
+
+        toolkit_for_template: list[dict] = []
+        for cat in SOOTHING_TOOLKIT:
+            items_with_meta: list[dict] = []
+            for label in cat.items:
+                entry = FUSS_BUS_GLOSSARY.get(label)
+                items_with_meta.append(
+                    {
+                        "label": label,
+                        "glossary_title": entry.title if entry else "",
+                        "glossary_body": entry.body if entry else "",
+                    }
+                )
+            toolkit_for_template.append(
+                {
+                    "title": cat.title,
+                    "items": items_with_meta,
+                }
+            )
+
+        context = {
+            "child": child,
+            "step": step,
+            "symptom": symptom,
+            "checked_ids": checked_ids,
+            "auto_state": auto_state,
+            "checklist_items": checklist_items,
+            "suggestions": suggestions,
+            "developmental_contexts": developmental_contexts,
+            "show_colic": show_colic,
+            "when_to_call_doctor": WHEN_TO_CALL_DOCTOR_BULLETS,
+            "self_care_items": SELF_CARE_ITEMS,
+            "soothing_toolkit": toolkit_for_template,
+            "lullaby_songs": get_lullaby_songs(),
+            "colic_section": COLIC_SECTION,
+            "age_months": age_months,
+        }
+
+        return render(request, self.template_name, context)
+
+    def post(self, request, pk):
+        """Advance/back/reset wizard; state stored in session."""
+        state = self._get_state(request)
+
+        action = request.POST.get("action") or "next"
+        try:
+            current_step = int(request.POST.get("step") or state.get("step", 1))
+        except ValueError:
+            current_step = 1
+        state["step"] = current_step
+        symptom = state.get("symptom") or "general_fussiness"
+
+        if action == "start_over":
+            reset_state = {
+                "step": 1,
+                "symptom": "general_fussiness",
+                "checked": [],
+            }
+            self._save_state(request, reset_state)
+            return redirect("children:child_fuss_bus", pk=pk)
+
+        if current_step == 1:
+            form = FussBusStep1Form(request.POST)
+            if form.is_valid():
+                symptom = form.cleaned_data["symptom"]
+                state["symptom"] = symptom
+                if action == "next":
+                    state["step"] = 2
+                elif action == "back":
+                    state["step"] = 1
+        elif current_step == 2:
+            auto_state, checklist_items = self._build_auto_state_and_checklist(
+                symptom=symptom, checked_ids=set(state.get("checked", []))
+            )
+            manual_ids = [item.id for item in checklist_items if item.kind == "manual"]
+            form = FussBusStep2Form(request.POST, manual_ids=manual_ids)
+            if form.is_valid():
+                state["checked"] = form.cleaned_data.get("checked", [])
+                if action == "next":
+                    state["step"] = 3
+                elif action == "back":
+                    state["step"] = 1
+        else:
+            if action == "back":
+                state["step"] = 2
+            elif action == "next":
+                state["step"] = 3
+
+        self._save_state(request, state)
+        return redirect(
+            reverse("children:child_fuss_bus", kwargs={"pk": pk})
+            + f"?step={state.get('step', 1)}"
         )
 
 

@@ -43,6 +43,17 @@
         </a>
       </div>
       <div class="col-md-6">
+        <a href="{% url 'children:child_fuss_bus' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <i class="fa-solid fa-bus fa-2x text-danger" aria-hidden="true"></i>
+              <h2 class="h5 fw-bold mb-0">The Fuss Bus</h2>
+            </div>
+            <p class="text-body-secondary small mb-0">Guided checklist and soothing ideas when your baby is fussy.</p>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
         <a href="{% url 'children:child_analytics' pk=child.pk %}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
           <div class="card-body p-4">
             <div class="d-flex align-items-center gap-3 mb-2">

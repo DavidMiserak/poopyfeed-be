@@ -15,6 +15,7 @@ from .views import (
     ChildDeleteView,
     ChildExportStatusView,
     ChildExportView,
+    ChildFussBusView,
     ChildListView,
     ChildPediatricianSummaryView,
     ChildSharingView,
@@ -48,6 +49,7 @@ urlpatterns = [
         name="quick_log_nap",
     ),
     path("<int:pk>/advanced/", ChildAdvancedView.as_view(), name="child_advanced"),
+    path("<int:pk>/fuss-bus/", ChildFussBusView.as_view(), name="child_fuss_bus"),
     path(
         "<int:pk>/pediatrician-summary/",
         ChildPediatricianSummaryView.as_view(),

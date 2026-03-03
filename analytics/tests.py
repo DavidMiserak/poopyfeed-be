@@ -27,6 +27,14 @@ from naps.models import Nap
 
 from . import urls as analytics_urls
 from .cache import invalidate_child_analytics
+from .fuss_bus import (
+    AutoCheckState,
+    build_checklist_items,
+    get_auto_check_state,
+    get_child_age_months,
+    get_developmental_contexts,
+    prioritize_suggestions,
+)
 from .tasks import cleanup_old_exports, generate_pdf_report
 
 User = get_user_model()
@@ -781,6 +789,115 @@ class TimelineTests(APITestCase):
         """Timeline returns 404 for non-existent child."""
         response = self.client.get("/api/v1/analytics/children/99999/timeline/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class FussBusUtilsTests(TestCase):
+    """Unit tests for Fuss Bus analytics helpers (mirrors Angular fuss-bus.utils.ts)."""
+
+    def test_get_child_age_months_basic(self):
+        """Age in months should be non-negative and roughly correct."""
+        dob = date(2024, 1, 15)
+        now = datetime(2024, 4, 16, tzinfo=timezone.utc)
+        months = get_child_age_months(dob, now=now)
+        self.assertGreaterEqual(months, 3.0)
+        self.assertLessEqual(months, 4.5)
+
+    def test_auto_check_state_all_ok(self):
+        """Auto-check state marks fed/diaper/nap as ok when within thresholds."""
+        now = timezone.now()
+        pattern_alerts = {
+            "feeding": {
+                "data_points": 5,
+                "avg_interval_minutes": 180,
+                "minutes_since_last": 60,
+                "last_fed_at": (now - timedelta(minutes=60)).isoformat(),
+            },
+            "nap": {
+                "data_points": 4,
+                "avg_wake_window_minutes": 180,
+                "minutes_awake": 90,
+                "last_nap_ended_at": (now - timedelta(minutes=90)).isoformat(),
+            },
+        }
+        timeline_events = [
+            {
+                "type": "diaper",
+                "diaper": {
+                    "changed_at": now - timedelta(minutes=30),
+                },
+            }
+        ]
+
+        state = get_auto_check_state(
+            pattern_alerts=pattern_alerts,
+            timeline_events=timeline_events,
+            child_age_months=6,
+        )
+
+        self.assertIsInstance(state, AutoCheckState)
+        self.assertEqual(state.fed, "ok")
+        self.assertEqual(state.diaper, "ok")
+        self.assertEqual(state.nap, "ok")
+        self.assertIn("Fed", state.fed_detail or "")
+        self.assertIn("Changed", state.diaper_detail or "")
+        self.assertIn("Last nap ended", state.nap_detail or "")
+
+    def test_build_checklist_items_symptom_and_age_filtering(self):
+        """Checklist items include expected manual items for crying newborn."""
+        auto_state = AutoCheckState(
+            fed="ok",
+            fed_detail=None,
+            diaper="ok",
+            diaper_detail=None,
+            nap="ok",
+            nap_detail=None,
+        )
+        items = build_checklist_items(
+            symptom_id="crying",
+            child_age_months=1.0,
+            auto_check_state=auto_state,
+        )
+        ids = [item.id for item in items]
+        self.assertIn("gas_burping", ids)
+        self.assertIn("witching_hour", ids)
+        self.assertNotIn("offering_variety", ids)
+
+    def test_prioritize_suggestions_orders_auto_then_manual_then_toolkit(self):
+        """Suggestions prioritize auto issues, then manual, then generic toolkit."""
+        auto_state = AutoCheckState(
+            fed="missing",
+            fed_detail="Fed 4h ago",
+            diaper="missing",
+            diaper_detail=None,
+            nap="ok",
+            nap_detail=None,
+        )
+        checklist_items = build_checklist_items(
+            symptom_id="crying",
+            child_age_months=6.0,
+            auto_check_state=auto_state,
+        )
+        checked_manual_ids = set()
+        suggestions = prioritize_suggestions(
+            checklist_items=checklist_items,
+            checked_manual_ids=checked_manual_ids,
+            symptom_id="crying",
+            child_age_months=6.0,
+            auto_check_state=auto_state,
+        )
+
+        self.assertGreaterEqual(len(suggestions), 3)
+        high_priorities = [s for s in suggestions if s.priority == "high"]
+        self.assertTrue(
+            any("hungry" in s.text or "Fed" in s.text for s in high_priorities)
+        )
+        self.assertTrue(any("diaper" in s.text.lower() for s in high_priorities))
+        self.assertTrue(any("Soothing Toolkit" in s.text for s in suggestions))
+
+    def test_developmental_contexts_for_age(self):
+        """Developmental context strings are returned for matching age ranges."""
+        contexts = get_developmental_contexts(3.0)
+        self.assertTrue(any("Growth spurts" in text for text in contexts))
 
     def test_timeline_404_when_user_has_no_access_to_child(self):
         """Timeline returns 404 when requesting another user's child (not 403)."""
