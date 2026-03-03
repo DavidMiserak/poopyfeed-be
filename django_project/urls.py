@@ -20,8 +20,12 @@ from django.contrib import admin
 from django.urls import include, path
 
 from accounts.views import AccountSettingsView, TimezoneUpdateView
+from django_project.health import healthz, readyz
 
 urlpatterns = [
+    # Health checks (unauthenticated, for K8s probes)
+    path("healthz", healthz, name="healthz"),
+    path("readyz", readyz, name="readyz"),
     path("admin/", admin.site.urls),
     path("accounts/settings/", AccountSettingsView.as_view(), name="account_settings"),
     path(
