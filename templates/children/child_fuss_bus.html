@@ -17,15 +17,15 @@
       </ol>
     </nav>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card border-0 bg-danger bg-gradient text-white shadow-sm rounded-4 mb-4">
       <div class="card-body d-flex align-items-center gap-3">
-        <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center p-3"
+        <div class="bg-white bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center p-3"
              aria-hidden="true">
-          <i class="fa-solid fa-bus text-danger fs-4"></i>
+          <i class="fa-solid fa-bus text-white fs-4"></i>
         </div>
         <div>
-          <h1 class="h4 fw-bold mb-1">The Fuss Bus</h1>
-          <p class="text-body-secondary small mb-0">
+          <h1 class="h4 fw-bold mb-1 text-white">The Fuss Bus</h1>
+          <p class="small mb-0 text-white text-opacity-90">
             Quick checklist and ideas for {{ child.name }}.
           </p>
         </div>
@@ -66,10 +66,11 @@
           <p class="fw-semibold mb-3">What best describes what's going on?</p>
           <div class="row g-3">
             <div class="col-12 col-sm-6">
-              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start cursor-pointer">
+              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start">
                 <input type="radio" name="symptom" value="crying"
                        class="form-check-input mt-1 me-2"
                        {% if symptom == "crying" %}checked{% endif %}>
+                <span class="text-primary fs-4 flex-shrink-0" aria-hidden="true"><i class="fa-solid fa-face-sad-tear"></i></span>
                 <div>
                   <div class="fw-semibold">Crying</div>
                   <div class="text-body-secondary small">General distress, inconsolable</div>
@@ -79,10 +80,11 @@
 
             {% if age_months >= 12 %}
             <div class="col-12 col-sm-6">
-              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start cursor-pointer">
+              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start">
                 <input type="radio" name="symptom" value="refusing_food"
                        class="form-check-input mt-1 me-2"
                        {% if symptom == "refusing_food" %}checked{% endif %}>
+                <span class="text-primary fs-4 flex-shrink-0" aria-hidden="true"><i class="fa-solid fa-bottle-water"></i></span>
                 <div>
                   <div class="fw-semibold">Refusing food</div>
                   <div class="text-body-secondary small">Fussy eating, not interested</div>
@@ -92,10 +94,11 @@
             {% endif %}
 
             <div class="col-12 col-sm-6">
-              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start cursor-pointer">
+              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start">
                 <input type="radio" name="symptom" value="wont_sleep"
                        class="form-check-input mt-1 me-2"
                        {% if symptom == "wont_sleep" %}checked{% endif %}>
+                <span class="text-primary fs-4 flex-shrink-0" aria-hidden="true"><i class="fa-solid fa-moon"></i></span>
                 <div>
                   <div class="fw-semibold">Won't sleep</div>
                   <div class="text-body-secondary small">Fighting naps, restless</div>
@@ -104,10 +107,11 @@
             </div>
 
             <div class="col-12 col-sm-6">
-              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start cursor-pointer">
+              <label class="card border-0 shadow-sm rounded-4 h-100 p-3 d-flex gap-2 align-items-start">
                 <input type="radio" name="symptom" value="general_fussiness"
                        class="form-check-input mt-1 me-2"
                        {% if symptom == "general_fussiness" %}checked{% endif %}>
+                <span class="text-primary fs-4 flex-shrink-0" aria-hidden="true"><i class="fa-solid fa-face-frown"></i></span>
                 <div>
                   <div class="fw-semibold">General fussiness</div>
                   <div class="text-body-secondary small">Irritable, clingy, unsettled</div>
@@ -119,7 +123,7 @@
 
         <div class="d-flex justify-content-end">
           <button type="submit" name="action" value="next"
-                  class="btn btn-primary rounded-pill px-4"
+                  class="btn btn-primary rounded-pill px-4 py-2"
                   {% if not symptom %}disabled{% endif %}>
             Next
           </button>
@@ -161,17 +165,17 @@
                     {% if item.auto_status != "ok" %}
                       {% if item.id == "fed" %}
                         <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}"
-                           class="btn btn-link btn-sm p-0 small text-decoration-none">
+                           class="btn btn-link btn-sm py-2 small text-decoration-none">
                           Log feeding
                         </a>
                       {% elif item.id == "diaper" %}
                         <a href="{% url 'diapers:diaper_add' child_pk=child.pk %}"
-                           class="btn btn-link btn-sm p-0 small text-decoration-none">
+                           class="btn btn-link btn-sm py-2 small text-decoration-none">
                           Log diaper
                         </a>
                       {% elif item.id == "nap" %}
                         <a href="{% url 'naps:nap_add' child_pk=child.pk %}"
-                           class="btn btn-link btn-sm p-0 small text-decoration-none">
+                           class="btn btn-link btn-sm py-2 small text-decoration-none">
                           Log nap
                         </a>
                       {% endif %}
@@ -186,18 +190,17 @@
           <p class="text-body-secondary small">
             Tap to confirm anything you've already checked or ruled out.
           </p>
-          <ul class="list-group mb-3">
+          <ul class="list-unstyled mb-3">
             {% for item in checklist_items %}
               {% if item.kind == "manual" %}
-                <li class="list-group-item">
-                  <div class="form-check mb-0 d-flex align-items-center">
-                    <input class="form-check-input me-2" type="checkbox" name="checked" value="{{ item.id }}"
+                <li class="mb-2">
+                  <label class="fussbus-checklist-label d-flex align-items-center w-100 p-3 rounded-3 border border-2 border-secondary text-start mb-0 {% if item.id in checked_ids %}border-primary bg-primary bg-opacity-10{% endif %}"
+                         for="chk-{{ item.id }}">
+                    <input class="form-check-input me-3 flex-shrink-0" type="checkbox" name="checked" value="{{ item.id }}"
                            {% if item.id in checked_ids %}checked{% endif %}
                            id="chk-{{ item.id }}">
-                    <label class="form-check-label fw-semibold" for="chk-{{ item.id }}">
-                      {{ item.label }}
-                    </label>
-                  </div>
+                    <span class="fw-semibold">{{ item.label }}</span>
+                  </label>
                 </li>
               {% endif %}
             {% endfor %}
@@ -206,11 +209,11 @@
 
         <div class="d-flex justify-content-between gap-2">
           <button type="submit" name="action" value="back"
-                  class="btn btn-outline-secondary rounded-pill px-3">
+                  class="btn btn-outline-secondary rounded-pill px-3 py-2">
             Back
           </button>
           <button type="submit" name="action" value="next"
-                  class="btn btn-primary rounded-pill px-4">
+                  class="btn btn-primary rounded-pill px-4 py-2">
             Next
           </button>
         </div>
@@ -259,9 +262,11 @@
             </div>
           {% endif %}
 
-          <div class="mb-3">
-            <h3 class="h6 fw-bold mb-1">When to call the doctor</h3>
-            <ul class="mb-0 small text-body-secondary">
+          <div class="alert alert-danger rounded-3 mb-3" role="alert">
+            <h3 class="h6 fw-bold mb-2 d-flex align-items-center">
+              <i class="fa-solid fa-stethoscope me-2" aria-hidden="true"></i>When to call the doctor
+            </h3>
+            <ul class="mb-0 small">
               {% for bullet in when_to_call_doctor %}
                 <li>{{ bullet }}</li>
               {% endfor %}
@@ -317,8 +322,8 @@
             </div>
           </div>
 
-          <div class="mb-0">
-            <h3 id="fussbus-selfcare-heading" class="h6 fw-bold mb-1">
+          <div id="fussbus-selfcare-section" class="rounded-3 border border-2 border-secondary p-3 mb-0">
+            <h3 class="h6 fw-bold mb-1">
               Take care of yourself
             </h3>
             <ul class="mb-0 small text-body-secondary">
@@ -331,11 +336,11 @@
 
         <div class="d-flex justify-content-between gap-2">
           <button type="submit" name="action" value="back"
-                  class="btn btn-outline-secondary rounded-pill px-3">
+                  class="btn btn-outline-secondary rounded-pill px-3 py-2">
             Back
           </button>
           <button type="submit" name="action" value="start_over"
-                  class="btn btn-outline-danger rounded-pill px-3">
+                  class="btn btn-outline-danger rounded-pill px-3 py-2">
             Start over
           </button>
         </div>
@@ -414,11 +419,26 @@
       });
     });
 
-    // After 5 minutes, visually emphasize self-care heading
+    // Toggle checklist label styling when checkbox state changes
+    document.querySelectorAll('.fussbus-checklist-label').forEach(function (label) {
+      var chk = label.querySelector('input[type="checkbox"]');
+      if (!chk) return;
+      function updateLabel() {
+        if (chk.checked) {
+          label.classList.add('border-primary', 'bg-primary', 'bg-opacity-10');
+        } else {
+          label.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
+        }
+      }
+      chk.addEventListener('change', updateLabel);
+    });
+
+    // After 5 minutes, visually elevate the whole self-care section
     setTimeout(function () {
-      var heading = document.getElementById('fussbus-selfcare-heading');
-      if (heading) {
-        heading.classList.add('text-danger');
+      var section = document.getElementById('fussbus-selfcare-section');
+      if (section) {
+        section.classList.remove('border-secondary');
+        section.classList.add('border-danger', 'bg-danger', 'bg-opacity-10');
       }
     }, 5 * 60 * 1000);
   })();
