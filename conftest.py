@@ -23,6 +23,8 @@ def pytest_collection_modifyitems(config, items):
         "test_redis_integration",  # All Redis integration tests
         "test_session",  # Session tests
         "test_cache",  # Cache tests
+        "test_dashboard_summary_caching",  # Cache race condition in parallel
+        "QuickLogViewTests",  # Session UpdateError in parallel
         "RevokeAccessViewTests",  # Invite/access tests with state
         "ToggleInviteViewTests",  # Toggle invite tests
     ]
