@@ -122,6 +122,24 @@ class AnalyticsPermissionTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_dashboard_summary_owner_access(self):
+        """Owner should access dashboard-summary."""
+        token = Token.objects.create(user=self.owner)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = self.client.get(
+            f"/api/v1/children/{self.child.id}/dashboard-summary/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_dashboard_summary_unauthorized_returns_404(self):
+        """Unauthorized user should get 404 on dashboard-summary."""
+        token = Token.objects.create(user=self.unauthorized)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = self.client.get(
+            f"/api/v1/children/{self.child.id}/dashboard-summary/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_feeding_trends_unauthorized_returns_404(self):
         """Unauthorized user should get 404."""
         token = Token.objects.create(user=self.unauthorized)
@@ -1018,6 +1036,75 @@ class EmptyDataTests(APITestCase):
         self.assertEqual(data["feedings"]["count"], 0)
         self.assertEqual(data["diapers"]["count"], 0)
         self.assertEqual(data["sleep"]["naps"], 0)
+
+
+class DashboardSummaryTests(APITestCase):
+    """Test batch dashboard-summary endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="dashboard_user",
+            email="dashboard@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Dashboard Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def setUp(self):
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def _url(self):
+        return f"/api/v1/children/{self.child.id}/dashboard-summary/"
+
+    def test_dashboard_summary_response_structure(self):
+        """Response has today, weekly, unread_count with correct shapes."""
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIn("today", data)
+        self.assertIn("weekly", data)
+        self.assertIn("unread_count", data)
+        self.assertIsInstance(data["unread_count"], int)
+        self.assertGreaterEqual(data["unread_count"], 0)
+        self.assertIn("child_id", data["today"])
+        self.assertIn("feedings", data["today"])
+        self.assertIn("diapers", data["today"])
+        self.assertIn("sleep", data["today"])
+        self.assertIn("child_id", data["weekly"])
+        self.assertIn("feedings", data["weekly"])
+        self.assertIn("period", data["today"])
+        self.assertEqual(data["today"]["period"], "today")
+
+    def test_dashboard_summary_caching(self):
+        """Second request returns same data (cache hit)."""
+        r1 = self.client.get(self._url())
+        self.assertEqual(r1.status_code, status.HTTP_200_OK)
+        r2 = self.client.get(self._url())
+        self.assertEqual(r2.status_code, status.HTTP_200_OK)
+        self.assertEqual(r1.json(), r2.json())
+
+    def test_dashboard_summary_invalidation(self):
+        """After creating a feeding, response reflects new data."""
+        r1 = self.client.get(self._url())
+        self.assertEqual(r1.status_code, status.HTTP_200_OK)
+        count_before = r1.json()["today"]["feedings"]["count"]
+
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=timezone.now(),
+            amount_oz=4.0,
+        )
+
+        r2 = self.client.get(self._url())
+        self.assertEqual(r2.status_code, status.HTTP_200_OK)
+        count_after = r2.json()["today"]["feedings"]["count"]
+        self.assertEqual(count_after, count_before + 1)
 
 
 class ExportCSVTests(APITestCase):

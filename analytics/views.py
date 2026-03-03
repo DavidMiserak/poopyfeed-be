@@ -18,13 +18,16 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from children.models import Child
+from notifications.models import Notification
 
-from .cache import invalidate_child_analytics
+from .cache import DASHBOARD_SUMMARY_INVALIDATED_KEY, invalidate_child_analytics
 from .permissions import HasAnalyticsAccess
 from .serializers import (
     AsyncExportResponseSerializer,
+    DashboardSummaryResponseSerializer,
     DaysQuerySerializer,
     DiaperPatternsResponseSerializer,
     ExportStatusResponseSerializer,
@@ -464,3 +467,43 @@ class AnalyticsViewSet(viewsets.ViewSet):
                 return response
         except IOError:
             raise NotFound("Unable to read file")
+
+
+class DashboardSummaryView(APIView):
+    """Batch endpoint: today-summary + weekly-summary + notification unread_count.
+
+    GET /api/v1/children/{childId}/dashboard-summary/
+    Returns a single JSON payload combining the three for dashboard load.
+    Cached 5 minutes; invalidated when tracking records change for the child.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        child_id = pk
+        try:
+            Child.for_user(request.user).get(id=child_id)
+        except Child.DoesNotExist:
+            raise NotFound("Child not found")
+
+        user_tz = getattr(request.user, "timezone", None) or "UTC"
+        sentinel_key = DASHBOARD_SUMMARY_INVALIDATED_KEY.format(child_id=child_id)
+        cache_key = f"analytics:dashboard-summary:{child_id}:{user_tz}"
+
+        if not cache.get(sentinel_key):
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached, status=status.HTTP_200_OK)
+
+        today = get_today_summary(child_id, user_timezone=user_tz)
+        weekly = get_weekly_summary(child_id)
+        unread_count = Notification.objects.filter(
+            recipient=request.user, is_read=False
+        ).count()
+
+        payload = {"today": today, "weekly": weekly, "unread_count": unread_count}
+        serializer = DashboardSummaryResponseSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+        cache.set(cache_key, data, timeout=300)
+        return Response(data, status=status.HTTP_200_OK)

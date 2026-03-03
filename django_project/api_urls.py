@@ -12,7 +12,7 @@ from accounts.api import (
     UserProfileView,
     get_auth_token,
 )
-from analytics.views import AnalyticsViewSet
+from analytics.views import AnalyticsViewSet, DashboardSummaryView
 from children.api import AcceptInviteViewSet, ChildViewSet
 from children.batch_api import BatchCreateView
 from diapers.api import DiaperChangeViewSet
@@ -131,6 +131,12 @@ urlpatterns = [
         "children/<int:child_pk>/batch/",
         BatchCreateView.as_view(),
         name="child-batch-create",
+    ),
+    # Batch dashboard summary (today + weekly + unread_count)
+    path(
+        "children/<int:pk>/dashboard-summary/",
+        DashboardSummaryView.as_view(),
+        name="child-dashboard-summary",
     ),
     # Analytics endpoints (read-only)
     path(

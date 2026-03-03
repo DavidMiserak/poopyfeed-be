@@ -88,6 +88,14 @@ class WeeklySummaryFullResponseSerializer(serializers.Serializer):
     last_updated = serializers.DateTimeField()
 
 
+class DashboardSummaryResponseSerializer(serializers.Serializer):
+    """Response for batch dashboard-summary endpoint."""
+
+    today = TodaySummaryResponseSerializer()
+    weekly = WeeklySummaryFullResponseSerializer()
+    unread_count = serializers.IntegerField(min_value=0)
+
+
 class ExportRequestSerializer(serializers.Serializer):
     """Request validation for export endpoints."""
 
