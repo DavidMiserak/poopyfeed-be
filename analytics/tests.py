@@ -6,6 +6,7 @@ and error handling for all analytics endpoints.
 
 import tempfile
 from datetime import date, datetime, timedelta
+from datetime import timezone as dt_timezone
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -791,13 +792,32 @@ class TimelineTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class FussBusUtilsTests(TestCase):
+class FussBusUtilsTests(APITestCase):
     """Unit tests for Fuss Bus analytics helpers (mirrors Angular fuss-bus.utils.ts)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for timeline permission tests."""
+        cls.user = User.objects.create_user(
+            username="fussbus_user",
+            email="fussbus@example.com",
+            password=TEST_PASSWORD,
+        )
+        cls.child = Child.objects.create(
+            parent=cls.user,
+            name="Fuss Bus Child",
+            date_of_birth="2024-01-15",
+        )
+
+    def setUp(self):
+        """Set up authentication."""
+        token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
     def test_get_child_age_months_basic(self):
         """Age in months should be non-negative and roughly correct."""
         dob = date(2024, 1, 15)
-        now = datetime(2024, 4, 16, tzinfo=timezone.utc)
+        now = datetime(2024, 4, 16, tzinfo=dt_timezone.utc)
         months = get_child_age_months(dob, now=now)
         self.assertGreaterEqual(months, 3.0)
         self.assertLessEqual(months, 4.5)
@@ -932,8 +952,8 @@ class WeeklySummaryTests(APITestCase):
     def setUpTestData(cls):
         """Create test data."""
         cls.user = User.objects.create_user(
-            username="testuser",
-            email="user@example.com",
+            username="weekly_user",
+            email="weekly@example.com",
             password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
@@ -992,8 +1012,8 @@ class CachingTests(APITestCase):
     def setUpTestData(cls):
         """Create test data."""
         cls.user = User.objects.create_user(
-            username="testuser",
-            email="user@example.com",
+            username="caching_user",
+            email="caching@example.com",
             password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
@@ -1098,8 +1118,8 @@ class EmptyDataTests(APITestCase):
     def setUpTestData(cls):
         """Create test data without any tracking records."""
         cls.user = User.objects.create_user(
-            username="testuser",
-            email="user@example.com",
+            username="emptydata_user",
+            email="emptydata@example.com",
             password=TEST_PASSWORD,
         )
         cls.child = Child.objects.create(
