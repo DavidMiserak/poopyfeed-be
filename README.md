@@ -115,6 +115,18 @@ Share access to children with other accounts via invite links:
 - **Authentication**: django-allauth with email-based login (headless mode for SPA)
 - **Containers**: Podman (or Docker)
 
+## Monorepo Usage
+
+This backend is also used as a Git submodule in the main `poopyfeed` monorepo, which orchestrates backend, frontend, and database containers together.
+
+- **Root repo**: `poopyfeed/` (orchestration, shared docs, top-level `Makefile`)
+- **Backend submodule**: `poopyfeed/back-end/` (this repository)
+
+When working in the monorepo:
+
+- Run root-level commands (like `make run`, `make migrate`, `make test-backend-parallel-fast`) from the monorepo root.
+- Use the commands in this README when you are working directly in the backend repository (for example, on CI or when cloning `poopyfeed-be` alone).
+
 ## Requirements
 
 ### System Dependencies
@@ -172,12 +184,11 @@ See `requirements.txt` for full list. Key packages:
 Other useful commands:
 
 ```bash
-make test                          # Run tests with coverage
-make test-backend-parallel-fast    # Fast parallel tests (~13-15s)
-make logs                          # View container logs
-make stop                          # Stop containers
-make celery-worker                 # Start Celery worker (for PDF export)
-make celery-beat                   # Start Celery beat (for feeding reminders)
+make test          # Run tests with coverage in containers
+make test-local    # Run tests with SQLite locally (no containers)
+make logs          # View container logs
+make stop          # Stop containers
+coverage-html      # Generate HTML coverage report
 ```
 
 ### Local Development (without containers)
