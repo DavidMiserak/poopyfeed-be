@@ -40,10 +40,11 @@ if os.environ.get("REDIS_HOST"):
 
     CACHES = {
         "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": "django_project.cache.SafeRedisCache",
             "LOCATION": redis_url,
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
                 "CONNECTION_POOL_KWARGS": {
                     "retry_on_timeout": True,
                     "socket_connect_timeout": 5,

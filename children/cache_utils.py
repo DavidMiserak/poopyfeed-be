@@ -3,6 +3,9 @@
 Provides efficient caching of expensive last-activity annotations
 (last_diaper_change, last_nap, last_feeding) that are frequently accessed
 but expensive to compute via database aggregations.
+
+Cache values are stored in JSON-safe form (datetime as ISO string) so the
+Redis cache backend can use JSON serialization and avoid pickle errors.
 """
 
 from __future__ import annotations
@@ -18,6 +21,37 @@ logger = logging.getLogger(__name__)
 
 # Type for the activities dict returned per child
 ChildActivitiesDict = dict[str, datetime | None]
+
+# JSON-serializable shape stored in Redis (ISO string or null)
+ChildActivitiesCacheDict = dict[str, str | None]
+
+
+def _activities_to_cache(activities: ChildActivitiesDict) -> ChildActivitiesCacheDict:
+    """Convert activities dict to JSON-serializable form for cache."""
+
+    def _iso(dt: datetime | None) -> str | None:
+        return dt.isoformat() if dt is not None else None
+
+    return {
+        "last_diaper_change": _iso(activities.get("last_diaper_change")),
+        "last_nap": _iso(activities.get("last_nap")),
+        "last_feeding": _iso(activities.get("last_feeding")),
+    }
+
+
+def _activities_from_cache(raw: ChildActivitiesCacheDict) -> ChildActivitiesDict:
+    """Parse cache dict (ISO strings) back to ChildActivitiesDict (datetime | None)."""
+
+    def parse(v: str | None) -> datetime | None:
+        if v is None:
+            return None
+        return datetime.fromisoformat(v.replace("Z", "+00:00"))
+
+    return {
+        "last_diaper_change": parse(raw.get("last_diaper_change")),
+        "last_nap": parse(raw.get("last_nap")),
+        "last_feeding": parse(raw.get("last_feeding")),
+    }
 
 
 def get_child_last_activities(
@@ -55,14 +89,16 @@ def get_child_last_activities(
         if cache_key not in cached_results
     ]
 
-    # If all are cached, return immediately
+    # If all are cached, return immediately (parse JSON-safe form to datetimes)
     if not missing_child_ids:
         logger.debug(
             f"Cache HIT for all children: {child_ids}",
             extra={"hit_count": len(child_ids)},
         )
         return {
-            child_id: cached_results[f"child_activities_{child_id}"]
+            child_id: _activities_from_cache(
+                cached_results[f"child_activities_{child_id}"]
+            )
             for child_id in child_ids
         }
 
@@ -102,19 +138,19 @@ def get_child_last_activities(
             "last_feeding": item["last_feeding"],
         }
         missing_dict[child_id] = activities
-        cache_to_set[f"child_activities_{child_id}"] = activities
+        cache_to_set[f"child_activities_{child_id}"] = _activities_to_cache(activities)
 
     # Cache the results (5 minute TTL - balance between freshness and performance)
     # Cache invalidates automatically when tracking records change via signals
     if cache_to_set:
         cache.set_many(cache_to_set, 300)
 
-    # Merge cached and newly-fetched results
+    # Merge cached and newly-fetched results (parse cache entries to datetimes)
     result = {}
     for child_id in child_ids:
         cache_key = f"child_activities_{child_id}"
         if cache_key in cached_results:
-            result[child_id] = cached_results[cache_key]
+            result[child_id] = _activities_from_cache(cached_results[cache_key])
         else:
             result[child_id] = missing_dict.get(
                 child_id,

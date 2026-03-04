@@ -267,14 +267,22 @@ def _get_cache_config():
     redis_port = os.environ.get("REDIS_PORT", "6379")
     redis_url = os.environ.get("REDIS_URL", f"redis://{redis_host}:{redis_port}/0")
 
+    # Use SafeRedisCache to treat pickle/deserialization errors as cache miss
+    # (avoids occasional UnpicklingError from version mismatch or corrupt data).
+    # JSON serializer avoids pickle entirely; all cached values must be JSON-serializable.
+    common_options = {
+        "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+        "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
+    }
     if os.environ.get("DJANGO_DEBUG"):
         # Development: Try Redis, fall back to local memory if unavailable
         return {
             "default": {
-                "BACKEND": "django_redis.cache.RedisCache",
+                "BACKEND": "django_project.cache.SafeRedisCache",
                 "LOCATION": redis_url,
                 "OPTIONS": {
-                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    **common_options,
                     "CONNECTION_POOL_KWARGS": {
                         "retry_on_timeout": True,
                         "socket_connect_timeout": 5,
@@ -282,7 +290,6 @@ def _get_cache_config():
                     },
                     "SOCKET_CONNECT_TIMEOUT": 5,
                     "SOCKET_TIMEOUT": 5,
-                    "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
                     "IGNORE_EXCEPTIONS": True,  # Fall back to direct DB on cache miss
                 },
             }
@@ -291,10 +298,10 @@ def _get_cache_config():
         # Production: Always use Redis (fail hard if unavailable)
         return {
             "default": {
-                "BACKEND": "django_redis.cache.RedisCache",
+                "BACKEND": "django_project.cache.SafeRedisCache",
                 "LOCATION": redis_url,
                 "OPTIONS": {
-                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    **common_options,
                     "CONNECTION_POOL_KWARGS": {
                         "retry_on_timeout": True,
                         "socket_connect_timeout": 10,
@@ -303,7 +310,6 @@ def _get_cache_config():
                     },
                     "SOCKET_CONNECT_TIMEOUT": 10,
                     "SOCKET_TIMEOUT": 10,
-                    "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
                     "IGNORE_EXCEPTIONS": False,  # Fail hard in production
                 },
             }
