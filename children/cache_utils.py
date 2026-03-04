@@ -27,7 +27,14 @@ ChildActivitiesCacheDict = dict[str, str | None]
 
 
 def _activities_to_cache(activities: ChildActivitiesDict) -> ChildActivitiesCacheDict:
-    """Convert activities dict to JSON-serializable form for cache."""
+    """Convert activities dict to JSON-serializable form for cache.
+
+    Args:
+        activities: Dict with last_diaper_change, last_nap, last_feeding (datetime or None).
+
+    Returns:
+        Dict with same keys and ISO datetime strings (or None) for Redis/JSON storage.
+    """
 
     def _iso(dt: datetime | None) -> str | None:
         return dt.isoformat() if dt is not None else None
@@ -40,7 +47,14 @@ def _activities_to_cache(activities: ChildActivitiesDict) -> ChildActivitiesCach
 
 
 def _activities_from_cache(raw: ChildActivitiesCacheDict) -> ChildActivitiesDict:
-    """Parse cache dict (ISO strings) back to ChildActivitiesDict (datetime | None)."""
+    """Parse cache dict (ISO strings) back to ChildActivitiesDict (datetime | None).
+
+    Args:
+        raw: Dict from cache with last_diaper_change, last_nap, last_feeding as ISO str or None.
+
+    Returns:
+        Dict with same keys and timezone-aware datetimes (or None).
+    """
 
     def parse(v: str | None) -> datetime | None:
         if v is None:

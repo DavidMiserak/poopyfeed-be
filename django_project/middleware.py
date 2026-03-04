@@ -1,3 +1,10 @@
+"""Custom middleware for API timing, CSRF exemption, and cache control.
+
+- APITimingMiddleware: Logs API response times and adds Server-Timing header.
+- CSRFExemptMiddleware: Exempts configured URL patterns from CSRF checks (e.g. allauth headless).
+- NoCacheAPIMiddleware: Sets Cache-Control no-cache on all /api/ responses.
+"""
+
 import logging
 import re
 import time

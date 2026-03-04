@@ -92,7 +92,14 @@ class PostgreSQLPooledBackend(psycopg2_base.DatabaseWrapper):
         )
 
     def get_new_connection(self, conn_params):
-        """Get a connection from the pool instead of creating a new one."""
+        """Get a connection from the pool instead of creating a new one.
+
+        Args:
+            conn_params: Connection parameters (passed to parent if pool unavailable).
+
+        Returns:
+            A database connection from the pool, or from the parent backend if pooling is disabled.
+        """
         if not HAS_PSYCOPG2_POOL:
             # Fall back to default behavior if psycopg2 pool is not available
             return super().get_new_connection(conn_params)
@@ -108,7 +115,11 @@ class PostgreSQLPooledBackend(psycopg2_base.DatabaseWrapper):
             return super().get_new_connection(conn_params)
 
     def close(self):
-        """Close the connection and return it to the pool if applicable."""
+        """Close the connection and return it to the pool if applicable.
+
+        If using a connection pool, returns the connection to the pool instead of
+        closing it. Otherwise delegates to the parent close behavior.
+        """
         if self.connection is None:
             return
 

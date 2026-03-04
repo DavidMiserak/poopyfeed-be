@@ -43,6 +43,16 @@ class SafeRedisCache(RedisCache):
     """
 
     def get(self, key, default=None, version=None):
+        """Return cached value or default; on deserialization error, delete key and return default.
+
+        Args:
+            key: Cache key.
+            default: Value to return on miss or deserialization error.
+            version: Optional key version.
+
+        Returns:
+            Cached value or default.
+        """
         try:
             return super().get(key, default=default, version=version)
         except _DESERIALIZE_ERRORS as e:
@@ -50,6 +60,15 @@ class SafeRedisCache(RedisCache):
             return default
 
     def get_many(self, keys, version=None):
+        """Return dict of cached values; on deserialization error, delete requested keys and return {}.
+
+        Args:
+            keys: List of cache keys.
+            version: Optional key version.
+
+        Returns:
+            Dict mapping key to value for successful hits; empty dict if any key causes deserialization error.
+        """
         try:
             return super().get_many(keys, version=version)
         except _DESERIALIZE_ERRORS as e:
@@ -69,6 +88,13 @@ class SafeRedisCache(RedisCache):
             return {}  # No hits; caller will treat all as miss
 
     def _handle_deserialize_error(self, key, error, version=None):
+        """Delete the bad key and log a warning.
+
+        Args:
+            key: Cache key that caused the error.
+            error: The deserialization exception.
+            version: Optional key version.
+        """
         self._delete_key_safe(key, version)
         logger.warning(
             "Redis cache get deserialization error; treated as miss",
@@ -81,6 +107,12 @@ class SafeRedisCache(RedisCache):
         )
 
     def _delete_key_safe(self, key, version=None):
+        """Delete a cache key; log and swallow any exception from the backend.
+
+        Args:
+            key: Cache key to delete.
+            version: Optional key version.
+        """
         try:
             self.delete(key, version=version)
         except Exception as delete_err:

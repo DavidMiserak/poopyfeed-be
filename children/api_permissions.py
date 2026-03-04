@@ -31,13 +31,30 @@ class HasChildAccess(BasePermission):
         return True
 
     def has_object_permission(self, request: Any, view: Any, obj: Any) -> bool:
+        """Allow if the object's child is accessible to the request user.
+
+        Args:
+            request: HTTP request.
+            view: View instance (unused).
+            obj: Child or tracking model instance with a child attribute.
+
+        Returns:
+            True if user has any access to the child, False otherwise.
+        """
         child = self._get_child(obj)
         if child is None:
             return False
         return child.has_access(request.user)
 
     def _get_child(self, obj: Any) -> Child | None:
-        """Extract Child from object (handles Child and tracking records)."""
+        """Extract Child from object (handles Child and tracking records).
+
+        Args:
+            obj: Child instance or tracking model with a child attribute.
+
+        Returns:
+            The Child for the object, or None if not applicable.
+        """
         if isinstance(obj, Child):
             return obj
         if hasattr(obj, "child"):
