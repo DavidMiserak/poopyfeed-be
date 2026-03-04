@@ -6,7 +6,6 @@ in a single request. All events are validated and created within a database tran
 
 from django.db import transaction
 from rest_framework import serializers, status
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -114,15 +113,7 @@ class BatchCreateView(APIView):
     def get_child(self):
         """Get and validate child access."""
         child_pk = self.kwargs.get("child_pk")
-        try:
-            child = Child.objects.get(pk=child_pk)
-        except Child.DoesNotExist:
-            return None
-
-        if not child.has_access(self.request.user):
-            raise PermissionDenied("You do not have access to this child.")
-
-        return child
+        return Child.for_user(self.request.user).filter(pk=child_pk).first()
 
     def post(self, request, *args, **kwargs):
         """Handle batch event creation."""

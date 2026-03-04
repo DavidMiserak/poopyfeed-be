@@ -165,10 +165,10 @@ class BaseTrackingAPITests(ABC, APITestCase):
         self.assertEqual(len(response.data["results"]), 0)
 
     def test_stranger_cannot_create(self):
-        """Stranger cannot create records."""
+        """Stranger cannot create records (404 = no access, same as not found)."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.stranger_token.key}")
         response = self.client.post(self.get_list_url(), self.get_create_data())
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class TrackingBaseContractTests(TestCase):

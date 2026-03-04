@@ -10,7 +10,7 @@ from typing import Any, List
 from django.db.models import QuerySet
 from django.utils.dateparse import parse_datetime
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
@@ -82,8 +82,8 @@ class TrackingViewSet(viewsets.ModelViewSet):
         child_pk = self.kwargs.get("child_pk")
         if child_pk:
             # Nested route: /children/{child_pk}/tracking/
-            child = Child.objects.filter(pk=child_pk).first()
-            if child and child.has_access(self.request.user):
+            child = Child.for_user(self.request.user).filter(pk=child_pk).first()
+            if child:
                 # Get model class from queryset
                 model = self.queryset.model
                 qs = model.objects.filter(child=child).select_related("child")
@@ -137,9 +137,9 @@ class TrackingViewSet(viewsets.ModelViewSet):
 
         child_pk = self.kwargs.get("child_pk")
         if child_pk:
-            child = Child.objects.get(pk=child_pk)
-            if not child.has_access(self.request.user):
-                raise PermissionDenied("You do not have access to this child.")
+            child = Child.for_user(self.request.user).filter(pk=child_pk).first()
+            if not child:
+                raise NotFound("Child not found")
             instance = serializer.save(child=child)
         else:
             # Top-level route: child must be in request data

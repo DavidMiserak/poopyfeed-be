@@ -160,14 +160,14 @@ class BatchCreateAPITest(TestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_batch_unauthorized_user_denied(self):
-        """Test that unauthorized user cannot create batch events."""
+        """Test that unauthorized user gets 404 (no access = same as not found)."""
         self.client.force_authenticate(self.other_user)
         response = self.client.post(
             self.url,
             {"events": [FEEDING_BOTTLE_EVENT]},
             format="json",
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
     def test_batch_nonexistent_child_returns_404(self):
         """Test batch endpoint returns 404 for nonexistent child."""
