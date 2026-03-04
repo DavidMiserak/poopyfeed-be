@@ -97,6 +97,27 @@ def _fill_date_gaps(
     return filled_data
 
 
+def _round_minutes_fields(
+    daily_data: list[dict],
+    fields: tuple[str, ...],
+) -> list[dict]:
+    """Round minute-based fields to whole minutes (no decimals).
+
+    Args:
+        daily_data: List of daily aggregation dicts.
+        fields: Keys within each dict that represent minutes.
+
+    Returns:
+        The same list with minute fields rounded in-place.
+    """
+    for row in daily_data:
+        for field in fields:
+            value = row.get(field)
+            if value is not None:
+                row[field] = int(round(value))
+    return daily_data
+
+
 def _calculate_trend(values: list[int | float]) -> str:
     """Calculate trend direction from a list of values.
 
@@ -201,6 +222,9 @@ def get_feeding_trends(
 
     # Fill gaps for dates with no data
     daily_data = _fill_date_gaps(daily_data, days)
+
+    # Round minute-based fields to whole minutes
+    daily_data = _round_minutes_fields(daily_data, ("average_duration",))
 
     return {
         "period": f"{start_date} to {end_date}",
@@ -338,6 +362,11 @@ def get_sleep_summary(
     )
 
     daily_data = _fill_date_gaps(daily_data, days)
+
+    # Round minute-based fields to whole minutes
+    daily_data = _round_minutes_fields(
+        daily_data, ("average_duration", "total_minutes")
+    )
 
     return {
         "period": f"{start_date} to {end_date}",

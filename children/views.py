@@ -508,7 +508,9 @@ class ChildPediatricianSummaryView(ChildAccessMixin, View):
             "oz_per_day": round(feedings.get("total_oz", 0) / days, 1),
             "diapers_per_day": round(diapers.get("count", 0) / days, 1),
             "naps_per_day": round(sleep.get("naps", 0) / days, 1),
-            "sleep_minutes_per_day": round(sleep.get("total_minutes", 0) / days, 0),
+            "sleep_minutes_per_day": int(
+                round(sleep.get("total_minutes", 0) / days, 0)
+            ),
         }
         return render(request, self.template_name, context)
 

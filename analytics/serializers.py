@@ -22,9 +22,9 @@ class DailyDataSerializer(serializers.Serializer):
 
     date = serializers.DateField()
     count = serializers.IntegerField()
-    average_duration = serializers.FloatField(allow_null=True)
+    average_duration = serializers.IntegerField(allow_null=True)
     total_oz = serializers.FloatField(allow_null=True)
-    total_minutes = serializers.FloatField(allow_null=True, required=False)
+    total_minutes = serializers.IntegerField(allow_null=True, required=False)
 
 
 class WeeklySummaryDataSerializer(serializers.Serializer):
