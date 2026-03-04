@@ -15,35 +15,44 @@
     </nav>
 
     <!-- Header -->
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-4">
-      <div>
-        <h1 class="h3 fw-bold mb-1">{{ child.name }}</h1>
-        <div class="text-body-secondary small">
-          <i class="fa-solid fa-cake-candles me-1" aria-hidden="true"></i>{{ child.date_of_birth|date:"M j, Y" }}
-          <span class="text-body-secondary">{{ child.date_of_birth|format_child_age_tz:user_timezone }}</span>
-          {% if child.gender %}
-            <span class="ms-1" aria-hidden="true">
-              {% if child.gender == "M" %}<i class="fa-solid fa-mars text-info" aria-hidden="true" title="Male"></i>
-              {% elif child.gender == "F" %}<i class="fa-solid fa-venus text-danger" aria-hidden="true" title="Female"></i>
-              {% else %}<i class="fa-solid fa-genderless text-secondary" aria-hidden="true"></i>{% endif %}
-            </span>
-          {% endif %}
+    <div class="card border-0 rounded-4 bg-primary bg-opacity-10 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 56px; height: 56px;" aria-hidden="true">
+              <i class="fa-solid fa-baby fa-lg text-primary"></i>
+            </div>
+            <div>
+              <h1 class="h3 fw-bold mb-1">{{ child.name }}</h1>
+              <div class="text-body-secondary small">
+                <i class="fa-solid fa-cake-candles me-1" aria-hidden="true"></i>{{ child.date_of_birth|date:"M j, Y" }}
+                <span class="text-body-secondary">{{ child.date_of_birth|format_child_age_tz:user_timezone }}</span>
+                {% if child.gender %}
+                  <span class="ms-1" aria-hidden="true">
+                    {% if child.gender == "M" %}<i class="fa-solid fa-mars text-info" aria-hidden="true" title="Male"></i>
+                    {% elif child.gender == "F" %}<i class="fa-solid fa-venus text-danger" aria-hidden="true" title="Female"></i>
+                    {% else %}<i class="fa-solid fa-genderless text-secondary" aria-hidden="true"></i>{% endif %}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            {% if can_edit %}
+              <a href="{% url 'children:child_edit' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="fa-solid fa-pen me-1" aria-hidden="true"></i>Edit
+              </a>
+            {% endif %}
+            <a href="{% url 'children:child_fuss_bus' pk=child.pk %}"
+               class="btn btn-outline-danger btn-sm rounded-pill"
+               aria-label="Open The Fuss Bus for this child">
+              <i class="fa-solid fa-bus me-1 text-danger" aria-hidden="true"></i>Fuss Bus
+            </a>
+            <a href="{% url 'children:child_advanced' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="View advanced options for this child">
+              <i class="fa-solid fa-screwdriver-wrench me-1" aria-hidden="true"></i>More tools
+            </a>
+          </div>
         </div>
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        {% if can_edit %}
-          <a href="{% url 'children:child_edit' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
-            <i class="fa-solid fa-pen me-1" aria-hidden="true"></i>Edit
-          </a>
-        {% endif %}
-        <a href="{% url 'children:child_fuss_bus' pk=child.pk %}"
-           class="btn btn-outline-danger btn-sm rounded-pill"
-           aria-label="Open The Fuss Bus for this child">
-          <i class="fa-solid fa-bus me-1 text-danger" aria-hidden="true"></i>Fuss Bus
-        </a>
-        <a href="{% url 'children:child_advanced' pk=child.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="View advanced options for this child">
-          <i class="fa-solid fa-screwdriver-wrench me-1" aria-hidden="true"></i>More tools
-        </a>
       </div>
     </div>
 
@@ -51,7 +60,7 @@
     <div class="mb-4" role="region" aria-label="Pattern alerts">
       <div class="d-flex flex-column gap-2">
         {% for alert in pattern_alerts %}
-          <div class="alert alert-warning rounded-3 mb-0 d-flex align-items-start gap-2" role="alert">
+          <div class="alert alert-warning rounded-4 shadow-sm border-start border-3 border-warning mb-0 d-flex align-items-start gap-2" role="alert">
             <i class="fa-solid fa-triangle-exclamation mt-1 flex-shrink-0" aria-hidden="true"></i>
             <p class="mb-0">{{ alert.message }}</p>
           </div>
@@ -61,37 +70,40 @@
     {% endif %}
 
     <!-- Today's Summary -->
+    <p class="fw-bold text-body-secondary small text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+      <i class="fa-solid fa-chart-simple me-1" aria-hidden="true"></i>Today's Summary
+    </p>
     <div class="row g-3 mb-4">
       <div class="col-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning bg-opacity-10">
           <div class="card-body text-center p-3">
-            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;" aria-hidden="true">
+            <div class="bg-warning bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;" aria-hidden="true">
               <i class="fa-solid fa-bottle-water text-warning" aria-hidden="true"></i>
             </div>
-            <div class="fw-bold fs-4 lh-1 mb-1">{{ today_summary.feedings.count }}</div>
+            <div class="fw-bold fs-3 lh-1 mb-1">{{ today_summary.feedings.count }}</div>
             <div class="text-body-secondary small">Feedings</div>
             {% if today_summary.feedings.total_oz %}<div class="text-body-tertiary small">{{ today_summary.feedings.total_oz }} oz</div>{% endif %}
           </div>
         </div>
       </div>
       <div class="col-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-success bg-opacity-10">
           <div class="card-body text-center p-3">
-            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;" aria-hidden="true">
+            <div class="bg-success bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;" aria-hidden="true">
               <i class="fa-solid fa-poo text-success" aria-hidden="true"></i>
             </div>
-            <div class="fw-bold fs-4 lh-1 mb-1">{{ today_summary.diapers.count }}</div>
+            <div class="fw-bold fs-3 lh-1 mb-1">{{ today_summary.diapers.count }}</div>
             <div class="text-body-secondary small">Diapers</div>
           </div>
         </div>
       </div>
       <div class="col-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-opacity-10">
           <div class="card-body text-center p-3">
-            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;" aria-hidden="true">
+            <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;" aria-hidden="true">
               <i class="fa-solid fa-moon text-primary" aria-hidden="true"></i>
             </div>
-            <div class="fw-bold fs-4 lh-1 mb-1">{{ today_summary.sleep.naps }}</div>
+            <div class="fw-bold fs-3 lh-1 mb-1">{{ today_summary.sleep.naps }}</div>
             <div class="text-body-secondary small">Naps</div>
             {% if today_summary.sleep.total_minutes %}<div class="text-body-tertiary small">{{ today_summary.sleep.total_minutes }} min</div>{% endif %}
           </div>
@@ -101,11 +113,13 @@
 
     <!-- Quick log (one-tap, card layout similar to front-end quick log) -->
     <div class="mb-4">
-      <p class="fw-bold text-body-secondary small mb-2">Quick log</p>
+      <p class="fw-bold text-body-secondary small text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+        <i class="fa-solid fa-bolt me-1" aria-hidden="true"></i>Quick Log
+      </p>
       <div class="row g-3">
         <!-- Diaper card: wet / dirty / both -->
-        <div class="col-12 col-md-4">
-          <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="col-12 col-sm-6 col-lg-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100 bg-success bg-opacity-10">
             <div class="card-body">
               <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
                 <i class="fa-solid fa-poo me-1" aria-hidden="true"></i>Diaper
@@ -135,8 +149,8 @@
         </div>
 
         <!-- Nap card: single primary action -->
-        <div class="col-12 col-md-4">
-          <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="col-12 col-sm-6 col-lg-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-opacity-10">
             <div class="card-body">
               <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
                 <i class="fa-solid fa-moon me-1" aria-hidden="true"></i>Nap
@@ -154,8 +168,8 @@
         </div>
 
         <!-- Bottle card: low / mid / high -->
-        <div class="col-12 col-md-4">
-          <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="col-12 col-sm-6 col-lg-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning bg-opacity-10">
             <div class="card-body">
               <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
                 <i class="fa-solid fa-bottle-water me-1" aria-hidden="true"></i>Bottle
@@ -188,7 +202,9 @@
 
     <!-- Log with details (smaller, like front-end dashboard) -->
     <div class="mb-4">
-      <p class="fw-bold text-body-secondary small mb-2">Log with details</p>
+      <p class="fw-bold text-body-secondary small text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+        <i class="fa-solid fa-pen-to-square me-1" aria-hidden="true"></i>Log with Details
+      </p>
       <div class="d-flex flex-wrap gap-2">
         <a href="{% url 'feedings:feeding_add' child_pk=child.pk %}" class="btn btn-warning btn-sm rounded-pill px-3 py-2 fw-semibold">
           <i class="fa-solid fa-bottle-water me-1" aria-hidden="true"></i>Feeding
@@ -223,7 +239,9 @@
           </div>
         {% else %}
           <div class="text-center py-4">
-            <i class="fa-solid fa-clock fa-2x text-body-tertiary mb-3 d-block opacity-50" aria-hidden="true"></i>
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;" aria-hidden="true">
+              <i class="fa-solid fa-baby-carriage fa-lg text-primary opacity-50"></i>
+            </div>
             <p class="text-body-tertiary small mb-0">No activity yet. Use the buttons above to get started.</p>
           </div>
         {% endif %}
