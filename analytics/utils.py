@@ -379,38 +379,34 @@ def get_sleep_summary(
 
 def _aggregate_feedings(feeding_filter: Q) -> dict[str, Any]:
     """Aggregate feeding count, total_oz, and breakdown by feeding_type. Shared by today/weekly summary."""
-    stats = Feeding.objects.filter(feeding_filter).aggregate(
+    row = Feeding.objects.filter(feeding_filter).aggregate(
         count=Count("id"),
         total_oz=Sum("amount_oz"),
+        bottle=Count("id", filter=Q(feeding_type="bottle")),
+        breast=Count("id", filter=Q(feeding_type="breast")),
     )
-    breakdown = (
-        Feeding.objects.filter(feeding_filter)
-        .values("feeding_type")
-        .annotate(count=Count("id"))
-    )
-    data = {
-        "count": stats["count"] or 0,
-        "total_oz": float(stats["total_oz"] or 0),
-        "bottle": 0,
-        "breast": 0,
+    return {
+        "count": row["count"] or 0,
+        "total_oz": float(row["total_oz"] or 0),
+        "bottle": row["bottle"] or 0,
+        "breast": row["breast"] or 0,
     }
-    for item in breakdown:
-        data[item["feeding_type"]] = item["count"]
-    return data
 
 
 def _aggregate_diapers(diaper_filter: Q) -> dict[str, Any]:
     """Aggregate diaper count and breakdown by change_type. Shared by today/weekly summary."""
-    stats = DiaperChange.objects.filter(diaper_filter).aggregate(count=Count("id"))
-    breakdown = (
-        DiaperChange.objects.filter(diaper_filter)
-        .values("change_type")
-        .annotate(count=Count("id"))
+    row = DiaperChange.objects.filter(diaper_filter).aggregate(
+        count=Count("id"),
+        wet=Count("id", filter=Q(change_type="wet")),
+        dirty=Count("id", filter=Q(change_type="dirty")),
+        both=Count("id", filter=Q(change_type="both")),
     )
-    data = {"count": stats["count"] or 0, "wet": 0, "dirty": 0, "both": 0}
-    for item in breakdown:
-        data[item["change_type"]] = item["count"]
-    return data
+    return {
+        "count": row["count"] or 0,
+        "wet": row["wet"] or 0,
+        "dirty": row["dirty"] or 0,
+        "both": row["both"] or 0,
+    }
 
 
 def _aggregate_naps(nap_filter: Q) -> dict[str, Any]:
