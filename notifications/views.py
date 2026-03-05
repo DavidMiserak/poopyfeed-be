@@ -1,6 +1,7 @@
 """API and template views for the notifications system."""
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
@@ -13,7 +14,11 @@ from rest_framework.views import APIView
 
 from children.models import Child
 
-from .cache import invalidate_unread_count_cache
+from .cache import (
+    UNREAD_COUNT_CACHE_TTL,
+    invalidate_unread_count_cache,
+    unread_count_cache_key,
+)
 from .models import Notification, NotificationPreference, QuietHours
 from .serializers import (
     NotificationPreferenceSerializer,
@@ -44,10 +49,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="unread-count")
     def unread_count(self, request):
-        """Return count of unread notifications."""
-        count = Notification.objects.filter(
-            recipient=request.user, is_read=False
-        ).count()
+        """Return count of unread notifications (cached 60s, same as context processor)."""
+        key = unread_count_cache_key(request.user.id)
+        count = cache.get(key)
+        if count is None:
+            count = Notification.objects.filter(
+                recipient=request.user, is_read=False
+            ).count()
+            cache.set(key, count, UNREAD_COUNT_CACHE_TTL)
         return Response({"count": count})
 
     @action(detail=False, methods=["post"], url_path="mark-all-read")
@@ -92,16 +101,18 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """Ensure preferences exist for all accessible children before listing."""
-        accessible_children = Child.for_user(request.user)
+        accessible_child_ids = list(
+            Child.for_user(request.user).values_list("id", flat=True)
+        )
         existing_child_ids = set(
             NotificationPreference.objects.filter(
-                user=request.user, child__in=accessible_children
+                user=request.user, child_id__in=accessible_child_ids
             ).values_list("child_id", flat=True)
         )
         missing = [
-            NotificationPreference(user=request.user, child=child)
-            for child in accessible_children
-            if child.id not in existing_child_ids
+            NotificationPreference(user=request.user, child_id=cid)
+            for cid in accessible_child_ids
+            if cid not in existing_child_ids
         ]
         if missing:
             NotificationPreference.objects.bulk_create(missing, ignore_conflicts=True)
