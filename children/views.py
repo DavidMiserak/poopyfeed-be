@@ -67,6 +67,7 @@ class ChildListView(LoginRequiredMixin, ListView):
             Child.objects.filter(
                 Q(parent=self.request.user) | Q(shares__user=self.request.user)
             )
+            .select_related("parent")
             .prefetch_related("shares__user")
             .distinct()
             # Annotations will be applied in get_context_data via cache_utils
@@ -132,6 +133,7 @@ class ChildUpdateView(ChildEditMixin, UpdateView):
                     shares__role=ChildShare.Role.CO_PARENT,
                 )
             )
+            .select_related("parent")
             .prefetch_related("shares__user")
             .distinct()
         )

@@ -210,7 +210,7 @@ class TrackingListView(TrackingListFilterMixin, ChildAccessMixin, ListView):
 
     def get_queryset(self):
         """Get tracking records for the child, with optional date/type filters from GET."""
-        qs = self.model.objects.filter(child=self.child)
+        qs = self.model.objects.filter(child=self.child).select_related("child")
         if hasattr(self, "apply_list_filters"):
             qs = self.apply_list_filters(qs)
         return qs

@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 
 from children.models import Child
 
+from .cache import invalidate_unread_count_cache
 from .models import Notification, NotificationPreference, QuietHours
 from .serializers import (
     NotificationPreferenceSerializer,
@@ -55,6 +56,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         updated = Notification.objects.filter(
             recipient=request.user, is_read=False
         ).update(is_read=True)
+        invalidate_unread_count_cache(request.user.id)
         return Response({"updated": updated})
 
     def partial_update(self, request, *args, **kwargs):
@@ -150,6 +152,7 @@ class MarkAllReadView(LoginRequiredMixin, View):
         Notification.objects.filter(recipient=request.user, is_read=False).update(
             is_read=True
         )
+        invalidate_unread_count_cache(request.user.id)
         return redirect("notifications:notifications_list")
 
 

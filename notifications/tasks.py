@@ -100,6 +100,11 @@ def create_notifications_for_activity(self, child_id, actor_id, event_type):
 
     if notifications:
         Notification.objects.bulk_create(notifications)
+        # bulk_create does not fire post_save; invalidate unread count cache per recipient
+        from .cache import invalidate_unread_count_cache
+
+        for recipient_id in {n.recipient_id for n in notifications}:
+            invalidate_unread_count_cache(recipient_id)
 
     return f"Created {len(notifications)} notifications"
 
