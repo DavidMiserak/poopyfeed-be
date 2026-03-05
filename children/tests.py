@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from django_project.test_constants import TEST_PASSWORD
 
-from .forms import ChildForm, LocalDateTimeFormMixin
+from .forms import ChildForm, FussBusStep2Form, LocalDateTimeFormMixin
 from .models import Child, ChildShare, ShareInvite
 
 TEST_PARENT_EMAIL = "parent@example.com"
@@ -147,6 +147,38 @@ class ChildFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("date_of_birth", form.errors)
+
+
+class FussBusStep2FormTests(TestCase):
+    """Tests for FussBusStep2Form (manual checklist step)."""
+
+    def test_form_with_manual_ids_none_has_empty_choices(self):
+        """manual_ids=None is treated as empty list; checked field has no choices."""
+        form = FussBusStep2Form(manual_ids=None)
+        self.assertIn("checked", form.fields)
+        self.assertEqual(list(form.fields["checked"].choices), [])
+
+    def test_form_with_manual_ids_empty_has_empty_choices(self):
+        """manual_ids=[] yields checked field with empty choices."""
+        form = FussBusStep2Form(manual_ids=[])
+        self.assertEqual(list(form.fields["checked"].choices), [])
+
+    def test_form_with_manual_ids_builds_choices(self):
+        """manual_ids list becomes MultipleChoiceField choices."""
+        form = FussBusStep2Form(manual_ids=["id1", "id2"])
+        self.assertEqual(
+            list(form.fields["checked"].choices),
+            [("id1", "id1"), ("id2", "id2")],
+        )
+
+    def test_form_valid_with_checked_subset(self):
+        """Form accepts a subset of manual_ids as checked."""
+        form = FussBusStep2Form(
+            data={"checked": ["id1"]},
+            manual_ids=["id1", "id2"],
+        )
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["checked"], ["id1"])
 
 
 class ChildViewTests(TestCase):
@@ -2013,6 +2045,66 @@ class QuickLogViewTests(TestCase):
             .values_list("amount_oz", flat=True)
         )
         self.assertEqual(amounts, [Decimal("3"), Decimal("5")])
+
+    def test_quick_log_feeding_invalid_preset_redirects_with_error(self):
+        """POST with invalid bottle preset redirects to dashboard with error message."""
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "invalid"},
+        )
+        response = self.client.post(url)
+        self.assertRedirects(
+            response,
+            reverse("children:child_dashboard", kwargs={"pk": self.child.pk}),
+        )
+        from django.contrib.messages import get_messages
+
+        messages_list = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any("Invalid" in str(m) for m in messages_list),
+            "Expected an error message about invalid bottle preset",
+        )
+
+    def test_quick_log_feeding_low_without_custom_uses_mid_minus_one(self):
+        """Low preset with no valid custom_bottle_low_oz uses mid - 1."""
+        from feedings.models import Feeding
+
+        self.child.custom_bottle_mid_oz = Decimal("5")
+        self.child.custom_bottle_low_oz = None
+        self.child.save(update_fields=["custom_bottle_mid_oz", "custom_bottle_low_oz"])
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "low"},
+        )
+        self.client.post(url)
+        feeding = Feeding.objects.get(child=self.child)
+        self.assertEqual(feeding.amount_oz, Decimal("4"))  # 5 - 1
+
+    def test_quick_log_feeding_high_without_custom_uses_mid_plus_one(self):
+        """High preset with no valid custom_bottle_high_oz uses mid + 1."""
+        from feedings.models import Feeding
+
+        self.child.custom_bottle_mid_oz = Decimal("4")
+        self.child.custom_bottle_high_oz = None
+        self.child.save(update_fields=["custom_bottle_mid_oz", "custom_bottle_high_oz"])
+        self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)
+        url = reverse(
+            "children:quick_log_feeding",
+            kwargs={"pk": self.child.pk, "preset": "high"},
+        )
+        self.client.post(url)
+        feeding = Feeding.objects.get(child=self.child)
+        self.assertEqual(feeding.amount_oz, Decimal("5"))  # 4 + 1
+
+    def test_get_bottle_amount_for_preset_unknown_preset_defaults_to_mid(self):
+        """When preset is not low/mid/high, helper defaults to mid (fallback)."""
+        from children.quick_log_views import _get_bottle_amount_for_preset
+
+        mid_amount = _get_bottle_amount_for_preset(self.child, "mid")
+        amount = _get_bottle_amount_for_preset(self.child, "unknown")
+        self.assertEqual(amount, mid_amount)
 
     def test_quick_log_feeding_get_redirects_to_dashboard(self):
         self.client.login(email="quicklog@example.com", password=TEST_PASSWORD)

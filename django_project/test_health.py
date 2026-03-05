@@ -53,3 +53,14 @@ class ReadyzTests(TestCase):
         """Readiness check must work without authentication."""
         response = self.client.get("/readyz")
         self.assertEqual(response.status_code, 200)
+
+    def test_readyz_returns_503_when_cache_get_returns_unexpected_value(self):
+        """Readiness check fails when cache.get does not return the written value."""
+        with patch("django.core.cache.cache") as mock_cache:
+            mock_cache.set.return_value = None
+            mock_cache.get.return_value = None  # e.g. key expired or wrong value
+            response = self.client.get("/readyz")
+        self.assertEqual(response.status_code, 503)
+        data = response.json()
+        self.assertEqual(data["status"], "degraded")
+        self.assertEqual(data["checks"]["cache"], "unavailable")
