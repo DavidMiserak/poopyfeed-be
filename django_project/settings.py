@@ -432,9 +432,19 @@ EMAIL_BACKEND = os.environ.get(
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        },
+    },
     "formatters": {
         "performance": {
             "format": "[{asctime}] {levelname} {message}",
+            "style": "{",
+            "datefmt": "%H:%M:%S",
+        },
+        "sql": {
+            "format": "[{asctime}] {message}",
             "style": "{",
             "datefmt": "%H:%M:%S",
         },
@@ -444,12 +454,22 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "performance",
         },
+        "console_sql": {
+            "class": "logging.StreamHandler",
+            "formatter": "sql",
+            "filters": ["require_debug_true"],
+        },
     },
     "loggers": {
         "poopyfeed.performance": {
             "handlers": ["console"],
             # DEBUG/dev: log all API timings; production: only slow requests (WARNING)
             "level": "INFO" if DEBUG else "WARNING",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console_sql"],
+            "level": "DEBUG",
             "propagate": False,
         },
     },
