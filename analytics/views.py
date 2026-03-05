@@ -21,6 +21,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from children.models import Child
+from notifications.cache import (
+    UNREAD_COUNT_CACHE_TTL,
+    unread_count_cache_key,
+)
 from notifications.models import Notification
 
 from .cache import DASHBOARD_SUMMARY_INVALIDATED_KEY, invalidate_child_analytics
@@ -497,9 +501,13 @@ class DashboardSummaryView(APIView):
 
         today = get_today_summary(child_id, user_timezone=user_tz)
         weekly = get_weekly_summary(child_id)
-        unread_count = Notification.objects.filter(
-            recipient=request.user, is_read=False
-        ).count()
+        key = unread_count_cache_key(request.user.id)
+        unread_count = cache.get(key)
+        if unread_count is None:
+            unread_count = Notification.objects.filter(
+                recipient=request.user, is_read=False
+            ).count()
+            cache.set(key, unread_count, UNREAD_COUNT_CACHE_TTL)
 
         payload = {"today": today, "weekly": weekly, "unread_count": unread_count}
         serializer = DashboardSummaryResponseSerializer(data=payload)
