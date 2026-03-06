@@ -84,7 +84,11 @@ class APITimingMiddleware(MiddlewareMixin):
                     )
 
         response["Server-Timing"] = server_timing
+        self._log_api_timing(log_data, duration_ms)
+        return response
 
+    def _log_api_timing(self, log_data: dict, duration_ms: float) -> None:
+        """Log API request timing at WARNING if slow, else INFO; format depends on DEBUG."""
         if duration_ms >= self.SLOW_REQUEST_THRESHOLD_MS:
             if settings.DEBUG:
                 logger.warning(
@@ -109,8 +113,6 @@ class APITimingMiddleware(MiddlewareMixin):
                     "%(method)s %(path)s [%(status)s] %(duration_ms).1fms",
                     log_data,
                 )
-
-        return response
 
 
 class CSRFExemptMiddleware(MiddlewareMixin):

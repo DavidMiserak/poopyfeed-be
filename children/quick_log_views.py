@@ -26,6 +26,25 @@ VALID_DIAPER_CHANGE_TYPES = ("wet", "dirty", "both")
 VALID_BOTTLE_PRESETS = ("low", "mid", "high")
 DEFAULT_BOTTLE_OZ = Decimal("4")
 
+URL_NAME_CHILD_DASHBOARD = "children:child_dashboard"
+
+
+def _mid_base_oz(child) -> Decimal:
+    """Resolve mid baseline from custom or default."""
+    mid_custom = getattr(child, "custom_bottle_mid_oz", None)
+    if mid_custom is not None and MIN_BOTTLE_OZ <= mid_custom <= MAX_BOTTLE_OZ:
+        return mid_custom
+    return DEFAULT_BOTTLE_OZ
+
+
+def _clamp_oz(amount: Decimal) -> Decimal:
+    """Clamp amount to allowed bottle range."""
+    if amount < MIN_BOTTLE_OZ:
+        return MIN_BOTTLE_OZ
+    if amount > MAX_BOTTLE_OZ:
+        return MAX_BOTTLE_OZ
+    return amount
+
 
 def _get_bottle_amount_for_preset(child, preset: str) -> Decimal:
     """Calculate bottle amount for low/mid/high presets using child custom values when present.
@@ -37,50 +56,38 @@ def _get_bottle_amount_for_preset(child, preset: str) -> Decimal:
 
     Final value is clamped to MIN_BOTTLE_OZ/MAX_BOTTLE_OZ.
     """
-
-    # Resolve a safe mid baseline first
-    mid_custom = getattr(child, "custom_bottle_mid_oz", None)
-    if mid_custom is not None and MIN_BOTTLE_OZ <= mid_custom <= MAX_BOTTLE_OZ:
-        mid_base = mid_custom
-    else:
-        mid_base = DEFAULT_BOTTLE_OZ
-
+    mid_base = _mid_base_oz(child)
     if preset == "mid":
-        amount = mid_base
-    elif preset == "low":
+        return _clamp_oz(mid_base)
+    if preset == "low":
         low_custom = getattr(child, "custom_bottle_low_oz", None)
-        if low_custom is not None and MIN_BOTTLE_OZ <= low_custom <= MAX_BOTTLE_OZ:
-            amount = low_custom
-        else:
-            amount = mid_base - Decimal("1")
-    elif preset == "high":
+        amount = (
+            low_custom
+            if low_custom is not None and MIN_BOTTLE_OZ <= low_custom <= MAX_BOTTLE_OZ
+            else mid_base - Decimal("1")
+        )
+        return _clamp_oz(amount)
+    if preset == "high":
         high_custom = getattr(child, "custom_bottle_high_oz", None)
-        if high_custom is not None and MIN_BOTTLE_OZ <= high_custom <= MAX_BOTTLE_OZ:
-            amount = high_custom
-        else:
-            amount = mid_base + Decimal("1")
-    else:
-        # Should not happen if caller validates preset; default to mid
-        amount = mid_base
-
-    # Clamp to allowed range
-    if amount < MIN_BOTTLE_OZ:
-        return MIN_BOTTLE_OZ
-    if amount > MAX_BOTTLE_OZ:
-        return MAX_BOTTLE_OZ
-    return amount
+        amount = (
+            high_custom
+            if high_custom is not None and MIN_BOTTLE_OZ <= high_custom <= MAX_BOTTLE_OZ
+            else mid_base + Decimal("1")
+        )
+        return _clamp_oz(amount)
+    return _clamp_oz(mid_base)
 
 
 class QuickLogFeedingView(ChildAccessMixin, View):
     """POST-only: create a bottle feeding for low/mid/high preset, then redirect."""
 
     def get(self, request, pk, preset):
-        return redirect(reverse("children:child_dashboard", kwargs={"pk": pk}))
+        return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": pk}))
 
     def post(self, request, pk, preset):
         if preset not in VALID_BOTTLE_PRESETS:
             messages.error(request, "Invalid bottle preset.")
-            return redirect(reverse("children:child_dashboard", kwargs={"pk": pk}))
+            return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": pk}))
 
         child = self.child
         amount = _get_bottle_amount_for_preset(child, preset)
@@ -102,19 +109,19 @@ class QuickLogFeedingView(ChildAccessMixin, View):
             event_type="feeding",
         )
         messages.success(request, "Feeding logged.")
-        return redirect(reverse("children:child_dashboard", kwargs={"pk": child.pk}))
+        return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": child.pk}))
 
 
 class QuickLogDiaperView(ChildAccessMixin, View):
     """POST-only: create a diaper change with change_type from URL, redirect to dashboard."""
 
     def get(self, request, pk, change_type):
-        return redirect(reverse("children:child_dashboard", kwargs={"pk": pk}))
+        return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": pk}))
 
     def post(self, request, pk, change_type):
         if change_type not in VALID_DIAPER_CHANGE_TYPES:
             messages.error(request, "Invalid diaper change type.")
-            return redirect(reverse("children:child_dashboard", kwargs={"pk": pk}))
+            return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": pk}))
 
         child = self.child
         changed_at = timezone.now()
@@ -133,14 +140,14 @@ class QuickLogDiaperView(ChildAccessMixin, View):
             event_type="diaper",
         )
         messages.success(request, "Diaper change logged.")
-        return redirect(reverse("children:child_dashboard", kwargs={"pk": child.pk}))
+        return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": child.pk}))
 
 
 class QuickLogNapView(ChildAccessMixin, View):
     """POST-only: create a nap start (napped_at=now, no end), redirect to dashboard."""
 
     def get(self, request, pk):
-        return redirect(reverse("children:child_dashboard", kwargs={"pk": pk}))
+        return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": pk}))
 
     def post(self, request, pk):
         child = self.child
@@ -160,4 +167,4 @@ class QuickLogNapView(ChildAccessMixin, View):
             event_type="nap",
         )
         messages.success(request, "Nap logged.")
-        return redirect(reverse("children:child_dashboard", kwargs={"pk": child.pk}))
+        return redirect(reverse(URL_NAME_CHILD_DASHBOARD, kwargs={"pk": child.pk}))

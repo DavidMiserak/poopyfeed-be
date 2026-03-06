@@ -345,9 +345,8 @@ class ChildFussBusView(ChildAccessMixin, View):
         )
         return auto_state, checklist_items
 
-    def get(self, request, pk):
-        child = self.child
-        # If user clicked the Fuss Bus link (no query params), start a fresh session state
+    def _get_fuss_bus_step_state(self, request) -> dict:
+        """Resolve and persist step from GET; return current state."""
         if not request.GET:
             state = {
                 "step": 1,
@@ -357,16 +356,35 @@ class ChildFussBusView(ChildAccessMixin, View):
             self._save_state(request, state)
         else:
             state = self._get_state(request)
-
         try:
-            step_param = int(request.GET.get("step") or state.get("step", 1))
+            raw_step = request.GET.get("step") or state.get("step", 1)
+            step_param = int(raw_step)  # type: ignore[arg-type]
         except (TypeError, ValueError):
             step_param = 1
-        if step_param < 1 or step_param > 3:
-            step_param = 1
-        state["step"] = step_param
+        state["step"] = max(1, min(3, step_param))
         self._save_state(request, state)
+        return state
 
+    def _build_soothing_toolkit_for_template(self) -> list[dict]:
+        """Build list of soothing categories with glossary metadata for template."""
+        result: list[dict] = []
+        for cat in SOOTHING_TOOLKIT:
+            items_with_meta = []
+            for label in cat.items:
+                entry = FUSS_BUS_GLOSSARY.get(label)
+                items_with_meta.append(
+                    {
+                        "label": label,
+                        "glossary_title": entry.title if entry else "",
+                        "glossary_body": entry.body if entry else "",
+                    }
+                )
+            result.append({"title": cat.title, "items": items_with_meta})
+        return result
+
+    def get(self, request, pk):
+        child = self.child
+        state = self._get_fuss_bus_step_state(request)
         step = int(state["step"])
         symptom = state.get("symptom") or "general_fussiness"
         checked_ids = set(state.get("checked", []))
@@ -379,7 +397,6 @@ class ChildFussBusView(ChildAccessMixin, View):
         suggestions = []
         developmental_contexts: list[str] = []
         show_colic = False
-
         if step == 3 and symptom:
             suggestions = prioritize_suggestions(
                 checklist_items=checklist_items,
@@ -389,25 +406,6 @@ class ChildFussBusView(ChildAccessMixin, View):
             )
             developmental_contexts = get_developmental_contexts(age_months)
             show_colic = age_months <= 4 and symptom == "crying"
-
-        toolkit_for_template: list[dict] = []
-        for cat in SOOTHING_TOOLKIT:
-            items_with_meta: list[dict] = []
-            for label in cat.items:
-                entry = FUSS_BUS_GLOSSARY.get(label)
-                items_with_meta.append(
-                    {
-                        "label": label,
-                        "glossary_title": entry.title if entry else "",
-                        "glossary_body": entry.body if entry else "",
-                    }
-                )
-            toolkit_for_template.append(
-                {
-                    "title": cat.title,
-                    "items": items_with_meta,
-                }
-            )
 
         context = {
             "child": child,
@@ -421,62 +419,51 @@ class ChildFussBusView(ChildAccessMixin, View):
             "show_colic": show_colic,
             "when_to_call_doctor": WHEN_TO_CALL_DOCTOR_BULLETS,
             "self_care_items": SELF_CARE_ITEMS,
-            "soothing_toolkit": toolkit_for_template,
+            "soothing_toolkit": self._build_soothing_toolkit_for_template(),
             "lullaby_songs": get_lullaby_songs(),
             "colic_section": COLIC_SECTION,
             "age_months": age_months,
         }
-
         return render(request, self.template_name, context)
 
-    def post(self, request, pk):
-        """Advance/back/reset wizard; state stored in session."""
-        state = self._get_state(request)
-
-        action = request.POST.get("action") or "next"
-        try:
-            current_step = int(request.POST.get("step") or state.get("step", 1))
-        except ValueError:
-            current_step = 1
-        state["step"] = current_step
+    def _process_fuss_bus_post_steps(self, state: dict, request, action: str) -> None:
+        """Update state from POST according to current step and action."""
+        current_step = state["step"]
         symptom = state.get("symptom") or "general_fussiness"
-
-        if action == "start_over":
-            reset_state = {
-                "step": 1,
-                "symptom": "general_fussiness",
-                "checked": [],
-            }
-            self._save_state(request, reset_state)
-            return redirect("children:child_fuss_bus", pk=pk)
-
         if current_step == 1:
-            form = FussBusStep1Form(request.POST)
-            if form.is_valid():
-                symptom = form.cleaned_data["symptom"]
-                state["symptom"] = symptom
-                if action == "next":
-                    state["step"] = 2
-                elif action == "back":
-                    state["step"] = 1
+            step1_form = FussBusStep1Form(request.POST)
+            if step1_form.is_valid():
+                state["symptom"] = step1_form.cleaned_data["symptom"]
+                state["step"] = 2 if action == "next" else 1
         elif current_step == 2:
             auto_state, checklist_items = self._build_auto_state_and_checklist(
                 symptom=symptom, checked_ids=set(state.get("checked", []))
             )
             manual_ids = [item.id for item in checklist_items if item.kind == "manual"]
-            form = FussBusStep2Form(request.POST, manual_ids=manual_ids)
-            if form.is_valid():
-                state["checked"] = form.cleaned_data.get("checked", [])
-                if action == "next":
-                    state["step"] = 3
-                elif action == "back":
-                    state["step"] = 1
+            step2_form = FussBusStep2Form(request.POST, manual_ids=manual_ids)
+            if step2_form.is_valid():
+                state["checked"] = step2_form.cleaned_data.get("checked", [])
+                state["step"] = 3 if action == "next" else 1
         else:
-            if action == "back":
-                state["step"] = 2
-            elif action == "next":
-                state["step"] = 3
+            state["step"] = 2 if action == "back" else 3
 
+    def post(self, request, pk):
+        """Advance/back/reset wizard; state stored in session."""
+        state = self._get_state(request)
+        action = request.POST.get("action") or "next"
+        try:
+            state["step"] = int(request.POST.get("step") or state.get("step", 1))
+        except ValueError:
+            state["step"] = 1
+
+        if action == "start_over":
+            self._save_state(
+                request,
+                {"step": 1, "symptom": "general_fussiness", "checked": []},
+            )
+            return redirect("children:child_fuss_bus", pk=pk)
+
+        self._process_fuss_bus_post_steps(state, request, action)
         self._save_state(request, state)
         return redirect(
             reverse("children:child_fuss_bus", kwargs={"pk": pk})

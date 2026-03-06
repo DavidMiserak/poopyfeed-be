@@ -17,18 +17,20 @@ from .datetime_utils import (
     utc_to_local_datetime_local_str,
 )
 
+TEST_TZ = "America/New_York"
+
 
 class DatetimeUtilsTestCase(TestCase):
     """Test datetime utility functions."""
 
     def test_utc_to_local_datetime_local_str_none(self):
         """None input returns empty string."""
-        self.assertEqual(utc_to_local_datetime_local_str(None, "America/New_York"), "")
+        self.assertEqual(utc_to_local_datetime_local_str(None, TEST_TZ), "")
 
     def test_utc_to_local_datetime_local_str_with_tz(self):
         """Aware UTC datetime is converted to local string."""
         utc = datetime(2025, 2, 15, 18, 30, tzinfo=ZoneInfo("UTC"))
-        result = utc_to_local_datetime_local_str(utc, "America/New_York")
+        result = utc_to_local_datetime_local_str(utc, TEST_TZ)
         self.assertEqual(result, "2025-02-15T13:30")
 
     def test_utc_to_local_datetime_local_str_no_tz_uses_utc(self):
@@ -49,23 +51,23 @@ class DatetimeUtilsTestCase(TestCase):
 
     def test_naive_local_to_utc_none(self):
         """None input returns None."""
-        self.assertIsNone(naive_local_to_utc(None, "America/New_York"))
+        self.assertIsNone(naive_local_to_utc(None, TEST_TZ))
 
     def test_naive_local_to_utc_conversion(self):
         """Naive datetime in local tz is converted to aware UTC."""
         naive = datetime(2025, 2, 15, 13, 30)
-        result = naive_local_to_utc(naive, "America/New_York")
+        result = naive_local_to_utc(naive, TEST_TZ)
         self.assertIsNotNone(result)
         self.assertEqual(result.tzinfo, ZoneInfo("UTC"))
 
     def test_format_datetime_user_tz_none(self):
         """None datetime returns empty string."""
-        self.assertEqual(format_datetime_user_tz(None, "America/New_York"), "")
+        self.assertEqual(format_datetime_user_tz(None, TEST_TZ), "")
 
     def test_format_datetime_user_tz_with_fmt(self):
         """Datetime is formatted with given format."""
         utc = datetime(2025, 2, 15, 18, 30, tzinfo=ZoneInfo("UTC"))
-        result = format_datetime_user_tz(utc, "America/New_York", fmt="%Y-%m-%d %H:%M")
+        result = format_datetime_user_tz(utc, TEST_TZ, fmt="%Y-%m-%d %H:%M")
         self.assertIn("2025-02-15", result)
 
     def test_format_relative_none(self):
@@ -183,12 +185,12 @@ class DatetimeUtilsTestCase(TestCase):
 
     def test_date_to_utc_range_none(self):
         """None or empty date_str returns None."""
-        self.assertIsNone(date_to_utc_range(None, "America/New_York"))
-        self.assertIsNone(date_to_utc_range("", "America/New_York"))
+        self.assertIsNone(date_to_utc_range(None, TEST_TZ))
+        self.assertIsNone(date_to_utc_range("", TEST_TZ))
 
     def test_date_to_utc_range_valid(self):
         """Valid YYYY-MM-DD returns (start_utc, end_utc) for that day in tz."""
-        start_utc, end_utc = date_to_utc_range("2025-02-15", "America/New_York")
+        start_utc, end_utc = date_to_utc_range("2025-02-15", TEST_TZ)
         self.assertIsNotNone(start_utc)
         self.assertIsNotNone(end_utc)
         self.assertEqual(start_utc.tzinfo, ZoneInfo("UTC"))

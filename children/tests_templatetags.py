@@ -6,6 +6,9 @@ from zoneinfo import ZoneInfo
 from django.template import Context, Template
 from django.test import TestCase
 
+TEST_TZ = "America/New_York"
+TEMPLATE_FORMAT_EXACT_TZ = "{% load poopyfeed_dt %}{{ value|format_exact_tz:tz }}"
+
 
 class PoopyfeedDtFiltersTestCase(TestCase):
     """Test format_relative_tz, format_exact_tz, format_child_age_tz with None and values."""
@@ -13,7 +16,7 @@ class PoopyfeedDtFiltersTestCase(TestCase):
     def test_format_relative_tz_none_returns_empty(self):
         """Filter with None value returns empty string (covers line 27)."""
         t = Template("{% load poopyfeed_dt %}{{ value|format_relative_tz:tz }}")
-        result = t.render(Context({"value": None, "tz": "America/New_York"}))
+        result = t.render(Context({"value": None, "tz": TEST_TZ}))
         self.assertEqual(result.strip(), "")
 
     def test_format_relative_tz_with_value(self):
@@ -25,13 +28,13 @@ class PoopyfeedDtFiltersTestCase(TestCase):
 
     def test_format_exact_tz_none_returns_empty(self):
         """Filter with None value returns empty string (covers line 38)."""
-        t = Template("{% load poopyfeed_dt %}{{ value|format_exact_tz:tz }}")
-        result = t.render(Context({"value": None, "tz": "America/New_York"}))
+        t = Template(TEMPLATE_FORMAT_EXACT_TZ)
+        result = t.render(Context({"value": None, "tz": TEST_TZ}))
         self.assertEqual(result.strip(), "")
 
     def test_format_exact_tz_with_value(self):
         """Filter with datetime returns formatted string."""
-        t = Template("{% load poopyfeed_dt %}{{ value|format_exact_tz:tz }}")
+        t = Template(TEMPLATE_FORMAT_EXACT_TZ)
         value = datetime(2025, 2, 15, 14, 30, tzinfo=ZoneInfo("UTC"))
         result = t.render(Context({"value": value, "tz": "UTC"}))
         self.assertIn("Feb", result)
@@ -39,7 +42,7 @@ class PoopyfeedDtFiltersTestCase(TestCase):
     def test_format_child_age_tz_none_returns_empty(self):
         """Filter with None dob returns empty string (covers line 49)."""
         t = Template("{% load poopyfeed_dt %}{{ dob|format_child_age_tz:tz }}")
-        result = t.render(Context({"dob": None, "tz": "America/New_York"}))
+        result = t.render(Context({"dob": None, "tz": TEST_TZ}))
         self.assertEqual(result.strip(), "")
 
     def test_format_child_age_tz_with_date(self):
@@ -56,7 +59,7 @@ class PoopyfeedDtFiltersTestCase(TestCase):
 
     def test_tz_arg_normalizes_empty_to_utc(self):
         """Empty or whitespace tz_name is normalized to UTC (covers _tz_arg branches)."""
-        t = Template("{% load poopyfeed_dt %}{{ value|format_exact_tz:tz }}")
+        t = Template(TEMPLATE_FORMAT_EXACT_TZ)
         value = datetime(2025, 2, 15, 14, 30, tzinfo=ZoneInfo("UTC"))
         result_empty = t.render(Context({"value": value, "tz": ""}))
         result_whitespace = t.render(Context({"value": value, "tz": "  "}))

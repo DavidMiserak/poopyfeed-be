@@ -6,6 +6,8 @@ from django.test import TestCase
 
 from .utils.timing import timing
 
+LOG_PERFORMANCE = "poopyfeed.performance"
+
 
 class TimingDecoratorTests(TestCase):
     """Tests for django_project.utils.timing.timing decorator."""
@@ -17,7 +19,7 @@ class TimingDecoratorTests(TestCase):
         def fast_func():
             return 42
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG") as cm:
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG") as cm:
             result = fast_func()
 
         self.assertEqual(result, 42)
@@ -32,7 +34,7 @@ class TimingDecoratorTests(TestCase):
             time.sleep(0.01)
             return "done"
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG") as cm:
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG") as cm:
             result = slow_func()
 
         self.assertEqual(result, "done")
@@ -43,9 +45,10 @@ class TimingDecoratorTests(TestCase):
 
         @timing(label="PDF export", threshold_ms=5000)
         def export():
+            # Empty body to test that decorator logs and does not alter behavior.
             pass
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG") as cm:
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG") as cm:
             export()
 
         self.assertTrue(any("PDF export" in m for m in cm.output))
@@ -55,9 +58,10 @@ class TimingDecoratorTests(TestCase):
 
         @timing(threshold_ms=5000)
         def my_special_func():
+            # Empty body to test default label uses function qualname.
             pass
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG") as cm:
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG") as cm:
             my_special_func()
 
         self.assertTrue(any("my_special_func" in m for m in cm.output))
@@ -69,7 +73,7 @@ class TimingDecoratorTests(TestCase):
         def func_with_high_threshold():
             time.sleep(0.005)
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG") as cm:
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG") as cm:
             func_with_high_threshold()
 
         # Should be DEBUG since 5ms << 50000ms threshold
@@ -83,7 +87,7 @@ class TimingDecoratorTests(TestCase):
         def returns_dict():
             return {"key": "value", "count": 3}
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG"):
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG"):
             result = returns_dict()
 
         self.assertEqual(result, {"key": "value", "count": 3})
@@ -95,7 +99,7 @@ class TimingDecoratorTests(TestCase):
         def raises_error():
             raise ValueError("test error")
 
-        with self.assertLogs("poopyfeed.performance", level="DEBUG"):
+        with self.assertLogs(LOG_PERFORMANCE, level="DEBUG"):
             with self.assertRaises(ValueError, msg="test error"):
                 raises_error()
 

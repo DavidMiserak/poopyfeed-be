@@ -241,14 +241,24 @@ MANUAL_CHECKLIST_DEFS: list[ChecklistItemDef] = [
     *SYMPTOM_SPECIFIC_ITEMS,
 ]
 
+SOOTHING_ITEM_BABY_CARRIER = "Baby carrier"
+SOOTHING_ITEM_COLIC_HOLD = "Colic hold"
+SOOTHING_ITEM_WHITE_NOISE = "White noise"
+
 SOOTHING_TOOLKIT: list[SoothingCategory] = [
     SoothingCategory(
         title="Comforting Touch",
-        items=["Rock", "Cuddle", "Massage", "Baby carrier", "Colic hold"],
+        items=[
+            "Rock",
+            "Cuddle",
+            "Massage",
+            SOOTHING_ITEM_BABY_CARRIER,
+            SOOTHING_ITEM_COLIC_HOLD,
+        ],
     ),
     SoothingCategory(
         title="Calming Sounds",
-        items=["White noise", "Soft music", "Singing"],
+        items=[SOOTHING_ITEM_WHITE_NOISE, "Soft music", "Singing"],
     ),
     SoothingCategory(
         title="Rhythmic Motion",
@@ -286,6 +296,10 @@ COLIC_SECTION: dict[str, str] = {
     ),
 }
 
+DEVELOPMENTAL_GROWTH_SPURT_TEXT = (
+    "Growth spurts cause increased hunger and fussiness — increase feeding frequency."
+)
+
 DEVELOPMENTAL_CONTEXTS: list[DevelopmentalContext] = [
     DevelopmentalContext(
         age_range=AgeRange(max_months=4),
@@ -293,21 +307,15 @@ DEVELOPMENTAL_CONTEXTS: list[DevelopmentalContext] = [
     ),
     DevelopmentalContext(
         age_range=AgeRange(min_months=0, max_months=1),
-        text=(
-            "Growth spurts cause increased hunger and fussiness — increase feeding frequency."
-        ),
+        text=DEVELOPMENTAL_GROWTH_SPURT_TEXT,
     ),
     DevelopmentalContext(
         age_range=AgeRange(min_months=1.5, max_months=2),
-        text=(
-            "Growth spurts cause increased hunger and fussiness — increase feeding frequency."
-        ),
+        text=DEVELOPMENTAL_GROWTH_SPURT_TEXT,
     ),
     DevelopmentalContext(
         age_range=AgeRange(min_months=2.5, max_months=4),
-        text=(
-            "Growth spurts cause increased hunger and fussiness — increase feeding frequency."
-        ),
+        text=DEVELOPMENTAL_GROWTH_SPURT_TEXT,
     ),
     DevelopmentalContext(
         age_range=AgeRange(min_months=4, max_months=24),
@@ -595,6 +603,98 @@ def _format_nap_detail(awake_min: float) -> str:
     return f"Last nap ended {_format_minutes_ago(awake_min)}"
 
 
+_DEFAULT_FEEDING_INTERVAL_MINUTES = 180
+_FED_WARNING_MULTIPLIER = 1.1
+_DIAPER_OK_WITHIN_MINUTES = 120
+_WAKE_WINDOW_MINUTES: list[tuple[float, int]] = [
+    (3, 90),
+    (6, 150),
+    (12, 210),
+    (999, 300),
+]
+
+
+def _wake_window_for_age(months: float) -> int:
+    for max_months, minutes in _WAKE_WINDOW_MINUTES:
+        if months <= max_months:
+            return minutes
+    return 300
+
+
+def _compute_fed_state(
+    pattern_alerts: dict | None,
+    timeline_events: list[dict] | None,
+    now: datetime,
+) -> tuple[AutoCheckStatus, str | None]:
+    feeding_pa = (pattern_alerts or {}).get("feeding") if pattern_alerts else None
+    if not feeding_pa:
+        return "missing", None
+    data_points = feeding_pa.get("data_points") or 0
+    last_fed_at_iso = feeding_pa.get("last_fed_at")
+    if data_points == 0 or not last_fed_at_iso:
+        return "missing", None
+    interval = (
+        feeding_pa.get("avg_interval_minutes") or _DEFAULT_FEEDING_INTERVAL_MINUTES
+    )
+    last_dt = datetime.fromisoformat(last_fed_at_iso)
+    elapsed = float(
+        feeding_pa.get("minutes_since_last") or _minutes_between(last_dt, now)
+    )
+    fed_detail = _format_fed_detail(elapsed, timeline_events)
+    if elapsed <= interval:
+        return "ok", fed_detail
+    if elapsed <= interval * _FED_WARNING_MULTIPLIER:
+        return "warning", fed_detail
+    return "missing", fed_detail
+
+
+def _compute_diaper_state(
+    timeline_events: list[dict] | None, now: datetime
+) -> tuple[AutoCheckStatus, str | None]:
+    if not timeline_events:
+        return "missing", None
+    diaper_event = next(
+        (e for e in timeline_events if e.get("type") == "diaper" and e.get("diaper")),
+        None,
+    )
+    if not diaper_event or not diaper_event.get("diaper"):
+        return "missing", None
+    changed_at = diaper_event["diaper"]["changed_at"]
+    changed_dt = (
+        changed_at
+        if isinstance(changed_at, datetime)
+        else datetime.fromisoformat(str(changed_at))
+    )
+    elapsed_min = _minutes_between(changed_dt, now)
+    detail = _format_diaper_detail(elapsed_min)
+    if elapsed_min <= _DIAPER_OK_WITHIN_MINUTES:
+        return "ok", detail
+    return "missing", detail
+
+
+def _compute_nap_state(
+    pattern_alerts: dict | None, child_age_months: float, now: datetime
+) -> tuple[AutoCheckStatus, str | None]:
+    nap_pa = (pattern_alerts or {}).get("nap") if pattern_alerts else None
+    if not nap_pa:
+        return "missing", None
+    data_points = nap_pa.get("data_points") or 0
+    last_nap_ended_iso = nap_pa.get("last_nap_ended_at")
+    if data_points == 0 or not last_nap_ended_iso:
+        return "missing", None
+    wake_window = nap_pa.get("avg_wake_window_minutes") or _wake_window_for_age(
+        child_age_months
+    )
+    last_dt = datetime.fromisoformat(last_nap_ended_iso)
+    awake_min = float(nap_pa.get("minutes_awake") or _minutes_between(last_dt, now))
+    nap_detail = _format_nap_detail(awake_min)
+    if awake_min <= wake_window:
+        return "ok", nap_detail
+    if awake_min <= wake_window * _FED_WARNING_MULTIPLIER:
+        return "warning", nap_detail
+    return "missing", nap_detail
+
+
 def get_auto_check_state(
     *,
     pattern_alerts: dict | None,
@@ -606,110 +706,10 @@ def get_auto_check_state(
     Derive auto-check state from analytics pattern alerts + merged timeline events.
     Mirrors front-end getAutoCheckState behavior.
     """
-    if now is None:
-        now = timezone.now()
-
-    DEFAULT_FEEDING_INTERVAL_MINUTES = 180
-    FED_WARNING_MULTIPLIER = 1.1
-    DIAPER_OK_WITHIN_MINUTES = 120
-
-    # Fed
-    fed: AutoCheckStatus
-    fed_detail: str | None = None
-    feeding_pa = (pattern_alerts or {}).get("feeding") if pattern_alerts else None
-    if feeding_pa:
-        data_points = feeding_pa.get("data_points") or 0
-        last_fed_at_iso = feeding_pa.get("last_fed_at")
-        if data_points == 0 or not last_fed_at_iso:
-            fed = "missing"
-        else:
-            interval = (
-                feeding_pa.get("avg_interval_minutes")
-                or DEFAULT_FEEDING_INTERVAL_MINUTES
-            )
-            last_dt = datetime.fromisoformat(last_fed_at_iso)
-            elapsed = float(
-                feeding_pa.get("minutes_since_last") or _minutes_between(last_dt, now)
-            )
-            if elapsed <= interval:
-                fed = "ok"
-            elif elapsed <= interval * FED_WARNING_MULTIPLIER:
-                fed = "warning"
-            else:
-                fed = "missing"
-            fed_detail = _format_fed_detail(elapsed, timeline_events)
-    else:
-        fed = "missing"
-
-    # Diaper from timeline
-    diaper: AutoCheckStatus
-    diaper_detail: str | None = None
-    if timeline_events:
-        diaper_event = next(
-            (
-                e
-                for e in timeline_events
-                if e.get("type") == "diaper" and e.get("diaper")
-            ),
-            None,
-        )
-        if diaper_event and diaper_event.get("diaper"):
-            changed_at = diaper_event["diaper"]["changed_at"]
-            if isinstance(changed_at, datetime):
-                changed_dt = changed_at
-            else:
-                changed_dt = datetime.fromisoformat(str(changed_at))
-            elapsed_min = _minutes_between(changed_dt, now)
-            if elapsed_min <= DIAPER_OK_WITHIN_MINUTES:
-                diaper = "ok"
-            else:
-                diaper = "missing"
-            diaper_detail = _format_diaper_detail(elapsed_min)
-        else:
-            diaper = "missing"
-    else:
-        diaper = "missing"
-
-    # Nap from pattern alerts
-    nap: AutoCheckStatus
-    nap_detail: str | None = None
-    WAKE_WINDOW_MINUTES: list[tuple[float, int]] = [
-        (3, 90),
-        (6, 150),
-        (12, 210),
-        (999, 300),
-    ]
-
-    def _wake_window_for_age(months: float) -> int:
-        for max_months, minutes in WAKE_WINDOW_MINUTES:
-            if months <= max_months:
-                return minutes
-        return 300
-
-    nap_pa = (pattern_alerts or {}).get("nap") if pattern_alerts else None
-    if nap_pa:
-        data_points = nap_pa.get("data_points") or 0
-        last_nap_ended_iso = nap_pa.get("last_nap_ended_at")
-        if data_points == 0 or not last_nap_ended_iso:
-            nap = "missing"
-        else:
-            wake_window = nap_pa.get("avg_wake_window_minutes") or _wake_window_for_age(
-                child_age_months
-            )
-            last_dt = datetime.fromisoformat(last_nap_ended_iso)
-            awake_min = float(
-                nap_pa.get("minutes_awake") or _minutes_between(last_dt, now)
-            )
-            nap_detail = _format_nap_detail(awake_min)
-            if awake_min <= wake_window:
-                nap = "ok"
-            elif awake_min <= wake_window * FED_WARNING_MULTIPLIER:
-                nap = "warning"
-            else:
-                nap = "missing"
-    else:
-        nap = "missing"
-
+    now = now or timezone.now()
+    fed, fed_detail = _compute_fed_state(pattern_alerts, timeline_events, now)
+    diaper, diaper_detail = _compute_diaper_state(timeline_events, now)
+    nap, nap_detail = _compute_nap_state(pattern_alerts, child_age_months, now)
     return AutoCheckState(
         fed=fed,
         fed_detail=fed_detail,
@@ -800,6 +800,33 @@ def get_developmental_contexts(child_age_months: float) -> list[str]:
     ]
 
 
+def _high_priority_suggestions(
+    unchecked_auto_ids: list[str], auto_check_state: AutoCheckState
+) -> list[PrioritizedSuggestion]:
+    out: list[PrioritizedSuggestion] = []
+    if "fed" in unchecked_auto_ids:
+        text = (
+            f"Baby may be hungry — {auto_check_state.fed_detail}"
+            if auto_check_state.fed_detail
+            else "No recent feeding logged — consider offering a feed."
+        )
+        out.append(PrioritizedSuggestion(text=text, priority="high"))
+    if "diaper" in unchecked_auto_ids:
+        out.append(
+            PrioritizedSuggestion(
+                text="Check if baby needs a diaper change.", priority="high"
+            )
+        )
+    if "nap" in unchecked_auto_ids:
+        text = (
+            f"Baby may be overtired — {auto_check_state.nap_detail}"
+            if auto_check_state.nap_detail
+            else "Last nap was a while ago — consider offering a nap."
+        )
+        out.append(PrioritizedSuggestion(text=text, priority="high"))
+    return out
+
+
 def prioritize_suggestions(
     *,
     checklist_items: list[ChecklistItem],
@@ -813,8 +840,6 @@ def prioritize_suggestions(
     - Unchecked manual items as medium
     - Generic soothing toolkit suggestion as low
     """
-    suggestions: list[PrioritizedSuggestion] = []
-
     unchecked_auto_ids: list[str] = []
     if auto_check_state.fed != "ok":
         unchecked_auto_ids.append("fed")
@@ -822,43 +847,13 @@ def prioritize_suggestions(
         unchecked_auto_ids.append("diaper")
     if auto_check_state.nap != "ok":
         unchecked_auto_ids.append("nap")
+    suggestions = _high_priority_suggestions(unchecked_auto_ids, auto_check_state)
 
-    unchecked_manual_ids: list[str] = [
+    unchecked_manual_ids = [
         item.id
         for item in checklist_items
         if item.kind == "manual" and item.id not in checked_manual_ids
     ]
-
-    if "fed" in unchecked_auto_ids:
-        suggestions.append(
-            PrioritizedSuggestion(
-                text=(
-                    f"Baby may be hungry — {auto_check_state.fed_detail}"
-                    if auto_check_state.fed_detail
-                    else "No recent feeding logged — consider offering a feed."
-                ),
-                priority="high",
-            )
-        )
-    if "diaper" in unchecked_auto_ids:
-        suggestions.append(
-            PrioritizedSuggestion(
-                text="Check if baby needs a diaper change.",
-                priority="high",
-            )
-        )
-    if "nap" in unchecked_auto_ids:
-        suggestions.append(
-            PrioritizedSuggestion(
-                text=(
-                    f"Baby may be overtired — {auto_check_state.nap_detail}"
-                    if auto_check_state.nap_detail
-                    else "Last nap was a while ago — consider offering a nap."
-                ),
-                priority="high",
-            )
-        )
-
     for manual_id in unchecked_manual_ids:
         definition = next(
             (d for d in MANUAL_CHECKLIST_DEFS if d.id == manual_id),
@@ -871,12 +866,7 @@ def prioritize_suggestions(
             if definition.suggestion_text
             else f"Consider: {definition.label}"
         )
-        suggestions.append(
-            PrioritizedSuggestion(
-                text=text,
-                priority="medium",
-            )
-        )
+        suggestions.append(PrioritizedSuggestion(text=text, priority="medium"))
 
     symptom_label = next(
         (s.label for s in SYMPTOM_TYPES if s.id == symptom_id), "fussiness"
@@ -887,7 +877,6 @@ def prioritize_suggestions(
             priority="low",
         )
     )
-
     return suggestions
 
 
