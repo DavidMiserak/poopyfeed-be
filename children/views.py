@@ -433,6 +433,19 @@ class ChildFussBusView(ChildAccessMixin, View):
         except ValueError:
             return 1
 
+    def _process_fuss_bus_step2(
+        self, state: dict, request, action: str, symptom: str
+    ) -> None:
+        """Process step 2: validate and update checked items."""
+        auto_state, checklist_items = self._build_auto_state_and_checklist(
+            symptom=symptom, checked_ids=set(state.get("checked", []))
+        )
+        manual_ids = [item.id for item in checklist_items if item.kind == "manual"]
+        step2_form = FussBusStep2Form(request.POST, manual_ids=manual_ids)
+        if step2_form.is_valid():
+            state["checked"] = step2_form.cleaned_data.get("checked", [])
+            state["step"] = 3 if action == "next" else 1
+
     def _process_fuss_bus_post_steps(self, state: dict, request, action: str) -> None:
         """Update state from POST according to current step and action."""
         current_step = state["step"]
@@ -443,14 +456,7 @@ class ChildFussBusView(ChildAccessMixin, View):
                 state["symptom"] = step1_form.cleaned_data["symptom"]
                 state["step"] = 2 if action == "next" else 1
         elif current_step == 2:
-            auto_state, checklist_items = self._build_auto_state_and_checklist(
-                symptom=symptom, checked_ids=set(state.get("checked", []))
-            )
-            manual_ids = [item.id for item in checklist_items if item.kind == "manual"]
-            step2_form = FussBusStep2Form(request.POST, manual_ids=manual_ids)
-            if step2_form.is_valid():
-                state["checked"] = step2_form.cleaned_data.get("checked", [])
-                state["step"] = 3 if action == "next" else 1
+            self._process_fuss_bus_step2(state, request, action, symptom)
         else:
             state["step"] = 2 if action == "back" else 3
 
