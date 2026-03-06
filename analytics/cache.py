@@ -59,4 +59,4 @@ def invalidate_child_analytics(child_id: int) -> None:
     keys = _get_analytics_cache_keys(child_id)
     cache.delete_many(keys)
     sentinel_key = DASHBOARD_SUMMARY_INVALIDATED_KEY.format(child_id=child_id)
-    cache.set(sentinel_key, 1, timeout=300)
+    cache.set(sentinel_key, 1, timeout=1800)

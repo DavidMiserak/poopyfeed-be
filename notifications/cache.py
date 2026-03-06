@@ -2,7 +2,7 @@
 
 from django.core.cache import cache
 
-UNREAD_COUNT_CACHE_TTL = 60  # seconds
+UNREAD_COUNT_CACHE_TTL = 300  # 5 minutes (invalidated on notification create/read)
 
 
 def unread_count_cache_key(user_id: int) -> str:

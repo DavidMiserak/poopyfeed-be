@@ -236,7 +236,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             cache_key,
             get_today_summary,
             child.id,
-            cache_ttl=300,  # 5-minute TTL for today's data
+            cache_ttl=1800,  # 30-minute TTL (signal-invalidated on writes)
             user_timezone=user_tz,
         )
 
@@ -261,7 +261,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
         child = self.get_child(pk)
         cache_key = f"analytics:timeline:{child.id}"
         events = self._get_cached_data(
-            cache_key, get_child_timeline_events, child.id, cache_ttl=300
+            cache_key, get_child_timeline_events, child.id, cache_ttl=1800
         )
 
         page_size = min(max(int(request.query_params.get("page_size", 25)), 1), 100)
@@ -314,7 +314,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             cache_key,
             get_weekly_summary,
             child.id,
-            cache_ttl=600,  # 10-minute TTL for weekly data
+            cache_ttl=1800,  # 30-minute TTL (signal-invalidated on writes)
         )
 
         # Validate response
@@ -338,7 +338,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             cache_key,
             compute_pattern_alerts,
             child.id,
-            cache_ttl=120,
+            cache_ttl=900,  # 15-minute TTL (signal-invalidated on writes)
         )
         return Response(data, status=status.HTTP_200_OK)
 
@@ -513,5 +513,5 @@ class DashboardSummaryView(APIView):
         serializer = DashboardSummaryResponseSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
         data = serializer.data
-        cache.set(cache_key, data, timeout=300)
+        cache.set(cache_key, data, timeout=1800)
         return Response(data, status=status.HTTP_200_OK)
