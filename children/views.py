@@ -385,7 +385,6 @@ class ChildFussBusView(ChildAccessMixin, View):
                 checklist_items=checklist_items,
                 checked_manual_ids=checked_ids,
                 symptom_id=symptom,
-                child_age_months=age_months,
                 auto_check_state=auto_state,
             )
             developmental_contexts = get_developmental_contexts(age_months)

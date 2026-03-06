@@ -8,7 +8,7 @@ from django.http import JsonResponse
 logger = logging.getLogger(__name__)
 
 
-def healthz(request):
+def healthz(_request):
     """Liveness probe — returns 200 if the application process is running.
 
     Use for Kubernetes livenessProbe. Does not check dependencies
@@ -17,7 +17,7 @@ def healthz(request):
     return JsonResponse({"status": "ok"})
 
 
-def readyz(request):
+def readyz(_request):
     """Readiness probe — returns 200 only if all dependencies are reachable.
 
     Use for Kubernetes readinessProbe. Checks database and Redis

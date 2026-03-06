@@ -902,7 +902,6 @@ class FussBusUtilsTests(APITestCase):
             checklist_items=checklist_items,
             checked_manual_ids=checked_manual_ids,
             symptom_id="crying",
-            child_age_months=6.0,
             auto_check_state=auto_state,
         )
 

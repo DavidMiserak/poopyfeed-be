@@ -614,7 +614,7 @@ def get_auto_check_state(
     DIAPER_OK_WITHIN_MINUTES = 120
 
     # Fed
-    fed: AutoCheckStatus = "none"
+    fed: AutoCheckStatus
     fed_detail: str | None = None
     feeding_pa = (pattern_alerts or {}).get("feeding") if pattern_alerts else None
     if feeding_pa:
@@ -642,7 +642,7 @@ def get_auto_check_state(
         fed = "missing"
 
     # Diaper from timeline
-    diaper: AutoCheckStatus = "none"
+    diaper: AutoCheckStatus
     diaper_detail: str | None = None
     if timeline_events:
         diaper_event = next(
@@ -671,7 +671,7 @@ def get_auto_check_state(
         diaper = "missing"
 
     # Nap from pattern alerts
-    nap: AutoCheckStatus = "none"
+    nap: AutoCheckStatus
     nap_detail: str | None = None
     WAKE_WINDOW_MINUTES: list[tuple[float, int]] = [
         (3, 90),
@@ -805,7 +805,6 @@ def prioritize_suggestions(
     checklist_items: list[ChecklistItem],
     checked_manual_ids: set[str],
     symptom_id: FussBusSymptomId,
-    child_age_months: float,
     auto_check_state: AutoCheckState,
 ) -> list[PrioritizedSuggestion]:
     """
