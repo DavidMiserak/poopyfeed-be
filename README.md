@@ -45,12 +45,6 @@ for infants.
 - **Naps**: Track sleep times
 - **Batch Entry**: Log multiple past events at once via catch-up mode
 
-<p align="center">
-  <img src="docs/images/feeding-log.png" width="200" alt="Feeding log showing breast and bottle feedings" />
-  <img src="docs/images/diaper-log.png" width="200" alt="Diaper change log" />
-  <img src="docs/images/nap-log.png" width="200" alt="Nap log" />
-</p>
-
 ### Analytics & Export
 
 - **Feeding Trends**: Daily aggregates with configurable time range (1–90 days)
@@ -69,16 +63,6 @@ Share access to children with other accounts via invite links:
 - **Caregiver role**: Limited access to view and add entries only
 - Invite links are reusable and can be deactivated/reactivated
 - Only the child's owner can manage sharing settings
-
-<p align="center">
-  <img src="docs/images/sharing.png" width="200" alt="Share management page" />
-</p>
-
-<p align="center">
-  <img src="docs/images/child-list-parent.png" width="200" alt="Child card - owner view" />
-  <img src="docs/images/child-list-coparent.png" width="200" alt="Child card - co-parent view" />
-  <img src="docs/images/child-list-caregiver.png" width="200" alt="Child card - caregiver view" />
-</p>
 
 ### Notifications
 
@@ -188,7 +172,7 @@ make test          # Run tests with coverage in containers
 make test-local    # Run tests with SQLite locally (no containers)
 make logs          # View container logs
 make stop          # Stop containers
-coverage-html      # Generate HTML coverage report
+make coverage-html # Generate HTML coverage report
 ```
 
 ### Local Development (without containers)
