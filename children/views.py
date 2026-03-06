@@ -426,6 +426,13 @@ class ChildFussBusView(ChildAccessMixin, View):
         }
         return render(request, self.template_name, context)
 
+    def _parse_fuss_bus_step(self, request, state: dict) -> int:
+        """Parse step from POST or fall back to state; return 1 on invalid."""
+        try:
+            return int(request.POST.get("step") or state.get("step", 1))
+        except ValueError:
+            return 1
+
     def _process_fuss_bus_post_steps(self, state: dict, request, action: str) -> None:
         """Update state from POST according to current step and action."""
         current_step = state["step"]
@@ -451,10 +458,7 @@ class ChildFussBusView(ChildAccessMixin, View):
         """Advance/back/reset wizard; state stored in session."""
         state = self._get_state(request)
         action = request.POST.get("action") or "next"
-        try:
-            state["step"] = int(request.POST.get("step") or state.get("step", 1))
-        except ValueError:
-            state["step"] = 1
+        state["step"] = self._parse_fuss_bus_step(request, state)
 
         if action == "start_over":
             self._save_state(

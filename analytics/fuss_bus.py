@@ -332,8 +332,8 @@ DEVELOPMENTAL_CONTEXTS: list[DevelopmentalContext] = [
 ]
 
 FUSS_BUS_GLOSSARY: dict[str, GlossaryEntry] = {
-    "Colic hold": GlossaryEntry(
-        title="Colic hold",
+    SOOTHING_ITEM_COLIC_HOLD: GlossaryEntry(
+        title=SOOTHING_ITEM_COLIC_HOLD,
         body=(
             "Hold your baby tummy-down along your forearm, with their head near your elbow. "
             "The gentle pressure and position can help relieve gas and soothe fussiness."
@@ -346,16 +346,16 @@ FUSS_BUS_GLOSSARY: dict[str, GlossaryEntry] = {
             "It can mimic the womb and help calm. Stop once baby can roll."
         ),
     ),
-    "White noise": GlossaryEntry(
-        title="White noise",
+    SOOTHING_ITEM_WHITE_NOISE: GlossaryEntry(
+        title=SOOTHING_ITEM_WHITE_NOISE,
         body=(
             "Steady, soothing sound like a fan, vacuum, or dedicated machine. "
             "It can help babies settle by masking sudden noises and reminding "
             "them of sounds in the womb."
         ),
     ),
-    "Baby carrier": GlossaryEntry(
-        title="Baby carrier",
+    SOOTHING_ITEM_BABY_CARRIER: GlossaryEntry(
+        title=SOOTHING_ITEM_BABY_CARRIER,
         body=(
             "A sling or carrier lets you hold your baby close hands-free. "
             "The contact and motion often soothe fussiness and can help with bonding."
