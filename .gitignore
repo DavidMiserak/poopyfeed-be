@@ -65,6 +65,7 @@ Thumbs.db
 CLAUDE.md
 memory/
 .cursor/
+.claude/
 
 # Other
 build/
