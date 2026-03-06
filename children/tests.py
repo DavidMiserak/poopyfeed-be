@@ -347,7 +347,7 @@ class FussBusViewTests(TestCase):
         self.assertEqual(response2.status_code, 200)
         self.assertContains(response2, "Start with the basics")
         self.assertContains(response2, "Fed recently")
-        self.assertContains(response2, "Then check these")
+        self.assertContains(response2, "Things you may have already considered")
 
     def test_fuss_bus_start_over_resets_state(self):
         """Start over from later step should reset wizard back to step 1."""

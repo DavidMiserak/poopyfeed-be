@@ -27,7 +27,7 @@
         <div>
           <h1 class="h4 fw-bold mb-1">The Fuss Bus</h1>
           <p class="small mb-0 text-body-secondary">
-            Quick checklist and ideas for {{ child.name }}.
+            Things to consider and ideas for {{ child.name }}.
           </p>
         </div>
       </div>
@@ -36,7 +36,7 @@
     <div class="mb-3" aria-label="Fuss Bus progress">
       <div class="d-flex justify-content-between small text-uppercase text-body-tertiary fw-semibold mb-1">
         <span{% if step == 1 %} class="text-primary"{% endif %}>Step 1: What's happening?</span>
-        <span{% if step == 2 %} class="text-primary"{% endif %}>Step 2: Quick checklist</span>
+        <span{% if step == 2 %} class="text-primary"{% endif %}>Step 2: Things to consider</span>
         <span{% if step == 3 %} class="text-primary"{% endif %}>Step 3: Suggestions</span>
       </div>
       <div class="progress" role="progressbar" aria-label="Fuss Bus progress"
@@ -143,10 +143,10 @@
         </div>
 
       {% elif step == 2 %}
-        <section aria-label="Step 2: Quick checklist" class="mb-3">
+        <section aria-label="Step 2: Things to consider" class="mb-3">
           <p class="fw-semibold mb-2">Start with the basics</p>
           <p class="text-body-secondary small">
-            These use your recent activity to auto-check common causes. If something looks off, you can jump straight to logging.
+            We use your recent activity to suggest common causes. If something looks off, you can jump straight to logging.
           </p>
           <div class="list-group mb-4">
             {% for item in checklist_items %}
@@ -211,9 +211,9 @@
             {% endfor %}
           </div>
 
-          <p class="fw-semibold mb-2">Then check these</p>
+          <p class="fw-semibold mb-2">Things you may have already considered</p>
           <p class="text-body-secondary small">
-            Tap to confirm anything you've already checked or ruled out.
+            Mark any that you've already looked into or ruled out — no pressure. This just helps us suggest the most relevant next steps.
           </p>
           <ul class="list-unstyled mb-3">
             {% for item in checklist_items %}
@@ -247,7 +247,7 @@
       {% elif step == 3 %}
         <section aria-label="Step 3: Suggestions and support" class="mb-4">
           <div class="mb-3">
-            <h2 class="h5 fw-bold mb-2">Suggestions based on what you checked</h2>
+            <h2 class="h5 fw-bold mb-2">Suggestions based on what you marked</h2>
             {% if suggestions %}
               <ul class="list-group">
                 {% for s in suggestions %}
@@ -265,7 +265,7 @@
               </ul>
             {% else %}
               <p class="text-body-secondary small mb-0">
-                No specific suggestions — everything you checked looks okay. Use the soothing ideas below.
+                No specific suggestions — you've already considered the main things. Use the soothing ideas below.
               </p>
             {% endif %}
           </div>

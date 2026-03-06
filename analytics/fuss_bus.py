@@ -46,6 +46,8 @@ class ChecklistItemDef:
     label: str
     symptom_ids: tuple[FussBusSymptomId, ...]
     age_range: AgeRange | None = None
+    # Action-oriented text for step 3 when this item was not marked (label is for step 2 "already considered").
+    suggestion_text: str | None = None
 
 
 @dataclass
@@ -129,91 +131,107 @@ SYMPTOM_TYPES: list[SymptomType] = [
 ]
 
 # Manual checklist definitions (ported from front-end fuss-bus.data.ts)
+# Labels are phrased supportively so caregivers don't feel judged.
 COMMON_MANUAL_ITEMS: list[ChecklistItemDef] = [
     ChecklistItemDef(
         id="comfortable_temperature",
-        label="Comfortable temperature (not too hot/cold)",
+        label="Temperature seems comfortable (not too hot or cold)",
         symptom_ids=(),
+        suggestion_text="Check that the room or baby isn't too hot or cold.",
     ),
     ChecklistItemDef(
         id="not_overstimulated",
-        label="Not overstimulated (calm environment)",
+        label="Environment is calm (not overstimulating)",
         symptom_ids=(),
+        suggestion_text="Try a calmer environment — dim lights, less noise.",
     ),
     ChecklistItemDef(
         id="held_comforted",
-        label="Held/comforted recently",
+        label="They've been held or comforted recently",
         symptom_ids=(),
+        suggestion_text="Offer a cuddle or hold — sometimes contact is what they need.",
     ),
 ]
 
 AGE_FILTERED_ITEMS: list[ChecklistItemDef] = [
     ChecklistItemDef(
         id="no_teething",
-        label="No teething signs",
+        label="No signs of teething right now",
         symptom_ids=(),
         age_range=AgeRange(min_months=4, max_months=24),
+        suggestion_text="If teething might be involved, a chilled teething ring can help.",
     ),
     ChecklistItemDef(
         id="no_illness",
-        label="No illness symptoms (fever, rash, vomiting)",
+        label="No signs of illness (e.g. fever, rash, vomiting)",
         symptom_ids=(),
+        suggestion_text="If you notice fever, rash, or vomiting, contact your pediatrician.",
     ),
     ChecklistItemDef(
         id="not_growth_spurt",
-        label="Not in a growth spurt (common at 2–3 weeks, 6 weeks, 3 months)",
+        label="Doesn't seem to be a growth spurt (common around 2–3 weeks, 6 weeks, 3 months)",
         symptom_ids=(),
+        suggestion_text="Growth spurts can increase hunger and fussiness — try offering more frequent feeds.",
     ),
     ChecklistItemDef(
         id="no_separation_anxiety",
-        label="Not experiencing separation anxiety",
+        label="Separation anxiety doesn't seem to be the cause",
         symptom_ids=(),
         age_range=AgeRange(min_months=6),
+        suggestion_text="If separation anxiety fits, extra reassurance and consistent routines can help.",
     ),
 ]
 
 SYMPTOM_SPECIFIC_ITEMS: list[ChecklistItemDef] = [
     ChecklistItemDef(
         id="gas_burping",
-        label="Gas/burping needed",
+        label="Burping or gas relief already tried",
         symptom_ids=("crying",),
+        suggestion_text="Try burping or a gentle gas-relief hold (e.g. colic hold).",
     ),
     ChecklistItemDef(
         id="witching_hour",
-        label="Witching hour (late afternoon, 0–4 months)",
+        label="It's the witching hour (late afternoon fussiness, 0–4 months)",
         symptom_ids=("crying",),
         age_range=AgeRange(max_months=4),
+        suggestion_text="Late-afternoon fussiness is common at this age — soothing and taking shifts can help.",
     ),
     ChecklistItemDef(
         id="offering_variety",
         label="Offering variety without pressure",
         symptom_ids=("refusing_food",),
+        suggestion_text="Offer a variety of foods without pressure — appetite varies day to day.",
     ),
     ChecklistItemDef(
         id="mealtime_relaxed",
-        label="Mealtime is relaxed",
+        label="Mealtimes feel relaxed",
         symptom_ids=("refusing_food",),
+        suggestion_text="Keep mealtimes low-pressure and relaxed when you can.",
     ),
     ChecklistItemDef(
         id="milk_intake",
-        label="Milk intake under 400ml/day (12+ months)",
+        label="Milk under 400ml/day if 12+ months (optional to consider)",
         symptom_ids=("refusing_food",),
         age_range=AgeRange(min_months=12),
+        suggestion_text="If 12+ months, milk under 400ml/day leaves room for solid foods.",
     ),
     ChecklistItemDef(
         id="sleep_routine",
-        label="Consistent sleep routine",
+        label="Sleep routine is consistent",
         symptom_ids=("wont_sleep",),
+        suggestion_text="A consistent bedtime and wind-down routine can help.",
     ),
     ChecklistItemDef(
         id="dark_quiet_room",
-        label="Dark/quiet room",
+        label="Sleep space is dark and quiet",
         symptom_ids=("wont_sleep",),
+        suggestion_text="Try a dark, quiet sleep space to support settling.",
     ),
     ChecklistItemDef(
         id="not_overtired",
-        label="Not overtired (missed sleep window)",
+        label="Doesn't seem overtired (sleep window not missed)",
         symptom_ids=("wont_sleep",),
+        suggestion_text="If they're overtired, try offering sleep a bit earlier next time.",
     ),
 ]
 
@@ -849,9 +867,14 @@ def prioritize_suggestions(
         )
         if not definition:
             continue
+        text = (
+            definition.suggestion_text
+            if definition.suggestion_text
+            else f"Consider: {definition.label}"
+        )
         suggestions.append(
             PrioritizedSuggestion(
-                text=f"Consider: {definition.label}",
+                text=text,
                 priority="medium",
             )
         )
