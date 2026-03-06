@@ -1,50 +1,52 @@
-# Version control
-.git
-.gitattributes
-.gitignore
-
-# Python
-.venv
+# Python cache
 __pycache__
 *.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
 
-# Testing and coverage
-htmlcov
+# Coverage
 .coverage
-TEST*.xml
+htmlcov/
+.coverage.*
 
 # IDE
-.idea
-
-# Container and deployment
-.dockerignore
-.containerignore
-Containerfile
-podman-compose.yaml
-quadlet
-
-# CI/CD and docs
-.github
-CLAUDE.md
-CHANGELOG.md
-README.md
-docs
-
-# Linting and config
-.pre-commit-config.yaml
-.editorconfig
-.markdownlint.yaml
-.codespellignore
-
-# Database
-db.sqlite3
-
-# OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
-Thumbs.db
 
-# Keys
-*.pem
+# Git
+.git
+.gitignore
+.gitattributes
 
-# Render
-render.yaml
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+test_*.py
+
+# Development
+.env
+.env.local
+*.log
+
+# Media & static (generated, not needed for build)
+media/
+staticfiles/
+exports/
+
+# Node (frontend files)
+node_modules/
+npm-debug.log
