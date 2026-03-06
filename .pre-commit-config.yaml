@@ -23,6 +23,16 @@ repos:
           - id: check-toml
           - id: debug-statements
           - id: detect-private-key
+          - id: no-commit-to-branch
+            args:
+                [
+                    "--branch",
+                    "master",
+                    "--branch",
+                    "main",
+                    "--branch",
+                    "staging",
+                ]
 
     # Python code formatting with Black
     - repo: https://github.com/psf/black
@@ -52,19 +62,19 @@ repos:
       hooks:
           - id: mypy
             additional_dependencies:
-              - django-stubs[django]==5.2.9
-              - Django==6.0
-              - dj-database-url==2.3.0
-              - django-allauth==65.13.1
-              - django-cors-headers==4.9.0
-              - django-crispy-forms==2.5
-              - crispy-bootstrap5==2025.6
-              - djangorestframework==3.16.1
-              - celery==5.6.2
-              - django-redis==6.0.0
-              - psycopg2-binary==2.9.11
-              - reportlab==4.4.9
-              - matplotlib==3.10.1
+                - django-stubs[django]==5.2.9
+                - Django==6.0
+                - dj-database-url==2.3.0
+                - django-allauth==65.13.1
+                - django-cors-headers==4.9.0
+                - django-crispy-forms==2.5
+                - crispy-bootstrap5==2025.6
+                - djangorestframework==3.16.1
+                - celery==5.6.2
+                - django-redis==6.0.0
+                - psycopg2-binary==2.9.11
+                - reportlab==4.4.9
+                - matplotlib==3.10.1
             args: [--config-file=pyproject.toml, .]
             pass_filenames: false
 
