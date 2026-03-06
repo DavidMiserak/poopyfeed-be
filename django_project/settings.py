@@ -270,19 +270,25 @@ def _get_cache_config():
     # Use SafeRedisCache to treat pickle/deserialization errors as cache miss
     # (avoids occasional UnpicklingError from version mismatch or corrupt data).
     # JSON serializer avoids pickle entirely; all cached values must be JSON-serializable.
-    common_options = {
+    is_debug = bool(os.environ.get("DJANGO_DEBUG"))
+
+    # Disable compression in DEBUG mode to avoid parallel test issues
+    options = {
         "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
         "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
     }
-    if os.environ.get("DJANGO_DEBUG"):
+    if not is_debug:
+        # Production: enable zlib compression to reduce Redis memory usage
+        options["COMPRESSOR"] = "django_redis.compressors.zlib.ZlibCompressor"
+
+    if is_debug:
         # Development: Try Redis, fall back to local memory if unavailable
         return {
             "default": {
                 "BACKEND": "django_project.cache.SafeRedisCache",
                 "LOCATION": redis_url,
                 "OPTIONS": {
-                    **common_options,
+                    **options,
                     "CONNECTION_POOL_KWARGS": {
                         "retry_on_timeout": True,
                         "socket_connect_timeout": 5,
@@ -301,7 +307,7 @@ def _get_cache_config():
                 "BACKEND": "django_project.cache.SafeRedisCache",
                 "LOCATION": redis_url,
                 "OPTIONS": {
-                    **common_options,
+                    **options,
                     "CONNECTION_POOL_KWARGS": {
                         "retry_on_timeout": True,
                         "socket_connect_timeout": 10,
