@@ -363,6 +363,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notifications.tasks.check_feeding_reminders",
         "schedule": 1800.0,  # Every 30 minutes
     },
+    "check-pattern-alerts": {
+        "task": "notifications.tasks.check_pattern_alerts",
+        "schedule": 900.0,  # Every 15 minutes
+    },
 }
 
 # PDF export retention (hours)

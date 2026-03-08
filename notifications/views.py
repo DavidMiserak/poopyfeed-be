@@ -19,8 +19,9 @@ from .cache import (
     invalidate_unread_count_cache,
     unread_count_cache_key,
 )
-from .models import Notification, NotificationPreference, QuietHours
+from .models import DeviceToken, Notification, NotificationPreference, QuietHours
 from .serializers import (
+    DeviceTokenSerializer,
     NotificationPreferenceSerializer,
     NotificationSerializer,
     QuietHoursSerializer,
@@ -138,6 +139,62 @@ class QuietHoursView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class DeviceTokenView(APIView):
+    """Register or unregister FCM device tokens for push notifications.
+
+    POST   /api/v1/notifications/devices/ - Register token {"token": "...", "platform": "web"|"android"}
+    DELETE /api/v1/notifications/devices/ - Unregister token {"token": "..."}
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    MAX_TOKENS_PER_USER = 10
+
+    def post(self, request):
+        serializer = DeviceTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"]
+        platform = serializer.validated_data["platform"]
+
+        # Enforce per-user device limit (only count new registrations)
+        if not DeviceToken.objects.filter(token=token).exists():
+            active_count = DeviceToken.objects.filter(
+                user=request.user, is_active=True
+            ).count()
+            if active_count >= self.MAX_TOKENS_PER_USER:
+                return Response(
+                    {"detail": "Maximum device limit reached."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Upsert: if token exists for another user, reassign (device handoff)
+        device, created = DeviceToken.objects.update_or_create(
+            token=token,
+            defaults={
+                "user": request.user,
+                "platform": platform,
+                "is_active": True,
+            },
+        )
+        return Response(
+            {"status": "registered"},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request):
+        serializer = DeviceTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"]
+
+        updated = DeviceToken.objects.filter(token=token, user=request.user).update(
+            is_active=False
+        )
+
+        if updated:
+            return Response({"status": "unregistered"})
+        return Response({"status": "not_found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class NotificationsListView(LoginRequiredMixin, ListView):

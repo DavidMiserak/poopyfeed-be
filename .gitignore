@@ -93,6 +93,7 @@ Lighthouse*
 
 # Security
 *.pem
+firebase-service-account.json
 
 # AI generated files
 CLAUDE.md

@@ -19,6 +19,7 @@ from diapers.api import DiaperChangeViewSet
 from feedings.api import FeedingViewSet
 from naps.api import NapViewSet
 from notifications.views import (
+    DeviceTokenView,
     NotificationPreferenceViewSet,
     NotificationViewSet,
     QuietHoursView,
@@ -71,6 +72,11 @@ urlpatterns = [
         "notifications/quiet-hours/",
         QuietHoursView.as_view(),
         name="notification-quiet-hours",
+    ),
+    path(
+        "notifications/devices/",
+        DeviceTokenView.as_view(),
+        name="notification-devices",
     ),
     # Main router (children, invites, notifications)
     path("", include(router.urls)),

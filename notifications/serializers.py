@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from .models import Notification, NotificationPreference, QuietHours
+from .models import DeviceToken, Notification, NotificationPreference, QuietHours
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -55,3 +55,14 @@ class QuietHoursSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuietHours
         fields = ["enabled", "start_time", "end_time"]
+
+
+class DeviceTokenSerializer(serializers.Serializer):
+    """Serializer for device token registration/unregistration."""
+
+    token = serializers.CharField(min_length=10, max_length=500)
+    platform = serializers.ChoiceField(
+        choices=DeviceToken.Platform.choices,
+        required=False,
+        default=DeviceToken.Platform.WEB,
+    )

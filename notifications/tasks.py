@@ -1,10 +1,13 @@
 """Celery tasks for notification creation and cleanup."""
 
+import logging
 from datetime import timedelta
 
 from celery import shared_task
 from django.db import IntegrityError
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, time_limit=60)
@@ -106,13 +109,27 @@ def create_notifications_for_activity(self, child_id, actor_id, event_type):
         for recipient_id in {n.recipient_id for n in notifications}:
             invalidate_unread_count_cache(recipient_id)
 
+        # Send push notifications
+        from .fcm import send_push_to_user
+
+        for n in notifications:
+            try:
+                send_push_to_user(
+                    n.recipient_id,
+                    title=child.name,
+                    body=n.message,
+                    data={"event_type": event_type, "child_id": str(child_id)},
+                )
+            except Exception:
+                logger.exception("Failed to send push for activity notification")
+
     return f"Created {len(notifications)} notifications"
 
 
 @shared_task(bind=True, time_limit=120)
 def cleanup_old_notifications(self):
     """Delete notifications older than 30 days. Runs daily via Celery Beat."""
-    from .models import FeedingReminderLog, Notification
+    from .models import DeviceToken, FeedingReminderLog, Notification, PatternAlertLog
 
     cutoff = timezone.now() - timedelta(days=30)
     deleted_count, _ = Notification.objects.filter(created_at__lt=cutoff).delete()
@@ -123,8 +140,19 @@ def cleanup_old_notifications(self):
         sent_at__lt=log_cutoff
     ).delete()
 
+    # Cleanup old PatternAlertLog entries (7 days)
+    pattern_log_deleted, _ = PatternAlertLog.objects.filter(
+        sent_at__lt=log_cutoff
+    ).delete()
+
+    # Cleanup stale device tokens (inactive for 30+ days)
+    token_deleted, _ = DeviceToken.objects.filter(
+        is_active=False, updated_at__lt=cutoff
+    ).delete()
+
     return (
-        f"Deleted {deleted_count} notifications and {log_deleted_count} reminder logs"
+        f"Deleted {deleted_count} notifications, {log_deleted_count} reminder logs, "
+        f"{pattern_log_deleted} pattern alert logs, {token_deleted} stale device tokens"
     )
 
 
@@ -208,6 +236,28 @@ def _maybe_send_reminder_batch(
     notifications = _build_reminder_notifications(child, recipient_ids, prefs, message)
     if notifications:
         Notification.objects.bulk_create(notifications)
+        # Invalidate unread count cache (bulk_create skips post_save signals)
+        from .cache import invalidate_unread_count_cache
+
+        for recipient_id in {n.recipient_id for n in notifications}:
+            invalidate_unread_count_cache(recipient_id)
+
+        # Send push notifications for feeding reminders
+        from .fcm import send_push_to_user
+
+        for n in notifications:
+            try:
+                send_push_to_user(
+                    n.recipient_id,
+                    title=f"{child.name} — Feeding Reminder",
+                    body=message,
+                    data={
+                        "event_type": "feeding_reminder",
+                        "child_id": str(child.id),
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to send push for feeding reminder")
     _log_reminder_sent(child, last_fed_at, reminder_number)
     return len(notifications)
 
@@ -273,3 +323,169 @@ def check_feeding_reminders(self):
     )
     reminder_count = sum(_process_child_reminders(child) for child in children)
     return f"Created {reminder_count} feeding reminder notifications"
+
+
+@shared_task(bind=True, time_limit=60)
+def check_pattern_alerts(self):
+    """Check for pattern alerts and send push notifications.
+
+    Runs every 15 minutes via Celery Beat. For each child with recent
+    tracking activity, computes feeding interval and nap wake-window alerts.
+    Uses PatternAlertLog for idempotency to prevent duplicate sends.
+    Respects quiet hours (unlike feeding reminders, these are not safety-critical).
+    """
+    from dateutil.parser import isoparse  # type: ignore[import-untyped]
+
+    from analytics.utils import compute_pattern_alerts
+    from children.models import Child, ChildShare
+
+    from .cache import invalidate_unread_count_cache
+    from .fcm import send_push_to_user
+    from .models import (
+        Notification,
+        NotificationPreference,
+        PatternAlertLog,
+        QuietHours,
+    )
+
+    now = timezone.now()
+    recent_cutoff = now - timedelta(hours=48)
+
+    # Only process children with recent feeding or nap activity
+    from feedings.models import Feeding
+    from naps.models import Nap
+
+    active_child_ids = set(
+        Feeding.objects.filter(fed_at__gte=recent_cutoff).values_list(
+            "child_id", flat=True
+        )
+    ) | set(
+        Nap.objects.filter(ended_at__gte=recent_cutoff).values_list(
+            "child_id", flat=True
+        )
+    )
+
+    if not active_child_ids:
+        return "No active children to check"
+
+    children = Child.objects.filter(id__in=active_child_ids).select_related("parent")
+
+    # Prefetch shares, preferences, and quiet hours for all relevant users
+    all_shares = {}
+    for share in ChildShare.objects.filter(child_id__in=active_child_ids):
+        all_shares.setdefault(share.child_id, set()).add(share.user_id)
+
+    # Collect all relevant user IDs
+    all_user_ids = set()
+    for child in children:
+        all_user_ids.add(child.parent_id)
+    for user_ids in all_shares.values():
+        all_user_ids.update(user_ids)
+
+    # Prefetch preferences and quiet hours in bulk
+    all_prefs = {}
+    for p in NotificationPreference.objects.filter(
+        user_id__in=all_user_ids, child_id__in=active_child_ids
+    ):
+        all_prefs[(p.user_id, p.child_id)] = p
+
+    all_quiet_hours = {}
+    for qh in QuietHours.objects.select_related("user").filter(
+        user_id__in=all_user_ids, enabled=True
+    ):
+        all_quiet_hours[qh.user_id] = qh
+
+    alert_count = 0
+
+    for child in children:
+        try:
+            alerts = compute_pattern_alerts(child.id, now=now)
+        except Exception:
+            logger.exception("compute_pattern_alerts failed for child %s", child.id)
+            continue
+
+        for alert_type in ("feeding", "nap"):
+            alert_data = alerts[alert_type]
+            if not alert_data["alert"]:
+                continue
+
+            # Determine window_start from the alert data
+            if alert_type == "feeding":
+                last_event_str = alert_data.get("last_fed_at")
+            else:
+                last_event_str = alert_data.get("last_nap_ended_at")
+
+            if not last_event_str:
+                continue
+
+            try:
+                window_start = isoparse(last_event_str)
+            except (ValueError, TypeError):
+                logger.warning(
+                    "Invalid date in pattern alert for child %s: %s",
+                    child.id,
+                    last_event_str,
+                )
+                continue
+
+            # Check idempotency
+            if PatternAlertLog.objects.filter(
+                child=child, alert_type=alert_type, window_start=window_start
+            ).exists():
+                continue
+
+            # Build recipients: owner + shared users
+            recipient_ids = {child.parent_id}
+            recipient_ids.update(all_shares.get(child.id, set()))
+
+            # Filter by preference and quiet hours
+            pref_field = "notify_feedings" if alert_type == "feeding" else "notify_naps"
+            message = alert_data["message"]
+            notifications = []
+            for recipient_id in recipient_ids:
+                pref = all_prefs.get((recipient_id, child.id))
+                if pref and not getattr(pref, pref_field):
+                    continue
+
+                qh = all_quiet_hours.get(recipient_id)
+                if qh and qh.is_quiet_now():
+                    continue
+
+                notifications.append(
+                    Notification(
+                        recipient_id=recipient_id,
+                        actor=None,
+                        child=child,
+                        event_type=Notification.EventType.PATTERN_ALERT,
+                        message=message,
+                    )
+                )
+
+            if notifications:
+                Notification.objects.bulk_create(notifications)
+                for n in notifications:
+                    invalidate_unread_count_cache(n.recipient_id)
+                    try:
+                        send_push_to_user(
+                            n.recipient_id,
+                            title=f"{child.name} — Pattern Alert",
+                            body=message,
+                            data={
+                                "event_type": "pattern_alert",
+                                "child_id": str(child.id),
+                                "alert_type": alert_type,
+                            },
+                        )
+                    except Exception:
+                        logger.exception("Failed to send push for pattern alert")
+                alert_count += len(notifications)
+
+            # Log for idempotency (even if no recipients after filtering)
+            try:
+                PatternAlertLog.objects.create(
+                    child=child, alert_type=alert_type, window_start=window_start
+                )
+            except IntegrityError:
+                pass
+
+    return f"Created {alert_count} pattern alert notifications"

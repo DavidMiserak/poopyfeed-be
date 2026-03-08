@@ -23,6 +23,7 @@ class Notification(models.Model):
         DIAPER = "diaper", "Diaper Change"
         NAP = "nap", "Nap"
         FEEDING_REMINDER = "feeding_reminder", "Feeding Reminder"
+        PATTERN_ALERT = "pattern_alert", "Pattern Alert"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -185,3 +186,78 @@ class FeedingReminderLog(models.Model):
 
     def __str__(self):
         return f"Feeding reminder #{self.reminder_number} for {self.child.name}"
+
+
+class DeviceToken(models.Model):
+    """FCM device token for push notifications.
+
+    Each device registers its FCM token with the backend. A unique token
+    constraint with upsert semantics handles device handoff between users.
+    Soft-delete via is_active=False; presence of active token = push enabled.
+    """
+
+    class Platform(models.TextChoices):
+        WEB = "web", "Web"
+        ANDROID = "android", "Android"
+        IOS = "ios", "iOS"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="device_tokens",
+    )
+    token = models.CharField(max_length=500, unique=True)
+    platform = models.CharField(max_length=10, choices=Platform.choices)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user", "is_active"],
+                name="devtoken_user_active_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"DeviceToken({self.platform}) for {self.user.email}"
+
+
+class PatternAlertLog(models.Model):
+    """Idempotency log for pattern alert notifications.
+
+    Tracks which pattern alerts have been sent for each child,
+    preventing duplicate sends. Uses (child, alert_type, window_start)
+    as unique key — window_start is the last_event_at when the alert fired.
+    """
+
+    class AlertType(models.TextChoices):
+        FEEDING = "feeding", "Feeding"
+        NAP = "nap", "Nap"
+
+    child = models.ForeignKey(
+        CHILD_MODEL,
+        on_delete=models.CASCADE,
+        related_name="pattern_alert_logs",
+    )
+    alert_type = models.CharField(
+        max_length=20,
+        choices=AlertType.choices,
+    )
+    window_start = models.DateTimeField(
+        help_text="Timestamp of the last event when this alert fired",
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [["child", "alert_type", "window_start"]]
+        indexes = [
+            models.Index(
+                fields=["sent_at"],
+                name="pattern_alert_clean_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Pattern alert ({self.alert_type}) for child {self.child_id}"
