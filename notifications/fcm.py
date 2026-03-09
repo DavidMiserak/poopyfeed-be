@@ -36,7 +36,7 @@ def _get_firebase_app():
             return _firebase_app
 
         try:
-            import firebase_admin  # type: ignore[import-not-found]
+            import firebase_admin  # type: ignore
             from firebase_admin import credentials
         except ImportError:
             logger.info("firebase-admin not installed, push notifications disabled")
