@@ -126,3 +126,17 @@ class ExportStatusResponseSerializer(serializers.Serializer):
     progress = serializers.IntegerField(required=False, allow_null=True)
     result = serializers.DictField(required=False, allow_null=True)
     error = serializers.CharField(required=False, allow_null=True)
+
+
+class TimelineEventSerializer(serializers.Serializer):
+    """Timeline API event serializer with gap metadata."""
+
+    type = serializers.CharField()
+    at = serializers.DateTimeField()
+    feeding = serializers.DictField(required=False, allow_null=True)
+    diaper = serializers.DictField(required=False, allow_null=True)
+    nap = serializers.DictField(required=False, allow_null=True)
+    gap_after_minutes = serializers.IntegerField(required=False, allow_null=True)
+    gap_after_start = serializers.DateTimeField(required=False, allow_null=True)
+    gap_after_end = serializers.DateTimeField(required=False, allow_null=True)
+    is_nap_eligible = serializers.BooleanField(required=False, allow_null=True)

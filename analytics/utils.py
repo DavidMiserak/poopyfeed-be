@@ -608,6 +608,80 @@ def build_analytics_csv(
     return buffer.getvalue(), filename
 
 
+_GAP_MIN_MINUTES = 5
+_NAP_ELIGIBLE_MINUTES = 60
+
+
+def _compute_gap_metadata(events_asc: list[dict]) -> list[dict]:
+    """Compute gap fields for timeline events (for API enrichment).
+
+    Takes events in ascending chronological order, computes:
+    - gap_after_minutes: Minutes from end of this event to start of next
+    - gap_after_start: Timestamp when gap begins (end of current event)
+    - gap_after_end: Timestamp when gap ends (start of next event)
+    - is_nap_eligible: Whether gap is >= 60 minutes (suitable for nap)
+
+    If gap < 5 minutes or it's the last event, all gap fields are set to null.
+    For naps, uses ended_at if available, otherwise napped_at.
+
+    Args:
+        events_asc: List of events in ascending chronological order
+
+    Returns:
+        Same list with gap fields added to each event
+    """
+    for i, event in enumerate(events_asc):
+        if i == len(events_asc) - 1:
+            # Last event has no gap after it
+            event.update(
+                {
+                    "gap_after_minutes": None,
+                    "gap_after_start": None,
+                    "gap_after_end": None,
+                    "is_nap_eligible": None,
+                }
+            )
+            continue
+
+        next_event = events_asc[i + 1]
+
+        # Determine the end time of the current event
+        if event["type"] == "nap":
+            nap = event["nap"]
+            end_dt = nap.get("ended_at") or nap["napped_at"]
+        else:
+            end_dt = event["at"]
+
+        # Start time of next event
+        next_start_dt = next_event["at"]
+
+        # Compute gap in minutes
+        diff_minutes = round((next_start_dt - end_dt).total_seconds() / 60)
+
+        if diff_minutes < _GAP_MIN_MINUTES:
+            # Gap too small to display
+            event.update(
+                {
+                    "gap_after_minutes": None,
+                    "gap_after_start": None,
+                    "gap_after_end": None,
+                    "is_nap_eligible": None,
+                }
+            )
+        else:
+            # Gap large enough; compute metadata
+            event.update(
+                {
+                    "gap_after_minutes": diff_minutes,
+                    "gap_after_start": end_dt,
+                    "gap_after_end": next_start_dt,
+                    "is_nap_eligible": diff_minutes >= _NAP_ELIGIBLE_MINUTES,
+                }
+            )
+
+    return events_asc
+
+
 def get_merged_activities(
     child_id: int,
     limit_per_type: int | None = None,
@@ -705,16 +779,18 @@ def get_child_timeline_events(
 ) -> list[dict[str, Any]]:
     """Build a merged chronological timeline of feedings, diapers, and naps.
 
-    Fetches the most recent events per type, merges by timestamp, and returns
-    a single list sorted by time descending (newest first).
+    Fetches the most recent events per type, merges by timestamp, computes gap
+    metadata (gap_after_minutes, gap_after_start, gap_after_end, is_nap_eligible),
+    and returns a single list sorted by time descending (newest first).
 
     Args:
         child_id: The child's ID
         limit_per_type: Max events to fetch per type (default 100)
 
     Returns:
-        List of event dicts, each with "type", "at" (datetime), and a type-keyed
-        payload ("feeding", "diaper", or "nap"). Datetimes are timezone-aware UTC.
+        List of event dicts, each with "type", "at" (datetime), a type-keyed
+        payload ("feeding", "diaper", or "nap"), and gap metadata fields.
+        Datetimes are timezone-aware UTC.
     """
     feedings = list(
         Feeding.objects.filter(child_id=child_id)
@@ -747,7 +823,16 @@ def get_child_timeline_events(
         merged.append({"type": "diaper", "at": d["changed_at"], "diaper": d})
     for n in naps_list:
         merged.append({"type": "nap", "at": n["napped_at"], "nap": n})
-    merged.sort(key=lambda x: x["at"] or datetime.min, reverse=True)
+
+    # Sort ascending to compute gaps
+    merged.sort(key=lambda x: x["at"] or datetime.min, reverse=False)
+
+    # Compute gap metadata on ascending list
+    _compute_gap_metadata(merged)
+
+    # Reverse back to descending for API response
+    merged.reverse()
+
     return merged
 
 

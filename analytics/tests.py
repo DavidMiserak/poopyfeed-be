@@ -791,6 +791,276 @@ class TimelineTests(APITestCase):
         response = self.client.get("/api/v1/analytics/children/99999/timeline/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_timeline_events_have_gap_fields(self):
+        """All timeline events should have gap_after_* fields (even if null)."""
+        now = timezone.now()
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(hours=1),
+            amount_oz=4.0,
+        )
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now,
+        )
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        for event in data["results"]:
+            self.assertIn("gap_after_minutes", event)
+            self.assertIn("gap_after_start", event)
+            self.assertIn("gap_after_end", event)
+            self.assertIn("is_nap_eligible", event)
+
+    def test_timeline_gap_after_feeding(self):
+        """Gap between feeding and diaper should be computed correctly."""
+        # Create a fresh child to avoid interference from other tests
+        child = Child.objects.create(
+            parent=self.user,
+            name="Gap Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+        now = timezone.now()
+        feeding_time = now - timedelta(hours=2)
+        diaper_time = now
+
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=feeding_time,
+            amount_oz=4.0,
+        )
+        DiaperChange.objects.create(
+            child=child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=diaper_time,
+        )
+
+        response = self.client.get(f"/api/v1/analytics/children/{child.id}/timeline/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        results = data["results"]
+
+        # Find the feeding event (should be second, after diaper)
+        feeding_event = next((e for e in results if e["type"] == "feeding"), None)
+        self.assertIsNotNone(feeding_event)
+
+        # Feeding should have a gap of 120 minutes (2 hours)
+        self.assertEqual(feeding_event["gap_after_minutes"], 120)
+        self.assertIsNotNone(feeding_event["gap_after_start"])
+        self.assertIsNotNone(feeding_event["gap_after_end"])
+        self.assertTrue(feeding_event["is_nap_eligible"])  # 120 >= 60
+
+    def test_timeline_gap_suppressed_under_5_minutes(self):
+        """Gaps under 5 minutes should have null gap fields."""
+        # Create a fresh child to avoid interference from other tests
+        child = Child.objects.create(
+            parent=self.user,
+            name="Gap Suppression Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+        now = timezone.now()
+
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(minutes=3),
+            amount_oz=4.0,
+        )
+        DiaperChange.objects.create(
+            child=child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now,
+        )
+
+        response = self.client.get(f"/api/v1/analytics/children/{child.id}/timeline/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        results = data["results"]
+
+        # Find the feeding event
+        feeding_event = next((e for e in results if e["type"] == "feeding"), None)
+        self.assertIsNotNone(feeding_event)
+
+        # Gap should be suppressed (< 5 minutes)
+        self.assertIsNone(feeding_event["gap_after_minutes"])
+        self.assertIsNone(feeding_event["gap_after_start"])
+        self.assertIsNone(feeding_event["gap_after_end"])
+        self.assertIsNone(feeding_event["is_nap_eligible"])
+
+    def test_timeline_nap_gap_uses_ended_at(self):
+        """Nap-to-feeding gap should use nap.ended_at, not napped_at."""
+        # Create a fresh child to avoid interference from other tests
+        child = Child.objects.create(
+            parent=self.user,
+            name="Nap Gap Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+        now = timezone.now()
+        nap_start = now - timedelta(hours=3)
+        nap_end = now - timedelta(hours=2)
+        feeding_time = now
+
+        Nap.objects.create(
+            child=child,
+            napped_at=nap_start,
+            ended_at=nap_end,
+        )
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=feeding_time,
+            amount_oz=4.0,
+        )
+
+        response = self.client.get(f"/api/v1/analytics/children/{child.id}/timeline/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        results = data["results"]
+
+        # Find the nap event
+        nap_event = next((e for e in results if e["type"] == "nap"), None)
+        self.assertIsNotNone(nap_event)
+
+        # Gap should be computed from nap.ended_at (2 hours) not nap.napped_at (3 hours)
+        self.assertEqual(nap_event["gap_after_minutes"], 120)
+
+    def test_timeline_nap_without_ended_at_falls_back_to_napped_at(self):
+        """Nap without ended_at should use napped_at for gap calculation."""
+        # Create a fresh child to avoid interference from other tests
+        child = Child.objects.create(
+            parent=self.user,
+            name="Nap No End Time Test Child",
+            date_of_birth="2024-01-15",
+        )
+
+        now = timezone.now()
+        feeding_time = now - timedelta(hours=2)
+        nap_time = now - timedelta(hours=1, minutes=50)  # 10 minutes after feeding
+
+        # Create feeding, then nap with 10-minute gap
+        Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=feeding_time,
+            amount_oz=4.0,
+        )
+        # Create nap AFTER feeding (no later events to auto-end it)
+        Nap.objects.create(
+            child=child,
+            napped_at=nap_time,
+            ended_at=None,
+        )
+
+        response = self.client.get(f"/api/v1/analytics/children/{child.id}/timeline/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        results = data["results"]
+
+        # Find the feeding event - it should have a gap to the nap
+        feeding_event = next((e for e in results if e["type"] == "feeding"), None)
+        self.assertIsNotNone(feeding_event)
+
+        # Gap from feeding to nap should be ~10 minutes (gap should not be None since >= 5 min)
+        # feeding_time = now - 2h
+        # nap_time = now - 1h 50m
+        # gap = (now - 1h 50m) - (now - 2h) = 10 minutes
+        self.assertEqual(feeding_event["gap_after_minutes"], 10)
+
+    def test_timeline_last_event_has_null_gap_fields(self):
+        """The newest event (first in response) should have null gap fields."""
+        now = timezone.now()
+
+        Feeding.objects.create(
+            child=self.child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(hours=2),
+            amount_oz=4.0,
+        )
+        DiaperChange.objects.create(
+            child=self.child,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now,
+        )
+
+        response = self.client.get(
+            f"/api/v1/analytics/children/{self.child.id}/timeline/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        results = data["results"]
+
+        # The first event (newest, diaper) should have null gap fields
+        first_event = results[0]
+        self.assertEqual(first_event["type"], "diaper")
+        self.assertIsNone(first_event["gap_after_minutes"])
+        self.assertIsNone(first_event["gap_after_start"])
+        self.assertIsNone(first_event["gap_after_end"])
+        self.assertIsNone(first_event["is_nap_eligible"])
+
+
+class ComputeGapMetadataTests(TestCase):
+    """Unit tests for _compute_gap_metadata utility function."""
+
+    def test_compute_gap_metadata_empty_list(self):
+        """Empty list should return empty list."""
+        from analytics.utils import _compute_gap_metadata
+
+        result = _compute_gap_metadata([])
+        self.assertEqual(result, [])
+
+    def test_compute_gap_metadata_single_event(self):
+        """Single event should have null gap fields."""
+        from analytics.utils import _compute_gap_metadata
+
+        events = [
+            {
+                "type": "feeding",
+                "at": timezone.now(),
+                "feeding": {"id": 1},
+            }
+        ]
+        result = _compute_gap_metadata(events)
+
+        self.assertEqual(len(result), 1)
+        self.assertIsNone(result[0]["gap_after_minutes"])
+        self.assertIsNone(result[0]["gap_after_start"])
+        self.assertIsNone(result[0]["gap_after_end"])
+        self.assertIsNone(result[0]["is_nap_eligible"])
+
+    def test_compute_gap_metadata_multiple_events(self):
+        """Multiple events should have correct gaps computed (expects ascending order)."""
+        from analytics.utils import _compute_gap_metadata
+
+        now = timezone.now()
+        # Events must be in ASCENDING chronological order for _compute_gap_metadata
+        events = [
+            {
+                "type": "diaper",
+                "at": now - timedelta(hours=2),
+                "diaper": {"id": 2},
+            },
+            {"type": "feeding", "at": now, "feeding": {"id": 1}},
+        ]
+
+        result = _compute_gap_metadata(events)
+
+        # First event (diaper at now-2h) should have gap to second event (2 hours = 120 minutes)
+        self.assertEqual(result[0]["gap_after_minutes"], 120)
+        self.assertTrue(result[0]["is_nap_eligible"])
+
+        # Last event (feeding at now) should have null gap
+        self.assertIsNone(result[1]["gap_after_minutes"])
+
 
 class FussBusUtilsTests(APITestCase):
     """Unit tests for Fuss Bus analytics helpers (mirrors Angular fuss-bus.utils.ts)."""

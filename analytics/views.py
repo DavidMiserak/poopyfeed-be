@@ -37,6 +37,7 @@ from .serializers import (
     ExportStatusResponseSerializer,
     FeedingTrendsResponseSerializer,
     SleepSummaryResponseSerializer,
+    TimelineEventSerializer,
     TodaySummaryResponseSerializer,
     WeeklySummaryFullResponseSerializer,
 )
@@ -253,8 +254,8 @@ class AnalyticsViewSet(viewsets.ViewSet):
             page_size: Results per page (default 25, max 100)
 
         Returns:
-            Paginated list of events, each with type, at (ISO datetime), and
-            a type-specific payload (feeding, diaper, or nap).
+            Paginated list of events, each with type, at (ISO datetime), gap metadata,
+            and a type-specific payload (feeding, diaper, or nap).
         """
         from django.core.paginator import Paginator
 
@@ -285,8 +286,8 @@ class AnalyticsViewSet(viewsets.ViewSet):
             else None
         )
 
-        # Serialize events for JSON (DRF Response handles datetime/Decimal)
-        results = list(page.object_list)
+        # Serialize events through TimelineEventSerializer (handles datetime formatting)
+        results = TimelineEventSerializer(list(page.object_list), many=True).data
 
         return Response(
             {
