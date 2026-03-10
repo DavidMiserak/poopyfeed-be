@@ -917,6 +917,149 @@ class CacheUtilsTests(APITestCase):
         self.assertIn(child2.id, result)
         self.assertEqual(result[child1.id], cached_data)
 
+    def test_get_child_last_activities_populates_from_tracking_models(self):
+        """Missing children load last activity timestamps from tracking models."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from diapers.models import DiaperChange
+        from feedings.models import Feeding
+        from naps.models import Nap
+
+        from .cache_utils import get_child_last_activities
+
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            username="trackuser",
+            email="track@example.com",
+            password=TEST_PASSWORD,
+        )
+        child1 = Child.objects.create(
+            parent=user, name="Track Baby 1", date_of_birth="2025-01-01"
+        )
+        child2 = Child.objects.create(
+            parent=user, name="Track Baby 2", date_of_birth="2025-01-01"
+        )
+
+        now = timezone.now()
+
+        # Child 1: multiple events per type to ensure we pick the latest row per child.
+        last_feeding_c1 = Feeding.objects.create(
+            child=child1,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(minutes=10),
+            amount_oz=4.0,
+        )
+        Feeding.objects.create(
+            child=child1,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(minutes=30),
+            amount_oz=2.0,
+        )
+
+        last_nap_c1 = Nap.objects.create(
+            child=child1,
+            napped_at=now - timedelta(hours=2),
+        )
+        Nap.objects.create(
+            child=child1,
+            napped_at=now - timedelta(hours=5),
+        )
+
+        # Child 2: only diapers, no naps or feedings.
+        last_diaper_c2 = DiaperChange.objects.create(
+            child=child2,
+            change_type=DiaperChange.ChangeType.WET,
+            changed_at=now - timedelta(minutes=5),
+        )
+        DiaperChange.objects.create(
+            child=child2,
+            change_type=DiaperChange.ChangeType.DIRTY,
+            changed_at=now - timedelta(minutes=20),
+        )
+
+        # Also include an ID with no tracking data at all.
+        child3 = Child.objects.create(
+            parent=user, name="No Events", date_of_birth="2025-01-01"
+        )
+
+        activities = get_child_last_activities([child1.id, child2.id, child3.id])
+
+        # Child 1: latest feeding and nap populated, diaper is None.
+        self.assertEqual(activities[child1.id]["last_feeding"], last_feeding_c1.fed_at)
+        self.assertEqual(activities[child1.id]["last_nap"], last_nap_c1.napped_at)
+        self.assertIsNone(activities[child1.id]["last_diaper_change"])
+
+        # Child 2: latest diaper populated, others None.
+        self.assertEqual(
+            activities[child2.id]["last_diaper_change"], last_diaper_c2.changed_at
+        )
+        self.assertIsNone(activities[child2.id]["last_nap"])
+        self.assertIsNone(activities[child2.id]["last_feeding"])
+
+        # Child 3: no tracking rows => all fields None.
+        self.assertEqual(
+            activities[child3.id],
+            {
+                "last_diaper_change": None,
+                "last_nap": None,
+                "last_feeding": None,
+            },
+        )
+
+    def test_last_activities_cache_invalidation_on_new_tracking_event(self):
+        """Cached last activities are refreshed after a new tracking record."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from feedings.models import Feeding
+
+        from .cache_utils import (
+            get_child_last_activities,
+            invalidate_child_activities_cache,
+        )
+
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            username="cacheflow",
+            email="cacheflow@example.com",
+            password=TEST_PASSWORD,
+        )
+        child = Child.objects.create(
+            parent=user, name="Cache Flow Baby", date_of_birth="2025-01-01"
+        )
+
+        now = timezone.now()
+
+        # First feeding: initial last activity
+        first_feeding = Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(minutes=30),
+            amount_oz=3.0,
+        )
+
+        # Prime cache
+        initial = get_child_last_activities([child.id])
+        self.assertEqual(initial[child.id]["last_feeding"], first_feeding.fed_at)
+
+        # Second, newer feeding
+        second_feeding = Feeding.objects.create(
+            child=child,
+            feeding_type=Feeding.FeedingType.BOTTLE,
+            fed_at=now - timedelta(minutes=5),
+            amount_oz=4.0,
+        )
+
+        # Simulate transaction commit invalidation
+        with self.captureOnCommitCallbacks(execute=True):
+            invalidate_child_activities_cache(child.id)
+
+        updated = get_child_last_activities([child.id])
+        self.assertEqual(updated[child.id]["last_feeding"], second_feeding.fed_at)
+
     def test_invalidate_child_activities_cache(self):
         """Cache invalidation deletes the correct key after commit."""
         from django.core.cache import cache
