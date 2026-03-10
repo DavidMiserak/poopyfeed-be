@@ -15,7 +15,6 @@ from datetime import datetime
 from typing import Any
 
 from django.core.cache import cache
-from django.db.models import Max
 
 logger = logging.getLogger(__name__)
 
@@ -121,35 +120,37 @@ def get_child_last_activities(
         extra={"miss_count": len(missing_child_ids), "total": len(child_ids)},
     )
 
-    # Query database for missing children - single query for all missing
-    from children.models import Child
+    # Query database for missing children using "last row per child" per model
+    from diapers.models import DiaperChange
+    from feedings.models import Feeding
+    from naps.models import Nap
 
-    missing_data = (
-        Child.objects.filter(id__in=missing_child_ids)
-        .annotate(
-            last_diaper_change=Max("diaper_changes__changed_at"),
-            last_nap=Max("naps__napped_at"),
-            last_feeding=Max("feedings__fed_at"),
+    def _latest_by_child(
+        model, ts_field: str, ids: list[int]
+    ) -> dict[int, datetime | None]:
+        if not ids:
+            return {}
+        qs = (
+            model.objects.filter(child_id__in=ids)
+            .order_by("child_id", f"-{ts_field}")
+            .distinct("child_id")
+            .values_list("child_id", ts_field)
         )
-        .values(
-            "id",
-            "last_diaper_change",
-            "last_nap",
-            "last_feeding",
-        )
-        .order_by("id")
-    )
+        return {child_id: ts for child_id, ts in qs}
+
+    last_diapers = _latest_by_child(DiaperChange, "changed_at", missing_child_ids)
+    last_naps = _latest_by_child(Nap, "napped_at", missing_child_ids)
+    last_feedings = _latest_by_child(Feeding, "fed_at", missing_child_ids)
 
     # Convert query results to dict and cache each child's activities
     missing_dict = {}
     cache_to_set = {}
 
-    for item in missing_data:
-        child_id = item["id"]
+    for child_id in missing_child_ids:
         activities = {
-            "last_diaper_change": item["last_diaper_change"],
-            "last_nap": item["last_nap"],
-            "last_feeding": item["last_feeding"],
+            "last_diaper_change": last_diapers.get(child_id),
+            "last_nap": last_naps.get(child_id),
+            "last_feeding": last_feedings.get(child_id),
         }
         missing_dict[child_id] = activities
         cache_to_set[f"child_activities_{child_id}"] = _activities_to_cache(activities)
