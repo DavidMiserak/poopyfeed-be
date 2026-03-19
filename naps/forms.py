@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from children.datetime_utils import (
     naive_local_to_utc,
@@ -46,14 +47,18 @@ class NapForm(LocalDateTimeFormMixin, forms.ModelForm):
                 self.initial["ended_at"] = utc_to_local_datetime_local_str(ended_at, tz)
 
     def clean(self):
-        """Convert ended_at from user TZ to UTC and validate ended_at > napped_at."""
+        """Convert ended_at from user TZ to UTC and validate constraints."""
         cleaned_data = super().clean()
         ended_at = cleaned_data.get("ended_at")
-        if ended_at is not None and self._request:
+        if ended_at is not None:
+            # Interpret the submitted naive datetime in the user's timezone, then store as UTC.
             tz = self._user_tz()
             cleaned_data["ended_at"] = naive_local_to_utc(ended_at, tz)
         napped_at = cleaned_data.get("napped_at")
         ended_at = cleaned_data.get("ended_at")
+        # Enforce: no future timestamps submitted.
+        if ended_at is not None and ended_at > timezone.now():
+            self.add_error("ended_at", "Date/time cannot be in the future.")
         if napped_at and ended_at and ended_at <= napped_at:
             self.add_error("ended_at", "End time must be after start time.")
         return cleaned_data

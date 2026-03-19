@@ -11,6 +11,7 @@ from django.utils import timezone
 from children.models import Child, ChildShare
 from django_project.test_constants import TEST_PASSWORD
 
+from .api import NapSerializer
 from .forms import NapForm
 from .models import Nap
 
@@ -304,6 +305,67 @@ class NapFormTests(TestCase):
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["napped_at"].hour, 14)
         self.assertEqual(form.cleaned_data["napped_at"].minute, 0)
+
+    def test_form_rejects_future_ended_at(self):
+        """Ended_at in the future (user timezone) is rejected."""
+        from django.test import RequestFactory
+
+        user = get_user_model().objects.create_user(
+            username="utcuser_futureend",
+            email="utc_futureend@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        request = RequestFactory().get("/")
+        request.user = user
+
+        now = timezone.now()
+        past_napped_at = now - timezone.timedelta(minutes=30)
+        future_ended_at = now + timezone.timedelta(hours=2)
+
+        form = NapForm(
+            request=request,
+            data={
+                "napped_at": past_napped_at.strftime("%Y-%m-%dT%H:%M"),
+                "ended_at": future_ended_at.strftime("%Y-%m-%dT%H:%M"),
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("ended_at", form.errors)
+        self.assertEqual(
+            form.errors["ended_at"][0], "Date/time cannot be in the future."
+        )
+
+    def test_serializer_rejects_future_ended_at(self):
+        """REST API rejects ended_at in the future."""
+        user = get_user_model().objects.create_user(
+            username="utcserializer_futureend",
+            email="utc_serializer_futureend@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Nap Serializer Child",
+            date_of_birth=date(2025, 1, 1),
+        )
+
+        now = timezone.now()
+        past_napped_at = now - timezone.timedelta(hours=2)
+        future_ended_at = now + timezone.timedelta(hours=1)
+
+        serializer = NapSerializer(
+            data={
+                "child": child.id,
+                "napped_at": past_napped_at.isoformat(),
+                "ended_at": future_ended_at.isoformat(),
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("ended_at", serializer.errors)
+        self.assertEqual(
+            serializer.errors["ended_at"][0], "Date/time cannot be in the future."
+        )
 
 
 class NapViewTests(TestCase):

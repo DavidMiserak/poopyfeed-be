@@ -1,5 +1,6 @@
 """REST API for feedings app: Feeding."""
 
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.routers import DefaultRouter
 
@@ -66,6 +67,16 @@ class FeedingSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Validate bottle vs breast fields."""
+        # No-future validation when caller submitted `fed_at`.
+        if "fed_at" in data and data.get("fed_at") is not None:
+            fed_at = data["fed_at"]
+            if getattr(fed_at, "tzinfo", None) is None:
+                fed_at = timezone.make_aware(fed_at, timezone.get_default_timezone())
+            if fed_at > timezone.now():
+                raise serializers.ValidationError(
+                    {"fed_at": "Date/time cannot be in the future."}
+                )
+
         feeding_type = self._has_value(data, "feeding_type")
 
         if feeding_type == Feeding.FeedingType.BOTTLE:

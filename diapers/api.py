@@ -1,5 +1,6 @@
 """REST API for diapers app: DiaperChange."""
 
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.routers import DefaultRouter
 
@@ -35,6 +36,20 @@ class DiaperChangeSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate(self, data):
+        """No-future validation for changed_at when the caller submits it."""
+        if "changed_at" in data and data.get("changed_at") is not None:
+            changed_at = data["changed_at"]
+            if getattr(changed_at, "tzinfo", None) is None:
+                changed_at = timezone.make_aware(
+                    changed_at, timezone.get_default_timezone()
+                )
+            if changed_at > timezone.now():
+                raise serializers.ValidationError(
+                    {"changed_at": "Date/time cannot be in the future."}
+                )
+        return data
 
 
 class NestedDiaperChangeSerializer(serializers.ModelSerializer):

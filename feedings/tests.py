@@ -11,6 +11,7 @@ from django.utils import timezone
 from children.models import Child, ChildShare
 from django_project.test_constants import TEST_PASSWORD
 
+from .api import FeedingSerializer
 from .forms import FeedingForm
 from .models import Feeding
 
@@ -395,6 +396,38 @@ class FeedingFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("duration_minutes", form.errors)
+
+
+class FeedingSerializerFutureValidationTests(TestCase):
+    def test_serializer_rejects_future_fed_at(self):
+        user = get_user_model().objects.create_user(
+            username="feedings_serializer_futureuser",
+            email="feedings_serializer_futureuser@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Feeding Serializer Child",
+            date_of_birth=date(2025, 1, 1),
+        )
+
+        now = timezone.now()
+        future_fed_at = now + timezone.timedelta(hours=2)
+
+        serializer = FeedingSerializer(
+            data={
+                "child": child.id,
+                "feeding_type": Feeding.FeedingType.BOTTLE,
+                "fed_at": future_fed_at.isoformat(),
+                "amount_oz": "4.0",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("fed_at", serializer.errors)
+        self.assertEqual(
+            serializer.errors["fed_at"][0], "Date/time cannot be in the future."
+        )
 
 
 class FeedingViewTests(TestCase):

@@ -10,6 +10,7 @@ from django.utils import timezone
 from children.models import Child, ChildShare
 from django_project.test_constants import TEST_PASSWORD
 
+from .api import DiaperChangeSerializer
 from .forms import DiaperChangeForm
 from .models import DiaperChange
 
@@ -140,6 +141,37 @@ class DiaperChangeFormTests(TestCase):
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["changed_at"].hour, 10)
         self.assertEqual(form.cleaned_data["changed_at"].minute, 30)
+
+
+class DiaperChangeSerializerFutureValidationTests(TestCase):
+    def test_serializer_rejects_future_changed_at(self):
+        user = get_user_model().objects.create_user(
+            username="diapers_serializer_futureuser",
+            email="diapers_serializer_futureuser@example.com",
+            password=TEST_PASSWORD,
+            timezone="UTC",
+        )
+        child = Child.objects.create(
+            parent=user,
+            name="Diaper Serializer Child",
+            date_of_birth=date(2025, 1, 1),
+        )
+
+        now = timezone.now()
+        future_changed_at = now + timezone.timedelta(hours=2)
+
+        serializer = DiaperChangeSerializer(
+            data={
+                "child": child.id,
+                "change_type": DiaperChange.ChangeType.WET,
+                "changed_at": future_changed_at.isoformat(),
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("changed_at", serializer.errors)
+        self.assertEqual(
+            serializer.errors["changed_at"][0], "Date/time cannot be in the future."
+        )
 
 
 class DiaperChangeViewTests(TestCase):

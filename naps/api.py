@@ -1,5 +1,6 @@
 """REST API for naps app: Nap."""
 
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.routers import DefaultRouter
 
@@ -35,7 +36,37 @@ class NapSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        """Ensure ended_at is after napped_at when both provided."""
+        """Validate nap datetime fields.
+
+        - No future timestamps submitted.
+        - ended_at must be after napped_at when both are provided.
+        """
+        now = timezone.now()
+
+        # No-future validation only when the caller submitted the field.
+        if "napped_at" in data and data.get("napped_at") is not None:
+            napped_at_val = data["napped_at"]
+            if getattr(napped_at_val, "tzinfo", None) is None:
+                napped_at_val = timezone.make_aware(
+                    napped_at_val, timezone.get_default_timezone()
+                )
+            if napped_at_val > now:
+                raise serializers.ValidationError(
+                    {"napped_at": "Date/time cannot be in the future."}
+                )
+
+        if "ended_at" in data and data.get("ended_at") is not None:
+            ended_at_val = data["ended_at"]
+            if getattr(ended_at_val, "tzinfo", None) is None:
+                ended_at_val = timezone.make_aware(
+                    ended_at_val, timezone.get_default_timezone()
+                )
+            if ended_at_val > now:
+                raise serializers.ValidationError(
+                    {"ended_at": "Date/time cannot be in the future."}
+                )
+
+        # Relationship validation: allow partial updates by falling back to instance.
         napped_at = data.get("napped_at") or (
             self.instance.napped_at if self.instance else None
         )
