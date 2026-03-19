@@ -33,6 +33,9 @@
           <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-0">
         {% endifchanged %}
 
+        {% if activity.gap_before_minutes %}
+          {% include "children/_gap_indicator.html" with activity=activity child=child %}
+        {% endif %}
         {% include "children/_activity_row.html" with activity=activity child=child can_edit=can_edit time_display=activity.at|format_relative_tz:user_timezone row_class="px-4 py-3 border-bottom" %}
 
       {% endfor %}

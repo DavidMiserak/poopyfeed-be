@@ -1,0 +1,15 @@
+{% comment %}
+  Gap indicator shown above a timeline event when there's a significant
+  gap between it and the newer event above.
+  Requires: activity (with gap_before_display and is_gap_nap_eligible), child.
+{% endcomment %}
+<div class="d-flex align-items-center gap-2 px-4 py-2 border-bottom border-light bg-body-tertiary bg-opacity-50">
+  <span class="border-start border-2 border-secondary-subtle flex-shrink-0 ms-3" style="height: 16px;"></span>
+  <span class="text-body-tertiary small">{{ activity.gap_before_display }}</span>
+  {% if activity.is_gap_nap_eligible %}
+    <a href="{% url 'naps:nap_add' child_pk=child.pk %}?napped_at={{ activity.gap_nap_start_local|urlencode }}&ended_at={{ activity.gap_nap_end_local|urlencode }}"
+       class="badge bg-primary-subtle text-primary rounded-pill text-decoration-none small">
+      <i class="fa-solid fa-plus me-1"></i>Add nap
+    </a>
+  {% endif %}
+</div>

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
@@ -513,6 +515,59 @@ class ChildPediatricianSummaryView(ChildAccessMixin, View):
         return render(request, self.template_name, context)
 
 
+_GAP_MIN_MINUTES = 5
+_NAP_ELIGIBLE_MINUTES = 60
+
+
+def _format_gap_duration(minutes: int) -> str:
+    """Format gap duration as human-readable string."""
+    if minutes >= 60:
+        h, m = divmod(minutes, 60)
+        return f"{h}h {m}m gap" if m else f"{h}h gap"
+    return f"{minutes}m gap"
+
+
+def _add_gap_fields(events_desc: list) -> None:
+    """Add gap metadata to events sorted descending (newest first).
+
+    Mutates each event dict in place, adding gap_before_minutes,
+    gap_before_display, and is_gap_nap_eligible. The gap represents
+    the time between this event and the newer event above it.
+    """
+    for i, event in enumerate(events_desc):
+        if i == 0:
+            # Newest event has no gap above it
+            event["gap_before_minutes"] = None
+            event["gap_before_display"] = None
+            event["is_gap_nap_eligible"] = None
+            continue
+
+        prev_newer = events_desc[i - 1]
+
+        # Start time of the newer event above
+        newer_at = prev_newer["at"]
+
+        # End time of the current (older) event
+        if event["type"] == "nap" and event["obj"].get("ended_at"):
+            current_end = event["obj"]["ended_at"]
+        else:
+            current_end = event["at"]
+
+        gap_minutes = round((newer_at - current_end).total_seconds() / 60)
+
+        if gap_minutes >= _GAP_MIN_MINUTES:
+            event["gap_before_minutes"] = gap_minutes
+            event["gap_before_display"] = _format_gap_duration(gap_minutes)
+            event["is_gap_nap_eligible"] = gap_minutes >= _NAP_ELIGIBLE_MINUTES
+            if gap_minutes >= _NAP_ELIGIBLE_MINUTES:
+                event["gap_nap_start"] = current_end + timedelta(minutes=1)
+                event["gap_nap_end"] = newer_at - timedelta(minutes=1)
+        else:
+            event["gap_before_minutes"] = None
+            event["gap_before_display"] = None
+            event["is_gap_nap_eligible"] = None
+
+
 class ChildTimelineView(ChildAccessMixin, View):
     """Unified chronological timeline of feedings, diapers, naps (FR-4, FR-5)."""
 
@@ -520,9 +575,22 @@ class ChildTimelineView(ChildAccessMixin, View):
 
     def get(self, request, pk):
         from analytics.utils import get_merged_activities
+        from children.datetime_utils import utc_to_local_datetime_local_str
 
         child = self.child
+        user_tz = getattr(request.user, "timezone", None) or "UTC"
         merged = get_merged_activities(child.id, limit_per_type=TIMELINE_FETCH_PER_TYPE)
+        _add_gap_fields(merged)
+
+        # Format nap gap times as local datetime strings for form pre-fill
+        for event in merged:
+            if event.get("gap_nap_start"):
+                event["gap_nap_start_local"] = utc_to_local_datetime_local_str(
+                    event["gap_nap_start"], user_tz
+                )
+                event["gap_nap_end_local"] = utc_to_local_datetime_local_str(
+                    event["gap_nap_end"], user_tz
+                )
 
         paginator = Paginator(merged, TIMELINE_PAGE_SIZE)
         page_number = request.GET.get("page", 1)

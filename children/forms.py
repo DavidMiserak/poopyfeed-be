@@ -191,7 +191,8 @@ class LocalDateTimeFormMixin(forms.Form):
             if utc_dt is not None:
                 self.initial[field_name] = utc_to_local_datetime_local_str(utc_dt, tz)
         elif instance is None or not getattr(instance, "pk", None):
-            self.initial[field_name] = now_in_user_tz_str(tz)
+            if field_name not in self.initial:
+                self.initial[field_name] = now_in_user_tz_str(tz)
 
     def _user_tz(self):
         """Return user's timezone or UTC."""
