@@ -19,8 +19,7 @@
 
     <div class="card border-0 bg-danger bg-opacity-10 shadow-sm rounded-4 mb-4">
       <div class="card-body d-flex align-items-center gap-3">
-        <div class="bg-danger bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center"
-             style="width: 56px; height: 56px;"
+        <div class="bg-danger bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center icon-56"
              aria-hidden="true">
           <i class="fa-solid fa-bus text-danger fs-4"></i>
         </div>
@@ -71,8 +70,8 @@
                 <input type="radio" name="symptom" value="crying"
                        class="visually-hidden"
                        {% if symptom == "crying" %}checked{% endif %}>
-                <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width: 44px; height: 44px;" aria-hidden="true">
+                <div class="rounded-circle bg-danger bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0 icon-44"
+                     aria-hidden="true">
                   <i class="fa-solid fa-face-sad-cry text-danger"></i>
                 </div>
                 <div>
@@ -88,8 +87,8 @@
                 <input type="radio" name="symptom" value="refusing_food"
                        class="visually-hidden"
                        {% if symptom == "refusing_food" %}checked{% endif %}>
-                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width: 44px; height: 44px;" aria-hidden="true">
+                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0 icon-44"
+                     aria-hidden="true">
                   <i class="fa-solid fa-utensils text-warning"></i>
                 </div>
                 <div>
@@ -105,8 +104,8 @@
                 <input type="radio" name="symptom" value="wont_sleep"
                        class="visually-hidden"
                        {% if symptom == "wont_sleep" %}checked{% endif %}>
-                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width: 44px; height: 44px;" aria-hidden="true">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0 icon-44"
+                     aria-hidden="true">
                   <i class="fa-solid fa-moon text-primary"></i>
                 </div>
                 <div>
@@ -121,8 +120,8 @@
                 <input type="radio" name="symptom" value="general_fussiness"
                        class="visually-hidden"
                        {% if symptom == "general_fussiness" %}checked{% endif %}>
-                <div class="rounded-circle bg-info bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width: 44px; height: 44px;" aria-hidden="true">
+                <div class="rounded-circle bg-info bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0 icon-44"
+                     aria-hidden="true">
                   <i class="fa-solid fa-face-frown text-info"></i>
                 </div>
                 <div>
@@ -153,8 +152,8 @@
               {% if item.kind == "auto" %}
                 <div class="list-group-item d-flex justify-content-between align-items-start border-start border-3 {% if item.auto_status == 'ok' %}border-success bg-success bg-opacity-10{% elif item.auto_status == 'warning' %}border-warning bg-warning bg-opacity-10{% elif item.auto_status == 'missing' %}border-danger bg-danger bg-opacity-10{% endif %}">
                   <div class="me-3 d-flex align-items-start gap-2">
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 {% if item.auto_status == 'ok' %}bg-success{% elif item.auto_status == 'warning' %}bg-warning{% else %}bg-danger{% endif %} bg-opacity-25"
-                         style="width: 36px; height: 36px;" aria-hidden="true">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 {% if item.auto_status == 'ok' %}bg-success{% elif item.auto_status == 'warning' %}bg-warning{% else %}bg-danger{% endif %} bg-opacity-25 icon-36"
+                         aria-hidden="true">
                       {% if item.id == "fed" %}
                         <i class="fa-solid fa-bottle-water {% if item.auto_status == 'ok' %}text-success{% elif item.auto_status == 'warning' %}text-warning{% else %}text-danger{% endif %}"></i>
                       {% elif item.id == "diaper" %}
@@ -221,8 +220,7 @@
                 <li class="mb-2">
                   <label class="fussbus-checklist-label d-flex align-items-center w-100 p-3 rounded-3 border border-2 border-secondary text-start mb-0 {% if item.id in checked_ids %}border-primary bg-primary bg-opacity-10{% endif %}"
                          for="chk-{{ item.id }}">
-                    <input class="form-check-input me-3 flex-shrink-0" type="checkbox" name="checked" value="{{ item.id }}"
-                           style="width: 1.5em; height: 1.5em;"
+                    <input class="form-check-input me-3 flex-shrink-0 icon-1e" type="checkbox" name="checked" value="{{ item.id }}"
                            {% if item.id in checked_ids %}checked{% endif %}
                            id="chk-{{ item.id }}">
                     <span class="fw-semibold">{{ item.label }}</span>
@@ -360,8 +358,8 @@
           <div id="fussbus-selfcare-section" class="card border-0 rounded-4 bg-info bg-opacity-10 mb-0">
             <div class="card-body p-3">
               <h3 class="h6 fw-bold mb-2 d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-info bg-opacity-25 d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width: 36px; height: 36px;" aria-hidden="true">
+                <div class="rounded-circle bg-info bg-opacity-25 d-inline-flex align-items-center justify-content-center flex-shrink-0 icon-36"
+                     aria-hidden="true">
                   <i class="fa-solid fa-heart text-info"></i>
                 </div>
                 Take care of yourself

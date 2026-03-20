@@ -17,7 +17,7 @@
       <h1 class="h3 fw-bold mb-0"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Analytics</h1>
       <div class="d-flex align-items-center gap-2">
         <form method="get" class="d-flex align-items-center gap-2">
-          <select name="days" class="form-select form-select-sm rounded-pill" onchange="this.form.submit()" style="width: auto;">
+          <select name="days" class="form-select form-select-sm rounded-pill w-auto" onchange="this.form.submit()">
             <option value="7" {% if days == 7 %}selected{% endif %}>7 days</option>
             <option value="14" {% if days == 14 %}selected{% endif %}>14 days</option>
             <option value="30" {% if days == 30 %}selected{% endif %}>30 days</option>
@@ -33,7 +33,7 @@
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
         <h2 class="h6 fw-bold mb-0">
-          <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+          <span class="bg-warning-subtle text-warning rounded-3 d-inline-flex align-items-center justify-content-center me-2 icon-28">
             <i class="fa-solid fa-bottle-water small"></i>
           </span>
           Feeding Trends
@@ -72,7 +72,7 @@
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
         <h2 class="h6 fw-bold mb-0">
-          <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+          <span class="bg-success-subtle text-success rounded-3 d-inline-flex align-items-center justify-content-center me-2 icon-28">
             <i class="fa-solid fa-poo small"></i>
           </span>
           Diaper Patterns
@@ -113,7 +113,7 @@
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
         <h2 class="h6 fw-bold mb-0">
-          <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+          <span class="bg-primary-subtle text-primary rounded-3 d-inline-flex align-items-center justify-content-center me-2 icon-28">
             <i class="fa-solid fa-moon small"></i>
           </span>
           Sleep Summary

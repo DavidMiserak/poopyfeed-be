@@ -1,0 +1,34 @@
+/* Icon container sizing utilities
+   Usage: class="icon-36" sets both width and height to 36px.
+   Pairs with d-inline-flex align-items-center justify-content-center. */
+.icon-28 { width: 28px; height: 28px; }
+.icon-32 { width: 32px; height: 32px; }
+.icon-36 { width: 36px; height: 36px; }
+.icon-40 { width: 40px; height: 40px; }
+.icon-44 { width: 44px; height: 44px; }
+.icon-48 { width: 48px; height: 48px; }
+.icon-56 { width: 56px; height: 56px; }
+.icon-64 { width: 64px; height: 64px; }
+.icon-80 { width: 80px; height: 80px; }
+.icon-88 { width: 88px; height: 88px; }
+
+/* Rem/em icon sizes for inline contexts */
+.icon-1h { width: 1.5rem; height: 1.5rem; }
+.icon-1e { width: 1.5em; height: 1.5em; }
+
+/* Section label typography (uppercase headers in dashboard/catchup) */
+.section-label    { font-size: 0.8rem;  letter-spacing: 0.05em; }
+.section-label-sm { font-size: 0.75rem; letter-spacing: 0.05em; }
+.section-label-xs { font-size: 0.7rem;  letter-spacing: 0.05em; }
+
+/* Gap indicator connector line */
+.gap-line { height: 16px; }
+
+/* Layout constraints */
+.mw-520 { max-width: 520px; }
+
+/* Timezone mismatch banner background */
+.tz-banner-bg { background: linear-gradient(to right, #fffbeb, #fff7ed); }
+
+/* Skip-to-content link z-index (above navbar) */
+.z-skip-link { z-index: 1050; }

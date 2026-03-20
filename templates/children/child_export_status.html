@@ -17,7 +17,7 @@
     <div class="card border-0 shadow-sm rounded-4">
       <div class="card-body p-4 text-center">
         {% if status == "completed" and download_url %}
-          <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+          <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3 icon-64">
             <i class="fa-solid fa-check fa-xl text-success"></i>
           </div>
           <h1 class="h5 fw-bold mb-2">PDF Ready</h1>
@@ -26,15 +26,15 @@
             <i class="fa-solid fa-download me-2"></i>Download PDF
           </a>
         {% elif status == "failed" or error %}
-          <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+          <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3 icon-64">
             <i class="fa-solid fa-xmark fa-xl text-danger"></i>
           </div>
           <h1 class="h5 fw-bold mb-2">Export Failed</h1>
           <p class="text-body-secondary small mb-4">{% if error %}{{ error }}{% else %}Something went wrong. Please try again.{% endif %}</p>
           <a href="{% url 'children:child_export' pk=child.pk %}" class="btn btn-outline-primary">Try Again</a>
         {% else %}
-          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-            <div class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem;">
+          <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3 icon-64">
+            <div class="spinner-border text-primary icon-1h" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
           </div>

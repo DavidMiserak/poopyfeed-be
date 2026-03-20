@@ -19,7 +19,7 @@
       <div class="card-body p-4">
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
           <div class="d-flex align-items-center gap-3">
-            <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 56px; height: 56px;" aria-hidden="true">
+            <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 icon-56" aria-hidden="true">
               <i class="fa-solid fa-baby fa-lg text-primary"></i>
             </div>
             <div>
@@ -70,14 +70,14 @@
     {% endif %}
 
     <!-- Today's Summary -->
-    <p class="fw-bold text-body-secondary small text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+    <p class="fw-bold text-body-secondary small text-uppercase mb-2 section-label">
       <i class="fa-solid fa-chart-simple me-1" aria-hidden="true"></i>Today's Summary
     </p>
     <div class="row g-3 mb-4">
       <div class="col-4">
         <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning bg-opacity-10">
           <div class="card-body text-center p-3">
-            <div class="bg-warning bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;" aria-hidden="true">
+            <div class="bg-warning bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2 icon-48" aria-hidden="true">
               <i class="fa-solid fa-bottle-water text-warning" aria-hidden="true"></i>
             </div>
             <div class="fw-bold fs-3 lh-1 mb-1">{{ today_summary.feedings.count }}</div>
@@ -89,7 +89,7 @@
       <div class="col-4">
         <div class="card border-0 shadow-sm rounded-4 h-100 bg-success bg-opacity-10">
           <div class="card-body text-center p-3">
-            <div class="bg-success bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;" aria-hidden="true">
+            <div class="bg-success bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2 icon-48" aria-hidden="true">
               <i class="fa-solid fa-poo text-success" aria-hidden="true"></i>
             </div>
             <div class="fw-bold fs-3 lh-1 mb-1">{{ today_summary.diapers.count }}</div>
@@ -100,7 +100,7 @@
       <div class="col-4">
         <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-opacity-10">
           <div class="card-body text-center p-3">
-            <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;" aria-hidden="true">
+            <div class="bg-primary bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center mb-2 icon-48" aria-hidden="true">
               <i class="fa-solid fa-moon text-primary" aria-hidden="true"></i>
             </div>
             <div class="fw-bold fs-3 lh-1 mb-1">{{ today_summary.sleep.naps }}</div>
@@ -113,7 +113,7 @@
 
     <!-- Quick log (one-tap, card layout similar to front-end quick log) -->
     <div class="mb-4">
-      <p class="fw-bold text-body-secondary small text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+      <p class="fw-bold text-body-secondary small text-uppercase mb-2 section-label">
         <i class="fa-solid fa-bolt me-1" aria-hidden="true"></i>Quick Log
       </p>
       <div class="row g-3">
@@ -121,7 +121,7 @@
         <div class="col-12 col-sm-6 col-lg-4">
           <div class="card border-0 shadow-sm rounded-4 h-100 bg-success bg-opacity-10">
             <div class="card-body">
-              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3 section-label">
                 <i class="fa-solid fa-poo me-1" aria-hidden="true"></i>Diaper
               </h2>
               <div class="row g-2">
@@ -152,7 +152,7 @@
         <div class="col-12 col-sm-6 col-lg-4">
           <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-opacity-10">
             <div class="card-body">
-              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3 section-label">
                 <i class="fa-solid fa-moon me-1" aria-hidden="true"></i>Nap
               </h2>
               <div class="row g-2">
@@ -171,7 +171,7 @@
         <div class="col-12 col-sm-6 col-lg-4">
           <div class="card border-0 shadow-sm rounded-4 h-100 bg-warning bg-opacity-10">
             <div class="card-body">
-              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+              <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-3 section-label">
                 <i class="fa-solid fa-bottle-water me-1" aria-hidden="true"></i>Bottle
               </h2>
               <div class="row g-2">
@@ -202,7 +202,7 @@
 
     <!-- Log with details (smaller, like front-end dashboard) -->
     <div class="mb-4">
-      <p class="fw-bold text-body-secondary small text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+      <p class="fw-bold text-body-secondary small text-uppercase mb-2 section-label">
         <i class="fa-solid fa-pen-to-square me-1" aria-hidden="true"></i>Log with Details
       </p>
       <div class="d-flex flex-wrap gap-2">
@@ -222,7 +222,7 @@
     <div class="card border-0 shadow-sm rounded-4">
       <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
         <div class="d-flex justify-content-between align-items-center">
-          <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+          <h2 class="h6 text-uppercase text-body-tertiary fw-semibold mb-0 section-label-sm">
             <i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>Recent Activity
           </h2>
           <a href="{% url 'children:child_timeline' pk=child.pk %}" class="text-body-tertiary text-decoration-none small">
@@ -239,7 +239,7 @@
           </div>
         {% else %}
           <div class="text-center py-4">
-            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;" aria-hidden="true">
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3 icon-64" aria-hidden="true">
               <i class="fa-solid fa-baby-carriage fa-lg text-primary opacity-50"></i>
             </div>
             <p class="text-body-tertiary small mb-0">No activity yet. Use the buttons above to get started.</p>
