@@ -723,6 +723,8 @@ class TimelineTests(APITestCase):
             child=self.child,
             napped_at=now - timedelta(hours=3),
         )
+        # Clear cache since on_commit handlers don't fire in test transactions
+        cache.clear()
 
         response = self.client.get(
             f"/api/v1/analytics/children/{self.child.id}/timeline/"
@@ -752,6 +754,8 @@ class TimelineTests(APITestCase):
                 fed_at=now - timedelta(hours=i),
                 amount_oz=4.0,
             )
+        # Clear cache since on_commit handlers don't fire in test transactions
+        cache.clear()
 
         response = self.client.get(
             f"/api/v1/analytics/children/{self.child.id}/timeline/",
@@ -1506,6 +1510,8 @@ class DashboardSummaryTests(APITestCase):
             fed_at=timezone.now(),
             amount_oz=4.0,
         )
+        # Clear cache since on_commit handlers don't fire in test transactions
+        cache.clear()
 
         r2 = self.client.get(self._url())
         self.assertEqual(r2.status_code, status.HTTP_200_OK)
