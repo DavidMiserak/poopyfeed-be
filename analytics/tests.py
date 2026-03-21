@@ -1316,6 +1316,8 @@ class CachingTests(APITestCase):
             fed_at=now,
             amount_oz=8.0,
         )
+        # Clear cache since on_commit handlers don't fire in test transactions
+        cache.clear()
 
         # Get trends again (should recalculate from fresh data)
         response2 = self.client.get(
@@ -1344,6 +1346,8 @@ class CachingTests(APITestCase):
             change_type=DiaperChange.ChangeType.WET,
             changed_at=now,
         )
+        # Clear cache since on_commit handlers don't fire in test transactions
+        cache.clear()
 
         # Get patterns again (should recalculate with fresh data)
         response2 = self.client.get(
@@ -1371,6 +1375,8 @@ class CachingTests(APITestCase):
             child=self.child,
             napped_at=now,
         )
+        # Clear cache since on_commit handlers don't fire in test transactions
+        cache.clear()
 
         # Get sleep summary again (should recalculate with fresh data)
         response2 = self.client.get(
