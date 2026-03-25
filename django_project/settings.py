@@ -70,6 +70,9 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.headless",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.facebook",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -583,6 +586,28 @@ HEADLESS_FRONTEND_URLS = {  # nosec B105
     "account_reset_password": "http://localhost:4200/auth/reset-password/{key}",
     "account_reset_password_from_key": "http://localhost:4200/auth/reset-password/{key}",
     "account_signup": "http://localhost:4200/signup",
+}
+
+# Social account configuration
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["email", "profile"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "APP": {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+        },
+    },
+    "facebook": {
+        "METHOD": "oauth2",
+        "SCOPE": ["email", "public_profile"],
+        "APP": {
+            "client_id": os.environ.get("FACEBOOK_APP_ID", ""),
+            "secret": os.environ.get("FACEBOOK_APP_SECRET", ""),
+        },
+    },
 }
 
 # =============================================================================
