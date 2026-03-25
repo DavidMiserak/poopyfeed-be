@@ -588,7 +588,9 @@ HEADLESS_FRONTEND_URLS = {  # nosec B105
     "account_signup": "http://localhost:4200/signup",
 }
 
-# Social account configuration
+# =============================================================================
+# Social Account Configuration
+# =============================================================================
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_PROVIDERS = {
