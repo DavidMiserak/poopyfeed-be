@@ -547,6 +547,17 @@ class CustomBottleValidationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Decimal(response.data["custom_bottle_low_oz"]), Decimal("2.0"))
 
+    def test_create_child_with_minimum_custom_bottles(self):
+        """Boundary value 0.1 oz is accepted for custom bottle amounts."""
+        data = self._create_child_data(
+            custom_bottle_low_oz="0.1",
+            custom_bottle_mid_oz="0.2",
+            custom_bottle_high_oz="0.3",
+        )
+        response = self.client.post(API_CHILDREN_URL, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Decimal(response.data["custom_bottle_low_oz"]), Decimal("0.1"))
+
     def test_create_child_with_null_custom_bottles(self):
         """All null custom bottle amounts succeed (use age-based defaults)."""
         data = self._create_child_data()

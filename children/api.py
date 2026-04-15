@@ -22,6 +22,9 @@ from .models import Child, ChildShare, ShareInvite
 if TYPE_CHECKING:
     from accounts.models import CustomUser
 
+MIN_CUSTOM_BOTTLE_OZ = Decimal("0.1")
+MAX_CUSTOM_BOTTLE_OZ = Decimal("50")
+
 # --- Serializers ---
 
 
@@ -122,7 +125,9 @@ class ChildSerializer(serializers.ModelSerializer):
 
     def validate_custom_bottle_low_oz(self, value: Decimal | None) -> Decimal | None:
         """Validate custom bottle low amount is in range 0.1-50 oz."""
-        if value is not None and (value < 0.1 or value > 50):
+        if value is not None and (
+            value < MIN_CUSTOM_BOTTLE_OZ or value > MAX_CUSTOM_BOTTLE_OZ
+        ):
             raise serializers.ValidationError(
                 "Custom bottle low amount must be between 0.1 and 50 oz."
             )
@@ -130,7 +135,9 @@ class ChildSerializer(serializers.ModelSerializer):
 
     def validate_custom_bottle_mid_oz(self, value: Decimal | None) -> Decimal | None:
         """Validate custom bottle mid amount is in range 0.1-50 oz."""
-        if value is not None and (value < 0.1 or value > 50):
+        if value is not None and (
+            value < MIN_CUSTOM_BOTTLE_OZ or value > MAX_CUSTOM_BOTTLE_OZ
+        ):
             raise serializers.ValidationError(
                 "Custom bottle mid amount must be between 0.1 and 50 oz."
             )
@@ -138,7 +145,9 @@ class ChildSerializer(serializers.ModelSerializer):
 
     def validate_custom_bottle_high_oz(self, value: Decimal | None) -> Decimal | None:
         """Validate custom bottle high amount is in range 0.1-50 oz."""
-        if value is not None and (value < 0.1 or value > 50):
+        if value is not None and (
+            value < MIN_CUSTOM_BOTTLE_OZ or value > MAX_CUSTOM_BOTTLE_OZ
+        ):
             raise serializers.ValidationError(
                 "Custom bottle high amount must be between 0.1 and 50 oz."
             )
